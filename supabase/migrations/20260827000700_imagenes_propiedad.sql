@@ -59,9 +59,18 @@ VALUES ('propiedades', 'propiedades', true, 5242880,
         ARRAY['image/jpeg','image/png','image/webp'])
 ON CONFLICT (id) DO NOTHING;
 
+-- No se otorga a anon: un caller anonimo no tiene auth.uid() y el listado
+-- del bucket permitiria enumerar objetos de propiedades sin publicar. La
+-- lectura publica de imagenes publicadas se sirve por URL publica de
+-- Storage (bucket public=true), que no consulta RLS; esta politica solo
+-- gobierna el listado/lectura autenticados de objetos, y se limita a la
+-- carpeta propia del dueno, igual que escritura y borrado.
 CREATE POLICY storage_propiedades_lectura ON storage.objects
-  FOR SELECT TO anon, authenticated
-  USING (bucket_id = 'propiedades');
+  FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'propiedades'
+    AND (storage.foldername(name))[1] = (SELECT auth.uid())::text
+  );
 
 -- Cada vendedor escribe solo dentro de su propia carpeta: <uid>/<archivo>
 CREATE POLICY storage_propiedades_escritura ON storage.objects

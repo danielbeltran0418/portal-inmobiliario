@@ -5,11 +5,14 @@ const A = { correo: 'img-vendedor-a@prueba.test', password: 'ClaveDePrueba123!' 
 const B = { correo: 'img-vendedor-b@prueba.test', password: 'ClaveDePrueba123!' }
 let idPublicada = ''
 let idBorrador = ''
+let idVendedorA = ''
+let rutaObjetoPrueba = ''
 
 describe('imagenes de propiedad', () => {
   beforeAll(async () => {
     const idA = await crearUsuarioDePrueba({ ...A, rol: 'vendedor' })
     await crearUsuarioDePrueba({ ...B, rol: 'vendedor' })
+    idVendedorA = idA
     const admin = clienteAdmin()
     const { data: barrio } = await admin.from('barrios').select('id').eq('slug', 'riomar').single()
     const base = {
@@ -24,6 +27,18 @@ describe('imagenes de propiedad', () => {
       .insert({ ...base, slug: 'casa-riomar-borrador', titulo: 'Casa en borrador', estado: 'borrador' })
       .select('id').single()
     idBorrador = b!.id
+  })
+
+  beforeAll(async () => {
+    // Objeto real en el bucket, dentro de la carpeta del vendedor A, para
+    // probar el listado restringido por RLS y la lectura por URL publica.
+    rutaObjetoPrueba = `${idVendedorA}/prueba.webp`
+    const { error } = await clienteAdmin().storage.from('propiedades')
+      .upload(rutaObjetoPrueba, Buffer.from('contenido de prueba para storage'), {
+        contentType: 'image/webp',
+        upsert: true,
+      })
+    if (error) throw error
   })
 
   it('rechaza una imagen sin alt_text', async () => {
@@ -67,5 +82,37 @@ describe('imagenes de propiedad', () => {
     const { error } = await cliente.from('imagenes_propiedad')
       .insert({ propiedad_id: idPublicada, ruta_storage: 'x/4.webp', alt_text: 'Intruso', orden: 9 })
     expect(error?.code).toBe('42501')
+  })
+
+  it('el vendedor dueno SI puede listar su propia carpeta en el bucket', async () => {
+    // Control positivo para las dos pruebas de listado de abajo: el dueno
+    // real de la carpeta debe poder listarla.
+    const cliente = await clienteComo(A.correo, A.password)
+    const { data, error } = await cliente.storage.from('propiedades').list(idVendedorA)
+    expect(error).toBeNull()
+    expect(data).toHaveLength(1)
+    expect(data![0].name).toBe('prueba.webp')
+  })
+
+  it('el anonimo NO puede listar el bucket de propiedades', async () => {
+    // Sin la politica de anon, el rol anonimo no tiene ninguna politica de
+    // SELECT aplicable sobre storage.objects: el listado siempre devuelve
+    // cero filas, tanto para la carpeta del vendedor A como para la raiz.
+    const { data: listadoCarpeta } = await clienteAnonimo().storage.from('propiedades').list(idVendedorA)
+    expect(listadoCarpeta ?? []).toHaveLength(0)
+
+    const { data: listadoRaiz } = await clienteAnonimo().storage.from('propiedades').list()
+    expect(listadoRaiz ?? []).toHaveLength(0)
+  })
+
+  it('la URL publica del objeto sigue resolviendo sin autenticacion', async () => {
+    // Verifica empiricamente que restringir la politica de SELECT (que solo
+    // gobierna listado/lectura autenticados) no rompe la ruta de URL publica
+    // de Storage, que sirve el objeto sin consultar RLS porque el bucket es
+    // public=true.
+    const { data } = clienteAnonimo().storage.from('propiedades').getPublicUrl(rutaObjetoPrueba)
+    const respuesta = await fetch(data.publicUrl)
+    expect(respuesta.ok).toBe(true)
+    expect(respuesta.status).toBe(200)
   })
 })
