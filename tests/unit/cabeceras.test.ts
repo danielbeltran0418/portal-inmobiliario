@@ -44,8 +44,12 @@ describe('cabeceras de seguridad', () => {
   it('no usa APIs de Node ausentes en el runtime Edge (Buffer, require, node:)', () => {
     const ruta = fileURLToPath(new URL('../../src/lib/seguridad/cabeceras.ts', import.meta.url))
     const codigo = readFileSync(ruta, 'utf-8')
-    expect(codigo).not.toMatch(/\bBuffer\s*[.(]/)
-    expect(codigo).not.toMatch(/require\(/)
-    expect(codigo).not.toMatch(/from ['"]node:/)
+    const sinComentarios = codigo
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '')
+
+    expect(sinComentarios).not.toMatch(/\bBuffer\b/)
+    expect(sinComentarios).not.toMatch(/\brequire\s*\(/)
+    expect(sinComentarios).not.toMatch(/from\s+['"]node:/)
   })
 })
