@@ -54,6 +54,15 @@ describe('RLS de propiedades', () => {
     expect(data).toHaveLength(0)
   })
 
+  it('el vendedor dueno SI puede editar su propia propiedad publicada', async () => {
+    const cliente = await clienteComo(A.correo, A.password)
+    const { data, error } = await cliente.from('propiedades')
+      .update({ titulo: 'Apartamento actualizado por dueno' }).eq('id', idPublicada).select('id, titulo')
+    expect(error).toBeNull()
+    expect(data).toHaveLength(1)
+    expect(data![0].titulo).toBe('Apartamento actualizado por dueno')
+  })
+
   it('el vendedor B NO puede editar la propiedad del vendedor A', async () => {
     const cliente = await clienteComo(B.correo, B.password)
     const { data } = await cliente.from('propiedades')
@@ -68,5 +77,6 @@ describe('RLS de propiedades', () => {
       operacion: 'venta', tipo_inmueble: 'casa', precio: 1, estado: 'borrador',
     })
     expect(error).not.toBeNull()
+    expect(error?.code).toBe('42501')
   })
 })
