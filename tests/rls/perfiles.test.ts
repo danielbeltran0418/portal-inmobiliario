@@ -24,14 +24,17 @@ describe('RLS de perfiles', () => {
   it('el usuario NO lee el perfil de otro', async () => {
     const cliente = await clienteComo(COMPRADOR.correo, COMPRADOR.password)
     const { data } = await cliente.from('perfiles').select('nombre')
+    expect(data).toHaveLength(1)
     expect(data!.some((f) => f.nombre === 'Otro Usuario')).toBe(false)
   })
 
   it('el usuario actualiza su propio nombre', async () => {
     const cliente = await clienteComo(COMPRADOR.correo, COMPRADOR.password)
-    const { error } = await cliente.from('perfiles')
-      .update({ nombre: 'Ana Actualizada' }).eq('id', idComprador)
+    const { data, error } = await cliente.from('perfiles')
+      .update({ nombre: 'Ana Actualizada' }).eq('id', idComprador).select()
     expect(error).toBeNull()
+    expect(data).toHaveLength(1)
+    expect(data![0].nombre).toBe('Ana Actualizada')
   })
 
   it('el usuario NO puede escalar su propio rol', async () => {
