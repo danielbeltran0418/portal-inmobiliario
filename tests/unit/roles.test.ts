@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { rolDesdeToken, rutaPermitida, rutaDePanel } from '@/lib/auth/roles'
+import { rolDesdeToken, rutaPermitida, rutaDePanel, decodificarBase64Url } from '@/lib/auth/roles'
 
 function tokenFalso(claims: object): string {
   const parte = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
@@ -23,6 +23,23 @@ describe('rolDesdeToken', () => {
 
   it('cae en comprador ante un token corrupto', () => {
     expect(rolDesdeToken('no-es-un-token')).toBe('comprador')
+  })
+
+  // Esta prueba es la razon de ser del paso TextDecoder. Llama a
+  // decodificarBase64Url DIRECTAMENTE, y por eso hay que exportarla: a traves de
+  // rolDesdeToken el fallo es inobservable, porque esa funcion solo devuelve el
+  // rol y todos los roles son ASCII, donde TextDecoder y String.fromCharCode
+  // coinciden. Sustituir TextDecoder por String.fromCharCode convierte 'José' en
+  // 'JosÃ©', y esta prueba lo detecta.
+  it('decodificarBase64Url maneja tildes y ñ sin corromperlos', () => {
+    const carga = JSON.stringify({ nombre: 'José Muñoz Peñaranda' })
+    // Buffer aqui es codigo de prueba corriendo en Node: legitimo.
+    const codificado = Buffer.from(carga, 'utf8').toString('base64url')
+
+    const decodificado = JSON.parse(decodificarBase64Url(codificado)) as {
+      nombre: string
+    }
+    expect(decodificado.nombre).toBe('José Muñoz Peñaranda')
   })
 })
 
@@ -55,6 +72,12 @@ describe('rutaPermitida', () => {
   it('cubre las subrutas del panel', () => {
     expect(rutaPermitida('/panel/publicaciones/nueva', 'comprador')).toBe(false)
     expect(rutaPermitida('/panel/publicaciones/nueva', 'vendedor')).toBe(true)
+  })
+
+  it('NO protege rutas que solo comparten prefijo de letras', () => {
+    expect(rutaPermitida('/panelx', 'comprador')).toBe(true)
+    expect(rutaPermitida('/panel-publico', 'comprador')).toBe(true)
+    expect(rutaPermitida('/paneles-publicos', 'comprador')).toBe(true)
   })
 })
 
