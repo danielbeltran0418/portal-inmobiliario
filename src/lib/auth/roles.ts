@@ -20,7 +20,7 @@ const RUTAS_PROTEGIDAS: ReadonlyArray<{ prefijo: string; rol: Rol }> = [
  * TextDecoder es necesario porque un nombre con tilde en los claims saldria
  * corrupto si se leyera el resultado de atob como texto directamente.
  */
-function decodificarBase64Url(valor: string): string {
+export function decodificarBase64Url(valor: string): string {
   const base64 = valor.replace(/-/g, '+').replace(/_/g, '/')
   const relleno = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
   const binario = atob(relleno)
