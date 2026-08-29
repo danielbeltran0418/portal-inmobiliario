@@ -10,7 +10,11 @@ CREATE INDEX intentos_login_ventana_idx
   ON public.intentos_login (correo, ip, creado_en DESC);
 
 ALTER TABLE public.intentos_login ENABLE ROW LEVEL SECURITY;
--- Sin politicas y sin GRANT: ningun rol de aplicacion accede.
+-- RLS activa y sin ninguna politica: el default-deny de RLS bloquea a todo
+-- rol de aplicacion. Los privilegios por defecto de Supabase de por si
+-- otorgan CRUD completo sobre toda tabla nueva de public a anon,
+-- authenticated y service_role -- no es la ausencia de un GRANT lo que
+-- protege esta tabla, es RLS sin politicas.
 
 -- Se limita por correo + IP combinados: solo por IP se castiga a usuarios
 -- legitimos detras de un NAT compartido; solo por correo queda abierto el

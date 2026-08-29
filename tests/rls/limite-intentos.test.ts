@@ -38,6 +38,40 @@ describe('limite de intentos de login', () => {
     expect(data).toBe(false)
   })
 
+  // Sin esta prueba, una funcion que filtrara SOLO por ip pasaria todo lo anterior:
+  // las demas pruebas varian la IP pero nunca el correo. La combinacion es el diseno.
+  it('no bloquea otra cuenta desde la misma IP', async () => {
+    const otroCorreo = 'otro-usuario@prueba.test'
+    await clienteAdmin().from('intentos_login').delete().eq('correo', otroCorreo)
+
+    for (let i = 0; i < 5; i++) {
+      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+    }
+
+    const { data: bloqueadoOriginal } = await clienteAdmin()
+      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+    expect(bloqueadoOriginal).toBe(true)
+
+    const { data: bloqueadoOtro } = await clienteAdmin()
+      .rpc('login_bloqueado', { p_correo: otroCorreo, p_ip: IP })
+    expect(bloqueadoOtro).toBe(false)
+  })
+
+  // La rama IF p_exitoso THEN DELETE de registrar_intento_login no tenia cobertura:
+  // todas las demas pruebas registran fallos. Un borrado de esa rama pasaria inadvertido.
+  it('un login exitoso limpia los fallos previos de esa combinacion', async () => {
+    for (let i = 0; i < 5; i++) {
+      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+    }
+    const { data: antes } = await clienteAdmin().rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+    expect(antes).toBe(true)
+
+    await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: true })
+
+    const { data: despues } = await clienteAdmin().rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+    expect(despues).toBe(false)
+  })
+
   it('un usuario autenticado no puede leer la tabla de intentos', async () => {
     // Control positivo: se registra un intento y se prueba que el admin
     // (service_role, que ignora RLS) SI lo ve. Sin este paso, la aserción
