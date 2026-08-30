@@ -7,7 +7,11 @@ const RUTAS_PROTEGIDAS = ['/mi-cuenta', '/panel', '/control']
 
 export async function middleware(peticion: NextRequest) {
   const nonce = generarNonce()
-  let respuesta = NextResponse.next({ request: peticion })
+
+  const cabecerasPeticion = new Headers(peticion.headers)
+  cabecerasPeticion.set('x-nonce', nonce)
+
+  let respuesta = NextResponse.next({ request: { headers: cabecerasPeticion } })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,7 +21,7 @@ export async function middleware(peticion: NextRequest) {
         getAll: () => peticion.cookies.getAll(),
         setAll: (cookies) => {
           for (const { name, value } of cookies) peticion.cookies.set(name, value)
-          respuesta = NextResponse.next({ request: peticion })
+          respuesta = NextResponse.next({ request: { headers: cabecerasPeticion } })
           for (const { name, value, options } of cookies) {
             respuesta.cookies.set(name, value, {
               ...options,
@@ -34,6 +38,22 @@ export async function middleware(peticion: NextRequest) {
     },
   )
 
+  function aplicarCabeceras(destino: NextResponse): NextResponse {
+    destino.headers.set('x-nonce', nonce)
+    for (const [clave, valor] of Object.entries(construirCabeceras(nonce))) {
+      destino.headers.set(clave, valor)
+    }
+    return destino
+  }
+
+  function redirigir(destino: string): NextResponse {
+    const redireccion = NextResponse.redirect(new URL(destino, peticion.url))
+    for (const cookie of respuesta.cookies.getAll()) {
+      redireccion.cookies.set(cookie)
+    }
+    return aplicarCabeceras(redireccion)
+  }
+
   // getUser revalida contra el servidor de auth; getSession solo lee la cookie.
   const { data: { user } } = await supabase.auth.getUser()
   const ruta = peticion.nextUrl.pathname
@@ -41,26 +61,21 @@ export async function middleware(peticion: NextRequest) {
 
   if (esProtegida) {
     if (!user) {
-      return NextResponse.redirect(new URL('/login', peticion.url))
+      return redirigir('/login')
     }
     if (!user.email_confirmed_at) {
-      return NextResponse.redirect(new URL('/verificar-correo', peticion.url))
+      return redirigir('/verificar-correo')
     }
 
     const { data: { session } } = await supabase.auth.getSession()
     const rol = rolDesdeToken(session?.access_token ?? '')
 
     if (!rutaPermitida(ruta, rol)) {
-      return NextResponse.redirect(new URL(rutaDePanel(rol), peticion.url))
+      return redirigir(rutaDePanel(rol))
     }
   }
 
-  respuesta.headers.set('x-nonce', nonce)
-  for (const [clave, valor] of Object.entries(construirCabeceras(nonce))) {
-    respuesta.headers.set(clave, valor)
-  }
-
-  return respuesta
+  return aplicarCabeceras(respuesta)
 }
 
 export const config = {
