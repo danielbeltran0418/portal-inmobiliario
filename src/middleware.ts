@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { construirCabeceras, generarNonce } from '@/lib/seguridad/cabeceras'
 import { rolDesdeToken, rutaPermitida, rutaDePanel } from '@/lib/auth/roles'
+import { origenReal } from '@/lib/http/origen-peticion'
 
 const RUTAS_PROTEGIDAS = ['/mi-cuenta', '/panel', '/control']
 
@@ -56,7 +57,10 @@ export async function middleware(peticion: NextRequest) {
   }
 
   function redirigir(destino: string): NextResponse {
-    const redireccion = NextResponse.redirect(new URL(destino, peticion.url))
+    // origenReal(peticion), no peticion.url: en next dev el host queda
+    // canonicalizado a localhost y el salto perderia la cookie de sesion
+    // fijada en el host real (127.0.0.1, el que usa site_url en local).
+    const redireccion = NextResponse.redirect(new URL(destino, origenReal(peticion)))
     for (const cookie of respuesta.cookies.getAll()) {
       redireccion.cookies.set(cookie)
     }
