@@ -21,7 +21,16 @@ export async function middleware(peticion: NextRequest) {
         getAll: () => peticion.cookies.getAll(),
         setAll: (cookies) => {
           for (const { name, value } of cookies) peticion.cookies.set(name, value)
-          respuesta = NextResponse.next({ request: { headers: cabecerasPeticion } })
+
+          // Re-derivar las cabeceras DESPUES de mutar las cookies. peticion.cookies.set
+          // reescribe la cabecera Cookie de la peticion, y reutilizar aqui el snapshot
+          // tomado antes de getUser() la dejaria vieja: en la peticion donde Supabase
+          // refresca el token, el navegador recibiria la cookie nueva pero los Server
+          // Components de ESA misma peticion seguirian leyendo la anterior.
+          const cabecerasRefrescadas = new Headers(peticion.headers)
+          cabecerasRefrescadas.set('x-nonce', nonce)
+
+          respuesta = NextResponse.next({ request: { headers: cabecerasRefrescadas } })
           for (const { name, value, options } of cookies) {
             respuesta.cookies.set(name, value, {
               ...options,
