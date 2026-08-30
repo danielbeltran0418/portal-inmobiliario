@@ -10,10 +10,16 @@ export default function PaginaLogin() {
 
   return (
     <main className="mx-auto max-w-md p-8">
-      <h1 className="text-2xl font-semibold">Iniciar sesion</h1>
+      <h1 className="text-2xl font-semibold">Iniciar sesión</h1>
       <form action={accion} className="mt-6 space-y-4">
-        <input name="correo" type="email" placeholder="Correo" required className="w-full border p-2" />
-        <input name="password" type="password" placeholder="Contrasena" required className="w-full border p-2" />
+        <div>
+          <label htmlFor="correo" className="block">Correo</label>
+          <input id="correo" name="correo" type="email" placeholder="Correo" required className="w-full border p-2" />
+        </div>
+        <div>
+          <label htmlFor="password" className="block">Contraseña</label>
+          <input id="password" name="password" type="password" placeholder="Contraseña" required className="w-full border p-2" />
+        </div>
         {estado.error && <p role="alert" className="text-red-600">{estado.error}</p>}
         <button type="submit" disabled={pendiente} className="w-full bg-black p-2 text-white">
           {pendiente ? 'Entrando...' : 'Entrar'}
