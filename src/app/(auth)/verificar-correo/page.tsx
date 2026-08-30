@@ -3,7 +3,7 @@ export default function PaginaVerificarCorreo() {
     <main className="mx-auto max-w-md p-8">
       <h1 className="text-2xl font-semibold">Verifica tu correo</h1>
       <p className="mt-4">
-        Tu cuenta todavia no esta activa. Abre el enlace que te enviamos para continuar.
+        Tu cuenta todavía no está activa. Abre el enlace que te enviamos para continuar.
       </p>
     </main>
   )
