@@ -44,11 +44,20 @@ describe('registrarUsuario', () => {
     expect(r.error).toBeTruthy()
   })
 
-  it('no revela si el correo ya estaba registrado', async () => {
+  it('no revela si el correo ya estaba registrado: mismo mensaje para cualquier error', async () => {
     signUp.mockResolvedValue({ data: { user: null }, error: { code: 'user_already_exists' } })
-    const r = await registrarUsuario({}, formulario(validos))
-    expect(r.error ?? '').not.toContain('registrado')
-    expect(r.error ?? '').not.toContain('existe')
+    const rCorreoExistente = await registrarUsuario({}, formulario(validos))
+
+    signUp.mockResolvedValue({ data: { user: null }, error: { code: 'fallo_generico' } })
+    const rFalloGenerico = await registrarUsuario({}, formulario(validos))
+
+    expect(rCorreoExistente.error).toBeTruthy()
+    expect(rCorreoExistente.error).toBe(rFalloGenerico.error)
+  })
+
+  it('apunta emailRedirectTo a /confirmar', async () => {
+    await registrarUsuario({}, formulario(validos))
+    expect(signUp.mock.calls[0][0].options.emailRedirectTo).toMatch(/\/confirmar$/)
   })
 
   it('devuelve exito cuando el registro funciona', async () => {

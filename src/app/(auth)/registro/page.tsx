@@ -13,7 +13,7 @@ export default function PaginaRegistro() {
       <main className="mx-auto max-w-md p-8">
         <h1 className="text-2xl font-semibold">Revisa tu correo</h1>
         <p className="mt-4">
-          Te enviamos un enlace de verificacion. Tu cuenta se activa cuando lo abras.
+          Te enviamos un enlace de verificación. Tu cuenta se activa cuando lo abras.
         </p>
       </main>
     )
@@ -23,10 +23,22 @@ export default function PaginaRegistro() {
     <main className="mx-auto max-w-md p-8">
       <h1 className="text-2xl font-semibold">Crear cuenta</h1>
       <form action={accion} className="mt-6 space-y-4">
-        <input name="nombre" placeholder="Nombre completo" required className="w-full border p-2" />
-        <input name="correo" type="email" placeholder="Correo" required className="w-full border p-2" />
-        <input name="telefono" placeholder="Celular (10 digitos)" required className="w-full border p-2" />
-        <input name="password" type="password" placeholder="Contrasena (minimo 12)" required minLength={12} className="w-full border p-2" />
+        <div>
+          <label htmlFor="nombre" className="block">Nombre completo</label>
+          <input id="nombre" name="nombre" placeholder="Nombre completo" required className="w-full border p-2" />
+        </div>
+        <div>
+          <label htmlFor="correo" className="block">Correo</label>
+          <input id="correo" name="correo" type="email" placeholder="Correo" required className="w-full border p-2" />
+        </div>
+        <div>
+          <label htmlFor="telefono" className="block">Celular (10 dígitos)</label>
+          <input id="telefono" name="telefono" placeholder="Celular (10 dígitos)" required className="w-full border p-2" />
+        </div>
+        <div>
+          <label htmlFor="password" className="block">Contraseña (mínimo 12)</label>
+          <input id="password" name="password" type="password" placeholder="Contraseña (mínimo 12)" required minLength={12} className="w-full border p-2" />
+        </div>
         <fieldset className="space-y-2">
           <legend>Quiero</legend>
           <label className="block"><input type="radio" name="rol" value="comprador" defaultChecked /> Buscar propiedad</label>
