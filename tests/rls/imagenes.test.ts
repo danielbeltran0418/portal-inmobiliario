@@ -6,12 +6,13 @@ const B = { correo: 'img-vendedor-b@prueba.test', password: 'ClaveDePrueba123!' 
 let idPublicada = ''
 let idBorrador = ''
 let idVendedorA = ''
+let idVendedorB = ''
 let rutaObjetoPrueba = ''
 
 describe('imagenes de propiedad', () => {
   beforeAll(async () => {
     const idA = await crearUsuarioDePrueba({ ...A, rol: 'vendedor' })
-    await crearUsuarioDePrueba({ ...B, rol: 'vendedor' })
+    idVendedorB = await crearUsuarioDePrueba({ ...B, rol: 'vendedor' })
     idVendedorA = idA
     const admin = clienteAdmin()
     const { data: barrio } = await admin.from('barrios').select('id').eq('slug', 'riomar').single()
@@ -103,6 +104,78 @@ describe('imagenes de propiedad', () => {
 
     const { data: listadoRaiz } = await clienteAnonimo().storage.from('propiedades').list()
     expect(listadoRaiz ?? []).toHaveLength(0)
+  })
+
+  // Nadie probaba que un vendedor no pueda sacar una imagen suya HACIA FUERA:
+  // las demas pruebas cubren al intruso escribiendo sobre lo ajeno, y ninguna
+  // cambiaba propiedad_id.
+  //
+  // Ojo con lo que esta prueba demuestra y lo que no: la proteccion ya existia
+  // antes de 20260831000200, porque PostgreSQL usa la expresion de USING como
+  // WITH CHECK cuando esta no se declara. La migracion solo la hace explicita.
+  // Lo que esta prueba fija es el comportamiento, no la forma de escribirlo:
+  // falla si alguien afloja el WITH CHECK (verificado poniendolo en `true`) y
+  // falla tambien si alguien lo endurece de mas, por el caso positivo del
+  // final.
+  it('el vendedor A no puede mover una imagen suya a una propiedad del vendedor B', async () => {
+    const admin = clienteAdmin()
+    const { data: barrio } = await admin.from('barrios').select('id').eq('slug', 'riomar').single()
+
+    // estado 'publicada' A PROPOSITO, y esto es lo delicado de la prueba.
+    //
+    // PostgREST convierte el .select() encadenado en un RETURNING, y a las
+    // filas devueltas por un RETURNING se les aplican las politicas de SELECT.
+    // Con la propiedad de B en 'borrador', la fila resultante no seria visible
+    // para A por ninguna politica de lectura, y Postgres devolveria 42501
+    // igualmente -- por la lectura, no por el WITH CHECK. La prueba pasaria
+    // aunque el WITH CHECK fuera `true`. Comprobado: con B en 'borrador' y
+    // WITH CHECK (true), el movimiento se bloquea; con B 'publicada' y el
+    // mismo WITH CHECK (true), el movimiento SE CONSUMA.
+    //
+    // Publicada, la fila resultante SI seria legible para A via
+    // imagenes_lectura_publica, asi que lo unico que puede impedir el
+    // movimiento es el WITH CHECK de la politica de UPDATE. Que es lo que se
+    // quiere medir.
+    const { data: propiedadB, error: errorPropiedadB } = await admin.from('propiedades').insert({
+      vendedor_id: idVendedorB, barrio_id: barrio!.id, operacion: 'arriendo',
+      tipo_inmueble: 'casa', precio: 1800000, descripcion: 'x',
+      slug: 'casa-del-vendedor-b', titulo: 'Casa del vendedor B', estado: 'publicada',
+    }).select('id').single()
+    expect(errorPropiedadB).toBeNull()
+
+    const { data: imagen, error: errorImagen } = await admin.from('imagenes_propiedad').insert({
+      propiedad_id: idPublicada, ruta_storage: 'x/secuestro.webp',
+      alt_text: 'Imagen que se intenta mover', orden: 7,
+    }).select('id').single()
+    expect(errorImagen).toBeNull()
+
+    const cliente = await clienteComo(A.correo, A.password)
+
+    // Se encadena .select(): un UPDATE de PostgREST que no afecta filas
+    // devuelve error nulo, asi que sin las filas devueltas la asercion no
+    // distinguiria "denegado" de "no habia nada que actualizar".
+    const { data: secuestro, error } = await cliente.from('imagenes_propiedad')
+      .update({ propiedad_id: propiedadB!.id }).eq('id', imagen!.id)
+      .select('id, propiedad_id')
+
+    // Una violacion de WITH CHECK no filtra en silencio: levanta error.
+    expect(error?.code).toBe('42501')
+    expect(secuestro ?? []).toHaveLength(0)
+
+    // Y el dato en la base sigue intacto, leido con service_role (salta RLS).
+    const { data: enBase } = await admin.from('imagenes_propiedad')
+      .select('propiedad_id').eq('id', imagen!.id).single()
+    expect(enBase!.propiedad_id).toBe(idPublicada)
+
+    // Caso positivo en el mismo test: mover la imagen a OTRA propiedad del
+    // propio vendedor A SI tiene que funcionar. Sin esto, un WITH CHECK que
+    // denegara todo UPDATE pasaria las aserciones de arriba.
+    const { data: movida, error: errorMover } = await cliente.from('imagenes_propiedad')
+      .update({ propiedad_id: idBorrador }).eq('id', imagen!.id)
+      .select('id, propiedad_id')
+    expect(errorMover).toBeNull()
+    expect(movida).toHaveLength(1)
+    expect(movida![0].propiedad_id).toBe(idBorrador)
   })
 
   it('la URL publica del objeto sigue resolviendo sin autenticacion', async () => {
