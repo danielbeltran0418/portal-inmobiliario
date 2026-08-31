@@ -28,7 +28,7 @@ describe('iniciarSesion', () => {
   beforeEach(() => {
     signInWithPassword.mockReset()
     loginBloqueado.mockReset().mockResolvedValue(false)
-    registrarIntentoLogin.mockReset().mockResolvedValue(undefined)
+    registrarIntentoLogin.mockReset().mockResolvedValue(true)
     redirect.mockReset()
   })
 
@@ -55,6 +55,54 @@ describe('iniciarSesion', () => {
     signInWithPassword.mockResolvedValue({ data: {}, error: { code: 'user_not_found' } })
     const r = await iniciarSesion({}, formulario('nadie@b.com', 'ClaveLargaSegura1'))
     expect(r.error).toBe(MENSAJE_CREDENCIALES)
+  })
+
+  // Antes, registrarIntentoLogin devolvia void y el error del RPC se perdia:
+  // si la llamada empezaba a fallar, los intentos dejaban de contarse y el
+  // limite se apagaba sin que nadie lo notara. Ahora informa del fallo y
+  // iniciarSesion degrada hacia el lado seguro.
+  describe('cuando el RPC del limitador falla', () => {
+    it('deniega si no se pudo contabilizar el intento FALLIDO', async () => {
+      signInWithPassword.mockResolvedValue({ data: {}, error: { code: 'invalid_credentials' } })
+      registrarIntentoLogin.mockResolvedValue(false)
+
+      const r = await iniciarSesion({}, formulario('a@b.com', 'ClaveLargaSegura1'))
+
+      // Se responde como si ya estuviera bloqueado: con el contador ciego, el
+      // sexto intento no se rechazaria nunca.
+      expect(r.error).toContain('Demasiados intentos')
+      expect(r.error).not.toBe(MENSAJE_CREDENCIALES)
+    })
+
+    // Control del caso contrario, en el mismo bloque: si el registro SI
+    // funciona, la respuesta vuelve a ser el mensaje uniforme de credenciales.
+    // Sin esto, un iniciarSesion que devolviera siempre 'Demasiados intentos'
+    // pasaria la prueba de arriba.
+    it('con el intento fallido bien registrado responde el mensaje uniforme', async () => {
+      signInWithPassword.mockResolvedValue({ data: {}, error: { code: 'invalid_credentials' } })
+      registrarIntentoLogin.mockResolvedValue(true)
+
+      const r = await iniciarSesion({}, formulario('a@b.com', 'ClaveLargaSegura1'))
+
+      expect(r.error).toBe(MENSAJE_CREDENCIALES)
+    })
+
+    // El lado opuesto: si el que falla es el registro del EXITO, las
+    // credenciales ya se demostraron correctas. Denegar ahi seria una
+    // negacion de servicio autoinfligida sin ganancia de seguridad; lo unico
+    // que se pierde es el limpiado de la ventana de fallos, que es
+    // conservador.
+    it('no deniega si lo que no se pudo registrar es el intento EXITOSO', async () => {
+      const parte = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
+      const token = `${parte({})}.${parte({ app_metadata: { rol: 'comprador' } })}.f`
+      signInWithPassword.mockResolvedValue({ data: { session: { access_token: token } }, error: null })
+      registrarIntentoLogin.mockResolvedValue(false)
+
+      const r = await iniciarSesion({}, formulario('v@b.com', 'ClaveLargaSegura1'))
+
+      expect(r).toBeUndefined()
+      expect(redirect).toHaveBeenCalledWith('/mi-cuenta')
+    })
   })
 
   it('registra el intento exitoso y redirige al panel del rol', async () => {
