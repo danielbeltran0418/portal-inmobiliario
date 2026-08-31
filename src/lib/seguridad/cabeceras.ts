@@ -17,9 +17,20 @@ export function generarNonce(): string {
 }
 
 export function construirCabeceras(nonce: string): Record<string, string> {
+  // React usa eval() en DESARROLLO para reconstruir pilas de llamada y otras
+  // ayudas de depuracion. Sin 'unsafe-eval' el navegador lo bloquea y la
+  // consola se llena en cada carga de "eval() is not supported in this
+  // environment" -- ruido que tapa las violaciones de CSP que si importan.
+  //
+  // En PRODUCCION React no lo usa nunca, y alli 'unsafe-eval' seria un agujero
+  // de verdad: reabre la ejecucion de cadenas como codigo, que es justo lo que
+  // cierran el nonce y 'strict-dynamic'. Por eso va condicionado, y hay una
+  // prueba unitaria que fija que en produccion NO aparece.
+  const evalDeDesarrollo = process.env.NODE_ENV !== 'production' ? ` 'unsafe-eval'` : ''
+
   const csp = [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' ${ORIGENES_SCRIPT.join(' ')}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${evalDeDesarrollo} ${ORIGENES_SCRIPT.join(' ')}`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' data: blob: https://*.supabase.co`,
     `font-src 'self'`,
