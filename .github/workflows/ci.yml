@@ -7,6 +7,8 @@ on:
 
 jobs:
   verificar:
+    # ubuntu-latest trae Docker preinstalado, que es lo que necesita la pila
+    # local de Supabase.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,11 +27,55 @@ jobs:
 
       - run: npm ci
 
-      - name: Levantar Supabase local
+      - name: Instalar el CLI de Supabase
         uses: supabase/setup-cli@v1
         with:
           version: latest
-      - run: supabase start
+
+      - name: Levantar la pila local de Supabase
+        run: supabase start
+
+      # El runner no tiene .env.local (esta en .gitignore) y las pruebas ya no
+      # dependen de ese archivo: leen process.env. Aqui se exporta el entorno
+      # real de la pila recien levantada.
+      #
+      # No basta con `supabase status -o env >> $GITHUB_ENV`, por tres razones
+      # comprobadas contra el CLI:
+      #   1. Los nombres que emite son API_URL / ANON_KEY / SERVICE_ROLE_KEY, no
+      #      los que usa la aplicacion. Se remapean con --override-name.
+      #   2. Los valores salen entre comillas dobles; el formato de $GITHUB_ENV
+      #      es literal y las comillas quedarian DENTRO del valor. El sed las
+      #      quita.
+      #   3. El CLI imprime en stdout lineas que no son variables (p. ej.
+      #      "Stopped services: [...]"), y una linea sin '=' hace fallar el
+      #      paso con "Invalid format". El grep deja pasar solo las tres claves.
+      - name: Exportar el entorno de Supabase
+        run: |
+          supabase status -o env \
+            --override-name api.url=NEXT_PUBLIC_SUPABASE_URL \
+            --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY \
+            --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
+            | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY)=' \
+            | sed 's/="\(.*\)"$/=\1/' \
+            >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000" >> "$GITHUB_ENV"
+          echo "APP_ENTORNO=local" >> "$GITHUB_ENV"
+
+      - name: Verificar que el entorno quedo exportado
+        run: |
+          for v in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY; do
+            if [ -z "${!v}" ]; then
+              echo "::error::$v quedo vacia tras exportar el entorno de Supabase"
+              exit 1
+            fi
+          done
+          echo "NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL"
+
+      # Aplica migraciones y seed sobre una base limpia. `supabase start` ya lo
+      # hace en un arranque en frio, pero el reset explicito deja el paso
+      # visible en el log y es idempotente si la pila se reutiliza.
+      - name: Aplicar migraciones y seed
+        run: supabase db reset
 
       - run: npm run lint
       - run: npx tsc --noEmit
