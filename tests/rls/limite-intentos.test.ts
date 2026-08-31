@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { clienteAdmin, clienteComo, crearUsuarioDePrueba } from './ayudantes'
+import { clienteAnonimo, clienteAdmin, clienteComo, crearUsuarioDePrueba } from './ayudantes'
 
 const CORREO = 'limite@prueba.test'
 const IP = '203.0.113.5'
@@ -70,6 +70,60 @@ describe('limite de intentos de login', () => {
 
     const { data: despues } = await clienteAdmin().rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
     expect(despues).toBe(false)
+  })
+
+  // El REVOKE original solo nombraba a anon y authenticated. Postgres concede
+  // EXECUTE a PUBLIC por defecto, y revocar de un rol no le quita lo heredado
+  // via PUBLIC: ambas funciones (SECURITY DEFINER) quedaban invocables sin
+  // autenticar por RPC. Verificado contra la base antes del arreglo: los dos
+  // POST anonimos devolvian 204 y 200.
+  //
+  // Cada prueba lleva su caso positivo con service_role EN EL MISMO test: sin
+  // el, un 42501 se veria igual si la funcion hubiera desaparecido o cambiado
+  // de firma, y la prueba pasaria sin demostrar nada sobre los privilegios.
+  it('el cliente anonimo NO puede ejecutar registrar_intento_login por RPC', async () => {
+    const argumentos = { p_correo: CORREO, p_ip: IP, p_exitoso: false }
+
+    const { error } = await clienteAnonimo().rpc('registrar_intento_login', argumentos)
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('42501')
+
+    const { error: errorAdmin } = await clienteAdmin().rpc('registrar_intento_login', argumentos)
+    expect(errorAdmin).toBeNull()
+  })
+
+  it('el cliente anonimo NO puede ejecutar login_bloqueado por RPC', async () => {
+    const argumentos = { p_correo: CORREO, p_ip: IP }
+
+    const { error } = await clienteAnonimo().rpc('login_bloqueado', argumentos)
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('42501')
+
+    const { data, error: errorAdmin } = await clienteAdmin().rpc('login_bloqueado', argumentos)
+    expect(errorAdmin).toBeNull()
+    expect(data).toBe(false)
+  })
+
+  // authenticated tampoco: el REVOKE lo nombra explicitamente ademas de PUBLIC,
+  // y un usuario con sesion es tan capaz de bloquear cuentas ajenas como uno
+  // anonimo. Sin esta prueba, un REVOKE que solo quitara PUBLIC dejando un
+  // GRANT a authenticated pasaria las dos de arriba.
+  it('un usuario autenticado tampoco puede ejecutar las funciones por RPC', async () => {
+    const cuenta = { correo: 'rpc-curioso@prueba.test', password: 'ClaveDePrueba123!' }
+    await crearUsuarioDePrueba({ ...cuenta, rol: 'comprador' })
+    const cliente = await clienteComo(cuenta.correo, cuenta.password)
+
+    const { error: errorRegistrar } = await cliente
+      .rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+    expect(errorRegistrar?.code).toBe('42501')
+
+    const { error: errorConsulta } = await cliente
+      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+    expect(errorConsulta?.code).toBe('42501')
+
+    const { error: errorAdmin } = await clienteAdmin()
+      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+    expect(errorAdmin).toBeNull()
   })
 
   it('un usuario autenticado no puede leer la tabla de intentos', async () => {
