@@ -37,9 +37,9 @@ La primera vez tarda varios minutos porque descarga las imagenes.
 commitearse nunca: contiene la `SUPABASE_SERVICE_ROLE_KEY`, que salta RLS por
 completo). `.env.example` documenta las claves que hacen falta.
 
-Los nombres que emite el CLI (`API_URL`, `ANON_KEY`, `SERVICE_ROLE_KEY`) **no**
-son los que usa la aplicacion, asi que hay que remapearlos. `--override-name` lo
-hace por ti.
+Los nombres que emite el CLI (`API_URL`, `ANON_KEY`, `SERVICE_ROLE_KEY`,
+`DB_URL`) **no** son los que usa la aplicacion, asi que hay que remapearlos.
+`--override-name` lo hace por ti.
 
 **Linux / macOS / Git Bash:**
 
@@ -48,7 +48,8 @@ npx supabase status -o env \
   --override-name api.url=NEXT_PUBLIC_SUPABASE_URL \
   --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY \
   --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
-  | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY)=' \
+  --override-name db.url=SUPABASE_DB_URL \
+  | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY|SUPABASE_DB_URL)=' \
   | sed 's/="\(.*\)"$/=\1/' > .env.local
 printf 'NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000\nAPP_ENTORNO=local\n' >> .env.local
 ```
@@ -59,26 +60,32 @@ printf 'NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000\nAPP_ENTORNO=local\n' >> .env.
 npx supabase status -o env `
   --override-name api.url=NEXT_PUBLIC_SUPABASE_URL `
   --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY `
-  --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY |
-  Select-String '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY)=' |
+  --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY `
+  --override-name db.url=SUPABASE_DB_URL |
+  Select-String '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY|SUPABASE_DB_URL)=' |
   ForEach-Object { $_.Line -replace '="(.*)"$', '=$1' } |
   Set-Content -Encoding utf8 .env.local
 Add-Content -Encoding utf8 .env.local "NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000"
 Add-Content -Encoding utf8 .env.local "APP_ENTORNO=local"
 ```
 
-El resultado tiene que contener estas cinco claves:
+El resultado tiene que contener estas seis claves:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
 APP_ENTORNO=local
 ```
 
-Si falta alguna de las tres primeras, la suite de pruebas aborta con un mensaje
-que dice cual falta y como obtenerla. No falla en silencio.
+Si falta alguna de las cuatro primeras, la suite de pruebas aborta con un
+mensaje que dice cual falta y como obtenerla. No falla en silencio.
+
+`SUPABASE_DB_URL` es la conexion directa a Postgres. La usa una sola prueba, la
+de la guarda de `supabase/seed.sql`: para comprobarla hay que ejecutar el
+archivo de verdad, y eso no se puede hacer por la API REST.
 
 Las mismas variables pueden llegar por el entorno del proceso en lugar del
 archivo; eso es lo que hace CI, donde `.env.local` no existe. Lo que ya este

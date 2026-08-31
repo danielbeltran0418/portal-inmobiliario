@@ -16,6 +16,10 @@ const OBLIGATORIAS = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
+  // Conexion directa a Postgres. La necesita la prueba de la guarda del seed,
+  // que ejecuta supabase/seed.sql de verdad: eso no se puede hacer por la API
+  // REST.
+  'SUPABASE_DB_URL',
 ] as const
 
 // Fallo ruidoso y con instrucciones. La version anterior usaba `process.env.X!`:
@@ -39,6 +43,7 @@ function entornoDePruebas(): Record<(typeof OBLIGATORIAS)[number], string> {
         '  NEXT_PUBLIC_SUPABASE_URL      <- API_URL',
         '  NEXT_PUBLIC_SUPABASE_ANON_KEY <- ANON_KEY',
         '  SUPABASE_SERVICE_ROLE_KEY     <- SERVICE_ROLE_KEY',
+        '  SUPABASE_DB_URL               <- DB_URL',
         '',
         'En CI, exportalas al entorno del job (ver .github/workflows/ci.yml).',
       ].join('\n'),
@@ -49,6 +54,7 @@ function entornoDePruebas(): Record<(typeof OBLIGATORIAS)[number], string> {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+    SUPABASE_DB_URL: process.env.SUPABASE_DB_URL as string,
   }
 }
 
@@ -56,6 +62,8 @@ const entorno = entornoDePruebas()
 const URL = entorno.NEXT_PUBLIC_SUPABASE_URL
 const ANON = entorno.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const SERVICE = entorno.SUPABASE_SERVICE_ROLE_KEY
+
+export const URL_BASE_DE_DATOS = entorno.SUPABASE_DB_URL
 
 export function clienteAnonimo(): SupabaseClient {
   return createClient(URL, ANON, { auth: { persistSession: false } })
