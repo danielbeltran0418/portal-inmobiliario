@@ -46,6 +46,13 @@ test('el sexto intento fallido de login es rechazado', async ({ page }) => {
     await page.fill('input[name="password"]', 'ClaveEquivocada123')
     await page.click('button[type="submit"]')
     await expect(alerta).toBeVisible()
+
+    // Contraste explicito: el primer intento es solo una credencial
+    // incorrecta, no el bloqueo -- para que la diferencia con el sexto
+    // quede en la prueba y no solo se infiera.
+    if (intento === 1) {
+      await expect(alerta).toContainText(/Correo o contrasena incorrectos/i)
+    }
   }
 
   await expect(alerta).toContainText(/Demasiados intentos/i)
