@@ -86,3 +86,18 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - run: npm run build
+
+      # Guarda del criterio 8 sobre la salida real del build.
+      #
+      # Va DESPUES de `npm run build` a proposito: lee .next/, que es lo que el
+      # build acaba de escribir. El script aborta si ese directorio no esta, asi
+      # que un build que no llegue a correr no lo deja pasar por vacio.
+      #
+      # Lo que vigila: que ninguna pagina quede prerenderizada. Un HTML escrito
+      # en build no puede llevar el nonce de la CSP -- se genera por peticion en
+      # el middleware -- y con 'strict-dynamic' en la politica esos <script>
+      # quedan bloqueados: la pagina se sirve y no hidrata. Ya paso una vez en
+      # esta rama, y las otras tres redes no lo cubren (ver el comentario largo
+      # dentro del script).
+      - name: Verificar que no hay paginas prerenderizadas
+        run: npm run verificar:render
