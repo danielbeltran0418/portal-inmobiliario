@@ -42,12 +42,29 @@ export async function iniciarSesion(
   const { data, error } = await supabase.auth.signInWithPassword({ email: correo, password })
 
   if (error || !data.session) {
-    await registrarIntentoLogin(correo, ip, false)
+    const quedoRegistrado = await registrarIntentoLogin(correo, ip, false)
+
+    // Si el fallo NO se pudo contabilizar, el limitador esta ciego: los
+    // intentos no se acumulan y el sexto no se rechazaria nunca. Se degrada
+    // hacia el lado seguro y se responde como si ya estuviera bloqueado. Al
+    // atacante no le da informacion nueva -- el mensaje es el mismo para
+    // cualquier correo, exista la cuenta o no -- y al usuario legitimo solo le
+    // cuesta una espera mientras la infraestructura este rota.
+    if (!quedoRegistrado) {
+      return { error: MENSAJE_BLOQUEADO }
+    }
+
     // El mismo mensaje para credenciales malas y usuario inexistente:
     // distinguirlos permitiria enumerar que correos tienen cuenta.
     return { error: error ? mapearError(error).mensaje : MENSAJE_CREDENCIALES }
   }
 
+  // Aqui las credenciales YA son correctas. Si no se puede registrar el exito,
+  // lo unico que se pierde es el limpiado de la ventana de fallos previos: el
+  // usuario podria toparse con el bloqueo antes de tiempo mas adelante. Eso es
+  // conservador, y es el lado correcto en el que fallar. Denegar a quien acaba
+  // de demostrar su contrasena seria una negacion de servicio autoinfligida sin
+  // ninguna ganancia de seguridad. El error ya queda en el log del servidor.
   await registrarIntentoLogin(correo, ip, true)
   redirect(rutaDePanel(rolDesdeToken(data.session.access_token)))
 }

@@ -10,3 +10,10 @@ regex = '''eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}'''
 
 [allowlist]
 paths = ['''\.env\.example$''', '''supabase/seed\.sql$''']
+
+# Las tres contrasenas del seed de desarrollo. Son publicas por diseno: estan
+# en supabase/seed.sql desde el primer dia y el README las documenta, porque
+# sin ellas nadie puede levantar el proyecto. Se listan una a una en vez de
+# poner README.md entero en `paths`: si algun dia se cuela un secreto DE VERDAD
+# en el README, gitleaks tiene que seguir viendolo.
+regexes = ['''(Admin|Vendedor|Comprador)Prueba2026\*''']
