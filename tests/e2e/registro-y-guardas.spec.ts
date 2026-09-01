@@ -63,6 +63,43 @@ test('la respuesta incluye la CSP con nonce', async ({ page }) => {
   expect(respuesta!.headers()['content-security-policy']).toContain('nonce-')
 })
 
+// Que la cabecera lleve un nonce no prueba nada por si solo: si ese nonce no
+// llega a los <script> de Next, la CSP los bloquea ('strict-dynamic' hace que
+// el navegador ignore 'self') y la pagina no hidrata. Esta prueba fija la
+// relacion que de verdad importa: el nonce de la cabecera y el de CADA script
+// son el mismo.
+//
+// Limitacion conocida: la suite e2e corre contra `npm run dev`, donde todo se
+// renderiza dinamicamente. El otro modo de romper esto -- que `next build`
+// prerenderice la pagina y `next start` sirva ese HTML sin nonce -- solo se
+// reproduce en un build de produccion, y se cubre con la verificacion manual
+// documentada (npm run build && npm run start).
+test('el nonce de la cabecera CSP es el mismo que el de todos los scripts de Next', async ({
+  page,
+}) => {
+  const respuesta = await page.goto('/login')
+  const csp = respuesta!.headers()['content-security-policy']
+  const nonceDeLaCabecera = csp.match(/'nonce-([^']+)'/)?.[1]
+  expect(nonceDeLaCabecera).toBeTruthy()
+
+  // Se auditan las etiquetas del HTML que devolvio el servidor, no el DOM ya
+  // hidratado. Dos razones: el navegador borra el atributo nonce del DOM tras
+  // el parseo (anti-exfiltracion con selectores CSS), y en el DOM aparecen
+  // ademas scripts que el cliente inyecta en caliente (el HMR de dev) que por
+  // diseno NO llevan nonce -- 'strict-dynamic' les hereda la confianza del
+  // script que los inserto. Lo que tiene que llevar nonce es lo que sirve el
+  // servidor.
+  const html = await respuesta!.text()
+  const etiquetas = html.match(/<script\b[^>]*>/g) ?? []
+  expect(etiquetas.length).toBeGreaterThan(0)
+
+  const sinNonce = etiquetas.filter((e) => !e.includes('nonce='))
+  expect(sinNonce).toEqual([])
+
+  const nonces = [...new Set(etiquetas.map((e) => e.match(/nonce="([^"]*)"/)?.[1]))]
+  expect(nonces).toEqual([nonceDeLaCabecera])
+})
+
 // Mandato de revision: la guarda de sesion redirige a /login antes de que
 // exista un usuario, y esa redireccion es una respuesta HTTP propia (307).
 // Una version anterior del middleware devolvia esa redireccion sin pasar

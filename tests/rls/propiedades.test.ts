@@ -70,6 +70,45 @@ describe('RLS de propiedades', () => {
     expect(data ?? []).toHaveLength(0)
   })
 
+  // RLS filtra FILAS, no columnas: la politica de lectura publica deja ver la
+  // propiedad publicada entera, y el GRANT SELECT original era sobre todas las
+  // columnas. La direccion exacta se protege con privilegios de columna, que es
+  // otro mecanismo, y por eso ninguna prueba de RLS lo cubria.
+  it('el anonimo NO puede leer direccion, latitud ni longitud', async () => {
+    const anonimo = clienteAnonimo()
+
+    for (const columna of ['direccion', 'latitud', 'longitud']) {
+      const { data, error } = await anonimo.from('propiedades').select(columna).eq('id', idPublicada)
+      expect(error?.code, `columna ${columna}`).toBe('42501')
+      expect(data ?? [], `columna ${columna}`).toHaveLength(0)
+    }
+
+    // Un select('*') anonimo tambien queda denegado: pedir la tabla entera
+    // incluye las columnas privadas. Es deliberado -- anadir una columna
+    // sensible no debe publicarla sola.
+    const { error: errorAsterisco } = await anonimo.from('propiedades').select('*').eq('id', idPublicada)
+    expect(errorAsterisco?.code).toBe('42501')
+
+    // Caso positivo 1: el MISMO cliente anonimo, pidiendo columnas publicas,
+    // si recibe la fila. Sin esto, los 42501 de arriba se verian igual si la
+    // fila no existiera o si anon hubiera perdido el acceso a la tabla entera.
+    const { data: publicas, error: errorPublicas } = await anonimo
+      .from('propiedades').select('id, titulo, precio, barrio_id, estado').eq('id', idPublicada)
+    expect(errorPublicas).toBeNull()
+    expect(publicas).toHaveLength(1)
+    expect(publicas![0].precio).toBe(350000000)
+    expect(publicas![0].estado).toBe('publicada')
+
+    // Caso positivo 2: el vendedor dueno, autenticado, SI ve su direccion.
+    // authenticated conserva el SELECT de tabla completa.
+    const cliente = await clienteComo(A.correo, A.password)
+    const { data: comoDueno, error: errorDueno } = await cliente
+      .from('propiedades').select('direccion, latitud, longitud').eq('id', idPublicada)
+    expect(errorDueno).toBeNull()
+    expect(comoDueno).toHaveLength(1)
+    expect(comoDueno![0].direccion).toBe('Calle 1 #2-3')
+  })
+
   it('el vendedor B no puede publicar a nombre del vendedor A', async () => {
     const cliente = await clienteComo(B.correo, B.password)
     const { error } = await cliente.from('propiedades').insert({
