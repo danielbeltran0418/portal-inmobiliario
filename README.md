@@ -164,14 +164,42 @@ Las pruebas de RLS y las e2e escriben en la base local. Si una queda a medias,
 > segunda capa, no la primera — nadie fija ese marcador automaticamente. El
 > control que de verdad importa es no aplicar el archivo.
 
-## 9. Despliegue a produccion
+## 9. Politica de contrasenas
+
+Minimo **12 caracteres**, aplicado en dos sitios porque uno solo no basta:
+
+| Donde | Que cubre |
+|---|---|
+| `src/lib/validacion/esquemas.ts` (Zod) | el formulario, con el mensaje al usuario |
+| `supabase/config.toml` → `minimum_password_length` | **todo lo demas**: un POST a `/auth/v1/signup`, el SDK desde una consola, o un cambio de contrasena que no pase por el formulario |
+
+No se exigen clases de caracteres (`password_requirements` vacio), y es una
+decision, no un olvido: obligan a patrones predecibles del tipo `P@ssw0rd1`
+que los diccionarios de ataque ya tienen. El spec elige longitud +
+verificacion contra contrasenas filtradas en su lugar.
+
+> **Pendiente en produccion:** esa verificacion contra contrasenas filtradas
+> (HaveIBeenPwned) **no se puede configurar desde `config.toml`** — es una
+> opcion de la plataforma alojada, no del CLI local. Hay que activarla a mano
+> en el proyecto de produccion: *Authentication → Settings → Prevent use of
+> leaked passwords*.
+
+## 10. Despliegue a produccion
 
 Produccion se actualiza SOLO con `supabase db push` (migraciones).
 Nunca ejecutar `supabase db reset` ni aplicar `seed.sql` contra produccion.
 El super admin de produccion se crea una vez, a mano, con contrasena generada y
 guardada en un gestor de contrasenas.
 
-## 10. Estructura
+Variables que hay que fijar en el entorno de produccion, ademas de las de
+Supabase (ver `.env.example`):
+
+| Variable | Por que |
+|---|---|
+| `NEXT_PUBLIC_APP_URL` | obligatoria: sin ella el origen de las redirecciones falla cerrado |
+| `IP_CABECERA_CONFIABLE` | nombre de la cabecera que **reescribe la plataforma** con la IP real (en Vercel, `x-vercel-forwarded-for`). Sin ella el limite de intentos degrada a ventana por correo |
+
+## 11. Estructura
 
 ```
 src/app/            rutas del App Router (auth, vendedor, comprador, admin)
