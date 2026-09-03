@@ -1,11 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const signUp = vi.fn()
+const verificarTurnstile = vi.fn()
+
 vi.mock('@/lib/supabase/cliente-servidor', () => ({
   crearClienteServidor: async () => ({ auth: { signUp } }),
 }))
+// ip-cliente.ts declara 'server-only', que solo resuelve dentro del bundler de
+// Next. Mismo mock que en origen-peticion.test.ts.
+vi.mock('server-only', () => ({}))
+vi.mock('next/headers', () => ({ headers: async () => new Headers() }))
+// El captcha se sustituye para fijar su veredicto; la funcion real se prueba en
+// tests/unit/turnstile.test.ts. Aqui se comprueba el cableado.
+vi.mock('@/lib/seguridad/turnstile', () => ({
+  CAMPO_TURNSTILE: 'cf-turnstile-response',
+  verificarTurnstile,
+}))
 
 const { registrarUsuario } = await import('@/app/(auth)/registro/acciones')
+const { MENSAJE_CAPTCHA } = await import('@/lib/errores/mapear')
 
 function formulario(campos: Record<string, string>): FormData {
   const fd = new FormData()
@@ -25,6 +38,40 @@ describe('registrarUsuario', () => {
   beforeEach(() => {
     signUp.mockReset()
     signUp.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null })
+    verificarTurnstile.mockReset().mockResolvedValue(true)
+  })
+
+  /**
+   * Hallazgo I4. El registro no tiene limite de intentos que lo proteja -- el
+   * de intentos_login solo cubre el login -- asi que el captcha es aqui la
+   * unica barrera contra el alta masiva de cuentas.
+   */
+  describe('captcha', () => {
+    it('rechaza el envio que no supera el captcha, sin crear la cuenta', async () => {
+      verificarTurnstile.mockResolvedValue(false)
+
+      const r = await registrarUsuario({}, formulario(validos))
+
+      expect(r.error).toBe(MENSAJE_CAPTCHA)
+      expect(r.exito).toBeUndefined()
+      expect(signUp).not.toHaveBeenCalled()
+    })
+
+    it('le pasa el token del formulario', async () => {
+      await registrarUsuario(
+        {},
+        formulario({ ...validos, 'cf-turnstile-response': 'token-del-widget' }),
+      )
+      expect(verificarTurnstile.mock.calls[0][0]).toBe('token-del-widget')
+    })
+
+    // Caso positivo del primero, en el mismo bloque: con el captcha superado la
+    // cuenta si se crea. Sin esto, una accion que rechazara siempre pasaria.
+    it('con el captcha superado el registro continua', async () => {
+      const r = await registrarUsuario({}, formulario(validos))
+      expect(signUp).toHaveBeenCalled()
+      expect(r.exito).toBe(true)
+    })
   })
 
   it('envia el rol solicitado dentro de los metadatos', async () => {

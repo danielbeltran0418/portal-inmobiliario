@@ -184,7 +184,59 @@ verificacion contra contrasenas filtradas en su lugar.
 > en el proyecto de produccion: *Authentication → Settings → Prevent use of
 > leaked passwords*.
 
-## 10. Despliegue a produccion
+## 10. Captcha (Turnstile de Cloudflare)
+
+El spec pide captcha en registro y login. Esta implementado **tras bandera de
+entorno**, porque las claves las emite Cloudflare y todavia no hay cuenta:
+
+| Variable | Donde vive | |
+|---|---|---|
+| `TURNSTILE_SITE_KEY` | llega al navegador dentro del HTML | clave publica del widget |
+| `TURNSTILE_SECRET_KEY` | **solo servidor** | la que canjea el token contra Cloudflare |
+
+**Las dos o ninguna.** Con las dos definidas se pinta el widget y el server
+action **verifica el token contra Cloudflare antes de procesar el formulario**.
+Sin ninguna, el captcha se omite y los formularios se comportan igual que antes.
+Con una sola, el captcha queda desactivado y se avisa por consola: con solo la
+secreta no habria widget y nadie podria entrar; con solo la publica se pintaria
+un desafio que nadie verifica, que aparenta una proteccion que no existe.
+
+### Como obtenerlas
+
+1. <https://dash.cloudflare.com> → **Turnstile** → *Add site*.
+2. Dominio del despliegue (para probar en local, `127.0.0.1` vale).
+3. Widget mode **Managed**.
+4. Copiar *Site Key* y *Secret Key* al entorno.
+
+Para probarlo **sin cuenta**, Cloudflare publica claves de prueba que siempre
+dan el mismo veredicto (documentadas en
+<https://developers.cloudflare.com/turnstile/troubleshooting/testing/>):
+
+| Efecto | `TURNSTILE_SITE_KEY` | `TURNSTILE_SECRET_KEY` |
+|---|---|---|
+| siempre aprueba | `1x00000000000000000000AA` | `1x0000000000000000000000000000000AA` |
+| siempre rechaza | `2x00000000000000000000AB` | `2x0000000000000000000000000000000AA` |
+
+La pareja que **rechaza** es la util: demuestra que la verificacion del servidor
+esta corriendo de verdad. Con la que aprueba, siteverify devuelve `success` ante
+cualquier token, asi que no distingue "verifico" de "no verifico".
+
+### Decisiones que conviene conocer
+
+- **La verificacion es del servidor.** El widget solo produce un token; quien
+  decide es `siteverify`, llamado desde el server action. Un captcha comprobado
+  solo en el cliente lo salta cualquiera con `curl`.
+- **Se falla cerrado.** Si Cloudflare no responde, el formulario se rechaza. Lo
+  contrario convertiria una caida —o cualquier interferencia con esa peticion
+  saliente— en un interruptor para apagar el captcha.
+- **La CSP no se toco.** La politica lleva `strict-dynamic`, que hace que el
+  navegador ignore la lista de origenes de `script-src`; el script de Turnstile
+  se autoriza por **nonce**, igual que los de Next. `frame-src` y `connect-src`
+  ya contemplaban `challenges.cloudflare.com` desde antes.
+- **Un captcha fallido no cuenta como intento fallido de login.** Si contara,
+  cinco envios con el captcha en blanco bloquearian la cuenta de cualquiera.
+
+## 11. Despliegue a produccion
 
 Produccion se actualiza SOLO con `supabase db push` (migraciones).
 Nunca ejecutar `supabase db reset` ni aplicar `seed.sql` contra produccion.
@@ -198,8 +250,9 @@ Supabase (ver `.env.example`):
 |---|---|
 | `NEXT_PUBLIC_APP_URL` | obligatoria: sin ella el origen de las redirecciones falla cerrado |
 | `IP_CABECERA_CONFIABLE` | nombre de la cabecera que **reescribe la plataforma** con la IP real (en Vercel, `x-vercel-forwarded-for`). Sin ella el limite de intentos degrada a ventana por correo |
+| `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY` | activan el captcha de registro y login (§10). Sin ellas SP0 funciona, pero sin captcha |
 
-## 11. Estructura
+## 12. Estructura
 
 ```
 src/app/            rutas del App Router (auth, vendedor, comprador, admin)
