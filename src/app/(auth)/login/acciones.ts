@@ -7,6 +7,7 @@ import { esquemaLogin } from '@/lib/validacion/esquemas'
 import { mapearError, MENSAJE_CREDENCIALES } from '@/lib/errores/mapear'
 import { loginBloqueado, registrarIntentoLogin } from '@/lib/auth/limite-intentos'
 import { rolDesdeToken, rutaDePanel } from '@/lib/auth/roles'
+import { ipDeConfianza } from '@/lib/http/ip-cliente'
 
 export interface EstadoFormulario {
   error?: string
@@ -14,12 +15,6 @@ export interface EstadoFormulario {
 
 const MENSAJE_BLOQUEADO =
   'Demasiados intentos fallidos. Espera 15 minutos antes de volver a intentar.'
-
-async function ipDeLaPeticion(): Promise<string> {
-  const cabeceras = await headers()
-  const reenviada = cabeceras.get('x-forwarded-for')
-  return reenviada?.split(',')[0]?.trim() || '127.0.0.1'
-}
 
 export async function iniciarSesion(
   _estado: EstadoFormulario,
@@ -32,7 +27,12 @@ export async function iniciarSesion(
   if (!analisis.success) return { error: MENSAJE_CREDENCIALES }
 
   const { correo, password } = analisis.data
-  const ip = await ipDeLaPeticion()
+
+  // null cuando no hay una IP en la que confiar. No es "sin limite": para el
+  // limitador significa "ventana por correo, sin discriminar IP", que es mas
+  // estricto y no falsificable. Ver src/lib/http/ip-cliente.ts y la migracion
+  // 20260831000500.
+  const ip = ipDeConfianza(await headers())
 
   if (await loginBloqueado(correo, ip)) {
     return { error: MENSAJE_BLOQUEADO }

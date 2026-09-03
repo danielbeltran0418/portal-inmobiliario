@@ -17,7 +17,15 @@ function registrarFallo(operacion: string, error: unknown): void {
   )
 }
 
-export async function loginBloqueado(correo: string, ip: string): Promise<boolean> {
+/**
+ * `ip` en null significa "no se pudo determinar una IP de confianza", no "sin
+ * IP que comprobar". Las dos funciones de la base lo interpretan como ventana
+ * por correo sin discriminar IP (migracion 20260831000500): un limite MAS
+ * estricto que el normal y, sobre todo, no falsificable, porque el correo lo
+ * fija el formulario y no una cabecera que manda el cliente.
+ * Quien decide cuando no hay IP fiable es src/lib/http/ip-cliente.ts.
+ */
+export async function loginBloqueado(correo: string, ip: string | null): Promise<boolean> {
   const { data, error } = await crearClienteAdmin()
     .rpc('login_bloqueado', { p_correo: correo, p_ip: ip })
 
@@ -44,7 +52,7 @@ export async function loginBloqueado(correo: string, ip: string): Promise<boolea
  * src/app/(auth)/login/acciones.ts.
  */
 export async function registrarIntentoLogin(
-  correo: string, ip: string, exitoso: boolean,
+  correo: string, ip: string | null, exitoso: boolean,
 ): Promise<boolean> {
   const { error } = await crearClienteAdmin()
     .rpc('registrar_intento_login', { p_correo: correo, p_ip: ip, p_exitoso: exitoso })
