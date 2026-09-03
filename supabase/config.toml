@@ -178,9 +178,27 @@ enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+#
+# 12, el minimo del spec. Estaba en 6, el valor por defecto del CLI: la
+# validacion de Zod en src/lib/validacion/esquemas.ts pedia 12, pero esa solo
+# corre en el formulario. GoTrue aceptaba 6 por cualquier otra via -- un POST
+# directo a /auth/v1/signup, el SDK desde una consola, o un cambio de
+# contrasena que no pase por el formulario. La regla del cliente no es la
+# regla: la regla es la que aplica el servidor de auth.
+minimum_password_length = 12
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
+#
+# Se deja vacio A PROPOSITO, no por descuido. El spec elige explicitamente
+# longitud + verificacion contra contrasenas filtradas en vez de exigir
+# simbolos: las clases de caracteres obligatorias empujan a la gente hacia
+# patrones predecibles (P@ssw0rd1) que los diccionarios de ataque ya tienen.
+#
+# La otra mitad de esa politica -- HaveIBeenPwned -- NO se puede configurar
+# desde este archivo: es una opcion de la plataforma alojada (Auth > Settings >
+# "Prevent use of leaked passwords"), y el CLI local no la expone. Queda
+# pendiente de activar en el proyecto de produccion cuando exista; anotado en
+# el README.
 password_requirements = ""
 
 # Configure passkey sign-ins.
