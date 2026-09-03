@@ -9,10 +9,17 @@ vi.mock('@/lib/supabase/cliente-servidor', () => ({
   crearClienteServidor: async () => ({ auth: { signInWithPassword } }),
 }))
 vi.mock('@/lib/auth/limite-intentos', () => ({ loginBloqueado, registrarIntentoLogin }))
+// x-forwarded-for con un valor hostil, a proposito: lo manda el cliente. La
+// accion ya no lo lee (hallazgo I3) -- resuelve la IP con ipDeConfianza, que
+// fuera de produccion devuelve 127.0.0.1 sin mirar ninguna cabecera. Se deja
+// puesto para que las aserciones de abajo demuestren que NO se cuela.
 vi.mock('next/headers', () => ({
   headers: async () => new Headers({ 'x-forwarded-for': '203.0.113.7' }),
 }))
 vi.mock('next/navigation', () => ({ redirect }))
+// ip-cliente.ts declara 'server-only', que solo resuelve dentro del bundler
+// de Next. Mismo mock que en origen-peticion.test.ts.
+vi.mock('server-only', () => ({}))
 
 const { iniciarSesion } = await import('@/app/(auth)/login/acciones')
 const { MENSAJE_CREDENCIALES } = await import('@/lib/errores/mapear')
@@ -42,7 +49,28 @@ describe('iniciarSesion', () => {
   it('registra el intento fallido', async () => {
     signInWithPassword.mockResolvedValue({ data: {}, error: { code: 'invalid_credentials' } })
     await iniciarSesion({}, formulario('a@b.com', 'ClaveLargaSegura1'))
-    expect(registrarIntentoLogin).toHaveBeenCalledWith('a@b.com', '203.0.113.7', false)
+    expect(registrarIntentoLogin).toHaveBeenCalledWith('a@b.com', '127.0.0.1', false)
+  })
+
+  /**
+   * Hallazgo I3, comprobado en el punto donde importa: la accion completa.
+   *
+   * tests/unit/ip-cliente.test.ts prueba el helper aislado; esto prueba que la
+   * accion lo USA. Sin esta prueba, alguien podria reintroducir la lectura de
+   * x-forwarded-for aqui y el helper seguiria verde en su propia suite.
+   */
+  it('no usa el x-forwarded-for que manda el cliente como IP del limitador', async () => {
+    signInWithPassword.mockResolvedValue({ data: {}, error: { code: 'invalid_credentials' } })
+
+    await iniciarSesion({}, formulario('a@b.com', 'ClaveLargaSegura1'))
+
+    const [, ipUsada] = registrarIntentoLogin.mock.calls[0]
+    expect(ipUsada).not.toBe('203.0.113.7')
+    // Caso positivo: se llamo, y con la IP que resuelve la politica en un
+    // entorno de desarrollo. Sin esto, una accion que no llamara al limitador
+    // en absoluto pasaria el `not.toBe`.
+    expect(ipUsada).toBe('127.0.0.1')
+    expect(loginBloqueado).toHaveBeenCalledWith('a@b.com', '127.0.0.1')
   })
 
   it('usa el mismo mensaje ante credenciales invalidas', async () => {
@@ -111,7 +139,7 @@ describe('iniciarSesion', () => {
     signInWithPassword.mockResolvedValue({ data: { session: { access_token: token } }, error: null })
 
     await iniciarSesion({}, formulario('v@b.com', 'ClaveLargaSegura1'))
-    expect(registrarIntentoLogin).toHaveBeenCalledWith('v@b.com', '203.0.113.7', true)
+    expect(registrarIntentoLogin).toHaveBeenCalledWith('v@b.com', '127.0.0.1', true)
     expect(redirect).toHaveBeenCalledWith('/panel')
   })
 })
