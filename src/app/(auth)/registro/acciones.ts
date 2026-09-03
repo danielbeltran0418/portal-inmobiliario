@@ -1,8 +1,11 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { esquemaRegistro } from '@/lib/validacion/esquemas'
-import { mapearError } from '@/lib/errores/mapear'
+import { mapearError, MENSAJE_CAPTCHA } from '@/lib/errores/mapear'
+import { ipDeConfianza } from '@/lib/http/ip-cliente'
+import { CAMPO_TURNSTILE, verificarTurnstile } from '@/lib/seguridad/turnstile'
 
 export interface EstadoFormulario {
   error?: string
@@ -25,6 +28,20 @@ export async function registrarUsuario(
 
   if (!analisis.success) {
     return { error: analisis.error.issues[0]?.message ?? 'Revisa los datos del formulario.' }
+  }
+
+  /**
+   * Captcha (hallazgo I4). El registro no tiene limite de intentos que lo
+   * proteja -- el de intentos_login solo cubre el login -- asi que aqui es la
+   * unica barrera contra el alta masiva de cuentas.
+   *
+   * Se verifica en el SERVIDOR contra siteverify. Con las variables de
+   * Turnstile sin definir, verificarTurnstile devuelve true sin mirar nada y
+   * este bloque no cambia el comportamiento.
+   */
+  const ip = ipDeConfianza(await headers())
+  if (!(await verificarTurnstile(formData.get(CAMPO_TURNSTILE), ip))) {
+    return { error: MENSAJE_CAPTCHA }
   }
 
   const { nombre, correo, telefono, password, rol } = analisis.data

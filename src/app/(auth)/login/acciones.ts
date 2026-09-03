@@ -4,10 +4,11 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { esquemaLogin } from '@/lib/validacion/esquemas'
-import { mapearError, MENSAJE_CREDENCIALES } from '@/lib/errores/mapear'
+import { mapearError, MENSAJE_CAPTCHA, MENSAJE_CREDENCIALES } from '@/lib/errores/mapear'
 import { loginBloqueado, registrarIntentoLogin } from '@/lib/auth/limite-intentos'
 import { rolDesdeToken, rutaDePanel } from '@/lib/auth/roles'
 import { ipDeConfianza } from '@/lib/http/ip-cliente'
+import { CAMPO_TURNSTILE, verificarTurnstile } from '@/lib/seguridad/turnstile'
 
 export interface EstadoFormulario {
   error?: string
@@ -36,6 +37,27 @@ export async function iniciarSesion(
 
   if (await loginBloqueado(correo, ip)) {
     return { error: MENSAJE_BLOQUEADO }
+  }
+
+  /**
+   * Captcha (hallazgo I4). Va DESPUES del limitador y ANTES de Supabase, y las
+   * dos posiciones son deliberadas:
+   *
+   * - Despues del limitador: a una cuenta ya bloqueada se le responde sin
+   *   gastar una peticion a Cloudflare por cada intento.
+   * - Antes de signInWithPassword: el captcha existe para frenar al bot antes
+   *   de que consuma nada, no para comentar el resultado.
+   *
+   * Y un captcha fallido NO se contabiliza como intento fallido de login.
+   * Contarlo abriria una forma trivial de bloquear la cuenta de cualquiera:
+   * cinco envios con el captcha en blanco y la victima se queda fuera 15
+   * minutos sin que nadie haya tocado su contrasena.
+   *
+   * Con TURNSTILE_SITE_KEY y TURNSTILE_SECRET_KEY sin definir, verificarTurnstile
+   * devuelve true sin mirar nada y este bloque no cambia el comportamiento.
+   */
+  if (!(await verificarTurnstile(formData.get(CAMPO_TURNSTILE), ip))) {
+    return { error: MENSAJE_CAPTCHA }
   }
 
   const supabase = await crearClienteServidor()
