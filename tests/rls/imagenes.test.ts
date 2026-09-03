@@ -3,6 +3,7 @@ import { clienteAnonimo, clienteAdmin, clienteComo, crearUsuarioDePrueba } from 
 
 const A = { correo: 'img-vendedor-a@prueba.test', password: 'ClaveDePrueba123!' }
 const B = { correo: 'img-vendedor-b@prueba.test', password: 'ClaveDePrueba123!' }
+const MODERADOR = { correo: 'img-super-admin@prueba.test', password: 'ClaveDePrueba123!' }
 let idPublicada = ''
 let idBorrador = ''
 let idVendedorA = ''
@@ -176,6 +177,158 @@ describe('imagenes de propiedad', () => {
     expect(errorMover).toBeNull()
     expect(movida).toHaveLength(1)
     expect(movida![0].propiedad_id).toBe(idBorrador)
+  })
+
+  /**
+   * Hallazgo I7: imagenes_propiedad era la unica tabla del modelo sin politica
+   * de super_admin, justo la que hace falta para moderar fotos.
+   *
+   * Las tres pruebas comparten la misma imagen sobre una propiedad del
+   * vendedor A, y en cada una el vendedor B -- que no es dueno de nada de eso
+   * -- hace de control negativo EN EL MISMO test. Sin el, una politica escrita
+   * como `USING (true)` pasaria las aserciones del super_admin y habria abierto
+   * las fotos de todo el portal a cualquier vendedor.
+   */
+  describe('moderacion del super_admin', () => {
+    let idImagenAjena = ''
+
+    beforeAll(async () => {
+      await crearUsuarioDePrueba({ ...MODERADOR, rol: 'super_admin' })
+    })
+
+    // Imagen nueva por prueba: la de borrado desaparece, y encadenar las tres
+    // sobre la misma fila las haria dependientes del orden de ejecucion.
+    async function imagenSobrePropiedadDeA(etiqueta: string): Promise<string> {
+      const { data, error } = await clienteAdmin().from('imagenes_propiedad').insert({
+        propiedad_id: idPublicada,
+        ruta_storage: `x/moderacion-${etiqueta}.webp`,
+        alt_text: `Imagen a moderar ${etiqueta}`,
+        orden: 20,
+      }).select('id').single()
+      expect(error).toBeNull()
+      return data!.id
+    }
+
+    /**
+     * Sobre un BORRADOR, y esto es lo delicado de la prueba.
+     *
+     * La primera version usaba la propiedad publicada y pasaba IGUAL sin la
+     * migracion: sobre lo publicado, el super_admin ya veia la imagen por
+     * imagenes_lectura_publica, como cualquiera. La prueba habria certificado
+     * una politica que no existia. Verificado quitando la migracion: en verde.
+     *
+     * Sobre un borrador no hay lectura publica ni lectura de dueno que valgan
+     * -- el moderador no es el vendedor A -- asi que lo unico que puede hacer
+     * visible esa fila es imagenes_lectura_super_admin. Que es lo que se mide.
+     */
+    it('el super_admin VE la imagen de un BORRADOR ajeno; el vendedor B no', async () => {
+      const { data: imagen, error: errorInsert } = await clienteAdmin()
+        .from('imagenes_propiedad').insert({
+          propiedad_id: idBorrador,
+          ruta_storage: 'x/moderacion-borrador.webp',
+          alt_text: 'Imagen de un borrador ajeno',
+          orden: 21,
+        }).select('id').single()
+      expect(errorInsert).toBeNull()
+      idImagenAjena = imagen!.id
+
+      const moderador = await clienteComo(MODERADOR.correo, MODERADOR.password)
+      const { data: comoAdmin, error } = await moderador
+        .from('imagenes_propiedad').select('id, alt_text').eq('id', idImagenAjena)
+      expect(error).toBeNull()
+      expect(comoAdmin).toHaveLength(1)
+
+      // Control negativo en el mismo test: el vendedor B es un authenticated
+      // cualquiera y no ve nada de ese borrador. Sin esto, una politica
+      // `USING (true)` pasaria la asercion de arriba y habria abierto los
+      // borradores de todo el portal.
+      const vendedorB = await clienteComo(B.correo, B.password)
+      const { data: comoVendedor } = await vendedorB
+        .from('imagenes_propiedad').select('id').eq('id', idImagenAjena)
+      expect(comoVendedor ?? []).toHaveLength(0)
+    })
+
+    it('el super_admin BORRA la imagen de una propiedad ajena; el vendedor B no', async () => {
+      const id = await imagenSobrePropiedadDeA('borrar')
+      const admin = clienteAdmin()
+
+      // Primero el control negativo, sobre la fila que todavia existe.
+      //
+      // Se encadena .select(): un DELETE de PostgREST que no afecta filas
+      // devuelve error NULO -- RLS filtra las filas antes de borrarlas, no
+      // levanta una excepcion. Sin las filas devueltas, "no paso nada" y
+      // "denegado" serian indistinguibles.
+      const vendedorB = await clienteComo(B.correo, B.password)
+      const { data: borradoPorB, error: errorB } = await vendedorB
+        .from('imagenes_propiedad').delete().eq('id', id).select('id')
+      expect(errorB).toBeNull()
+      expect(borradoPorB ?? []).toHaveLength(0)
+
+      // Y sigue en la base, leido con service_role, que salta RLS.
+      const { data: sigueViva } = await admin
+        .from('imagenes_propiedad').select('id').eq('id', id)
+      expect(sigueViva).toHaveLength(1)
+
+      // Caso positivo: el super_admin si la borra.
+      const moderador = await clienteComo(MODERADOR.correo, MODERADOR.password)
+      const { data: borradoPorAdmin, error: errorAdmin } = await moderador
+        .from('imagenes_propiedad').delete().eq('id', id).select('id')
+      expect(errorAdmin).toBeNull()
+      expect(borradoPorAdmin).toHaveLength(1)
+
+      const { data: yaNoEsta } = await admin
+        .from('imagenes_propiedad').select('id').eq('id', id)
+      expect(yaNoEsta ?? []).toHaveLength(0)
+    })
+
+    it('el super_admin CORRIGE el alt_text de una imagen ajena; el vendedor B no', async () => {
+      const id = await imagenSobrePropiedadDeA('editar')
+      const admin = clienteAdmin()
+
+      const vendedorB = await clienteComo(B.correo, B.password)
+      const { data: editadoPorB, error: errorB } = await vendedorB
+        .from('imagenes_propiedad')
+        .update({ alt_text: 'Texto puesto por un intruso' }).eq('id', id)
+        .select('id')
+      expect(errorB).toBeNull()
+      expect(editadoPorB ?? []).toHaveLength(0)
+
+      const moderador = await clienteComo(MODERADOR.correo, MODERADOR.password)
+      const { data: editadoPorAdmin, error: errorAdmin } = await moderador
+        .from('imagenes_propiedad')
+        .update({ alt_text: 'Alt corregido por moderacion' }).eq('id', id)
+        .select('id, alt_text')
+      expect(errorAdmin).toBeNull()
+      expect(editadoPorAdmin).toHaveLength(1)
+      expect(editadoPorAdmin![0].alt_text).toBe('Alt corregido por moderacion')
+
+      // El WITH CHECK explicito de la politica no debe dejar pasar una fila
+      // que quede fuera del predicado por otra via: el CHECK de la columna
+      // sigue en pie tambien para el moderador.
+      const { error: errorAltCorto } = await moderador
+        .from('imagenes_propiedad').update({ alt_text: 'ab' }).eq('id', id).select('id')
+      expect(errorAltCorto?.code).toBe('23514')
+
+      await admin.from('imagenes_propiedad').delete().eq('id', id)
+    })
+
+    it('el super_admin lista el bucket entero; el vendedor B solo su carpeta', async () => {
+      // Borrar la fila y dejar el archivo en un bucket public=true seria una
+      // moderacion aparente: el objeto sigue descargable por su URL. Por eso
+      // el super_admin tiene politica sobre storage.objects.
+      const moderador = await clienteComo(MODERADOR.correo, MODERADOR.password)
+      const { data: comoAdmin, error } = await moderador.storage
+        .from('propiedades').list(idVendedorA)
+      expect(error).toBeNull()
+      expect(comoAdmin).toHaveLength(1)
+      expect(comoAdmin![0].name).toBe('prueba.webp')
+
+      // Control negativo: el vendedor B no ve la carpeta del vendedor A.
+      const vendedorB = await clienteComo(B.correo, B.password)
+      const { data: comoVendedor } = await vendedorB.storage
+        .from('propiedades').list(idVendedorA)
+      expect(comoVendedor ?? []).toHaveLength(0)
+    })
   })
 
   it('la URL publica del objeto sigue resolviendo sin autenticacion', async () => {
