@@ -1,30 +1,19 @@
-'use client'
+import { claveDeSitioTurnstile } from '@/lib/seguridad/turnstile'
+import { GuionTurnstile } from '../guion-turnstile'
+import { FormularioLogin } from './formulario'
 
-import { useActionState } from 'react'
-import { iniciarSesion, type EstadoFormulario } from './acciones'
-
-const INICIAL: EstadoFormulario = {}
-
+/**
+ * La pagina es un componente de SERVIDOR y el formulario un componente de
+ * cliente aparte (hallazgo I4). El motivo del corte: el <script> de Turnstile
+ * necesita el nonce de la CSP, que solo existe en la peticion, y la clave
+ * publica del widget se decide en el servidor para que la bandera de entorno no
+ * dependa de una variable NEXT_PUBLIC_ visible en el bundle.
+ */
 export default function PaginaLogin() {
-  const [estado, accion, pendiente] = useActionState(iniciarSesion, INICIAL)
-
   return (
-    <main className="mx-auto max-w-md p-8">
-      <h1 className="text-2xl font-semibold">Iniciar sesión</h1>
-      <form action={accion} className="mt-6 space-y-4">
-        <div>
-          <label htmlFor="correo" className="block">Correo</label>
-          <input id="correo" name="correo" type="email" placeholder="Correo" required className="w-full border p-2" />
-        </div>
-        <div>
-          <label htmlFor="password" className="block">Contraseña</label>
-          <input id="password" name="password" type="password" placeholder="Contraseña" required className="w-full border p-2" />
-        </div>
-        {estado.error && <p role="alert" className="text-red-600">{estado.error}</p>}
-        <button type="submit" disabled={pendiente} className="w-full bg-black p-2 text-white">
-          {pendiente ? 'Entrando...' : 'Entrar'}
-        </button>
-      </form>
-    </main>
+    <>
+      <GuionTurnstile />
+      <FormularioLogin claveTurnstile={claveDeSitioTurnstile()} />
+    </>
   )
 }

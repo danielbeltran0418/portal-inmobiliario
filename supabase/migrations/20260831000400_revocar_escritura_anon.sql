@@ -1,0 +1,88 @@
+-- ============================================================================
+-- anon deja de tener privilegios de ESCRITURA sobre las tablas de public.
+--
+-- Estado antes de esta migracion, verificado en information_schema.role_table_grants
+-- y en pg_class.relacl: anon tenia INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES
+-- y TRIGGER sobre las SEIS tablas (barrios, imagenes_propiedad, intentos_login,
+-- perfiles, propiedades, registro_auditoria). No sobraban solo en propiedades.
+--
+-- El origen no es ninguna migracion de este repositorio: es el ALTER DEFAULT
+-- PRIVILEGES que trae Supabase de fabrica sobre el esquema public, que concede
+-- el CRUD completo a anon, authenticated y service_role en toda tabla nueva.
+-- Por eso hace falta tocar tambien los privilegios por defecto: revocar solo
+-- sobre lo que existe hoy deja la puerta abierta para las tablas del SP1.
+--
+-- ----------------------------------------------------------------------------
+-- Por que importa, si RLS ya deniega por defecto
+-- ----------------------------------------------------------------------------
+-- Dos motivos, y el segundo es el que de verdad pesa:
+--
+-- 1. TRUNCATE queda FUERA del alcance de RLS por diseno de PostgreSQL. En las
+--    demas operaciones RLS es una segunda capa por debajo del privilegio; en
+--    TRUNCATE no hay segunda capa, y toda la defensa descansa en que nadie
+--    consiga hablar como anon.
+--
+-- 2. Riesgo de composicion. Si en el SP1 alguien anade una politica de
+--    conveniencia del estilo
+--        CREATE POLICY ... FOR ALL TO anon USING (estado = 'publicada')
+--    creyendo que solo abre lectura, con los INSERT/UPDATE/DELETE de tabla ya
+--    concedidos eso abre ESCRITURA ANONIMA sobre todas las propiedades
+--    publicadas de golpe. Quitar el privilegio hace que esa politica no pueda
+--    causar dano por si sola: harian falta dos errores, no uno.
+--
+-- Tambien cierra una incoherencia de 20260831000300, que le quito a anon el
+-- SELECT sobre direccion/latitud/longitud pero le dejaba el INSERT y el UPDATE
+-- sobre esas mismas tres columnas.
+--
+-- ----------------------------------------------------------------------------
+-- MAINTAIN
+-- ----------------------------------------------------------------------------
+-- Se revoca ademas MAINTAIN, que la revision no habia visto porque
+-- information_schema.role_table_grants NO lo reporta: es un privilegio de
+-- PostgreSQL 17 y no del estandar SQL, asi que solo aparece consultando
+-- pg_class.relacl (la 'm' de 'arwdDxtm') o has_table_privilege. Permite
+-- VACUUM FULL, CLUSTER y REINDEX, que toman un ACCESS EXCLUSIVE sobre la
+-- tabla: no filtra ni corrompe datos, pero deja el catalogo publico colgado
+-- mientras dura. Cae por el mismo motivo que TRUNCATE -- RLS no lo mira.
+-- La base esta fijada a la version 17 en supabase/config.toml.
+--
+-- ----------------------------------------------------------------------------
+-- Lo que NO se toca
+-- ----------------------------------------------------------------------------
+-- SELECT. Ni el de tabla ni, sobre todo, los GRANT SELECT (columna) que
+-- 20260831000300 concedio sobre las 18 columnas publicas de propiedades. Un
+-- REVOKE de tabla no arrastra los privilegios de columna, que viven en
+-- pg_attribute.attacl, asi que la lectura publica del catalogo sigue igual.
+-- Por eso este archivo enumera las operaciones de escritura en vez de usar
+-- REVOKE ALL: REVOKE ALL habria borrado tambien el SELECT de tabla y obligado
+-- a reescribir aqui la lista de columnas publicas, duplicando una decision que
+-- ya esta tomada en otro archivo.
+--
+-- Tampoco se toca authenticated: sus INSERT/UPDATE/DELETE sobre propiedades e
+-- imagenes_propiedad son el modelo de escritura del vendedor y estan
+-- gobernados por RLS.
+-- ============================================================================
+
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN
+  ON ALL TABLES IN SCHEMA public FROM anon;
+
+-- Para que las tablas del SP1 no reintroduzcan lo mismo al crearse.
+--
+-- FOR ROLE postgres explicitamente: los privilegios por defecto se guardan por
+-- (rol que crea, esquema), no de forma global, y postgres es el rol con el que
+-- el CLI de Supabase aplica las migraciones. Sin el FOR ROLE la sentencia
+-- aplicaria a current_user, que hoy es postgres igualmente, pero dejarlo
+-- implicito haria que el efecto dependiera de con que credenciales se aplica
+-- el archivo.
+--
+-- Limitacion conocida y deliberada: existe una segunda entrada de privilegios
+-- por defecto sobre public a nombre de supabase_admin. No se toca -- gobierna
+-- objetos gestionados por la plataforma, no los de este repositorio, y las
+-- migraciones no crean tablas con ese rol. La red que cubre ese hueco no es
+-- esta migracion sino la prueba de tests/rls/privilegios-anon.test.ts, que
+-- enumera TODAS las tablas de public en tiempo de ejecucion en vez de una
+-- lista fija: una tabla futura que llegue con escritura para anon, la cree
+-- quien la cree, sale en rojo.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN
+  ON TABLES FROM anon;

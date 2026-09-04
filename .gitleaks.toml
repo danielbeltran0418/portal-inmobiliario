@@ -16,4 +16,12 @@ paths = ['''\.env\.example$''', '''supabase/seed\.sql$''']
 # sin ellas nadie puede levantar el proyecto. Se listan una a una en vez de
 # poner README.md entero en `paths`: si algun dia se cuela un secreto DE VERDAD
 # en el README, gitleaks tiene que seguir viendolo.
-regexes = ['''(Admin|Vendedor|Comprador)Prueba2026\*''']
+#
+# Y las claves de PRUEBA de Turnstile que documenta el README (§10). Las
+# publica Cloudflare para poder probar el captcha sin cuenta, y su unica
+# propiedad es dar siempre el mismo veredicto: no abren nada. Se listan por
+# patron y no por archivo, por el mismo motivo que arriba.
+regexes = [
+  '''(Admin|Vendedor|Comprador)Prueba2026\*''',
+  '''[12]x0{20,}A[AB]''',
+]

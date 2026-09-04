@@ -144,14 +144,42 @@ describe('seed de desarrollo', () => {
   // cosa sin avisar: por ejemplo, un corte dentro de $seed$ haria fallar
   // sentencias por sintaxis y "no se creo ninguna cuenta" saldria verde por el
   // motivo equivocado.
+  /**
+   * Seguimiento S5: esto fijaba `toHaveLength(4)` -- BEGIN, DO guarda, DO seed,
+   * COMMIT -- y con eso quedaba atado a la FORMA exacta del archivo: anadir a
+   * seed.sql una sentencia legitima (un barrio de prueba, un GRANT) rompia la
+   * prueba del separador sin que el separador tuviera nada malo.
+   *
+   * Lo que de verdad hay que garantizar no es cuantas sentencias salen, sino
+   * que el corte sea FIEL:
+   *
+   *   1. no se pierde ni se duplica texto,
+   *   2. cada bloque con comillas de dolar cae entero en UNA sentencia,
+   *   3. la transaccion sigue envolviendo el archivo completo.
+   *
+   * Con (1) y (2) juntos, un corte dentro de $seed$ es imposible de esconder:
+   * si el bloque se partiera, su marca aparecería en dos sentencias en vez de
+   * en una. Y (3) es lo que hace que la excepcion de la guarda detenga el resto
+   * del archivo, que es la propiedad que mide la prueba de mas abajo.
+   */
   it('el separador de sentencias respeta los bloques con comillas de dolar', () => {
     const sentencias = separarSentencias(SEED)
+    const sinEspacios = (texto: string) => texto.replace(/\s+/g, ' ').trim()
+
+    // 1. Fidelidad: juntar las sentencias reproduce el archivo. Sin esto, un
+    // separador que se comiera trozos podria pasar todo lo demas.
+    expect(sinEspacios(sentencias.join('\n'))).toBe(sinEspacios(SEED))
+
+    // 2. Cada bloque DO, entero y en una sola sentencia.
     expect(sentencias.filter((s) => s.includes('$guarda$'))).toHaveLength(1)
     expect(sentencias.filter((s) => s.includes('$seed$'))).toHaveLength(1)
-    expect(sentencias.some((s) => s.endsWith('BEGIN;'))).toBe(true)
-    expect(sentencias.some((s) => s.trim() === 'COMMIT;')).toBe(true)
-    // BEGIN, DO guarda, DO seed, COMMIT.
-    expect(sentencias).toHaveLength(4)
+
+    // 3. La transaccion abre al principio y cierra al final -- no en cualquier
+    // sitio: un BEGIN a mitad del archivo dejaria fuera de la transaccion todo
+    // lo anterior.
+    expect(sentencias.length).toBeGreaterThanOrEqual(4)
+    expect(sentencias[0].endsWith('BEGIN;')).toBe(true)
+    expect(sentencias[sentencias.length - 1].trim()).toBe('COMMIT;')
   })
 
   it('con el entorno marcado como produccion el seed aborta y no crea ninguna cuenta', async () => {
