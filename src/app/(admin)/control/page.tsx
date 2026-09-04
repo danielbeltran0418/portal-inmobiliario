@@ -1,4 +1,11 @@
-export const metadata = { robots: { index: false, follow: false } }
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Control del sistema | Portal Inmobiliario',
+  description: 'Métricas y moderación del Portal Inmobiliario de Barranquilla.',
+  // Privada: no se indexa, y ademas no se sigue ningun enlace desde ella.
+  robots: { index: false, follow: false },
+}
 
 export default function PaginaControl() {
   return (
