@@ -1,6 +1,14 @@
+import type { Metadata } from 'next'
 import { claveDeSitioTurnstile } from '@/lib/seguridad/turnstile'
 import { GuionTurnstile } from '../guion-turnstile'
 import { FormularioLogin } from './formulario'
+
+export const metadata: Metadata = {
+  title: 'Iniciar sesión | Portal Inmobiliario',
+  description:
+    'Entra a tu cuenta del Portal Inmobiliario de Barranquilla para gestionar tus ' +
+    'publicaciones o tus búsquedas.',
+}
 
 /**
  * La pagina es un componente de SERVIDOR y el formulario un componente de
