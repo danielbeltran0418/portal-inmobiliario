@@ -5,6 +5,16 @@ export const MENSAJE_GENERICO =
 
 export const MENSAJE_CREDENCIALES = 'Correo o contrasena incorrectos.'
 
+/**
+ * Captcha no superado. Es el unico mensaje del formulario que pide una accion
+ * concreta al usuario, y a proposito: si dijera lo mismo que MENSAJE_GENERICO,
+ * quien tiene el token caducado no sabria que lo que le falta es rehacer el
+ * desafio. No dice por que fallo -- token ausente, repetido, o siteverify
+ * caido: eso solo le serviria a quien esta probando como saltarselo.
+ */
+export const MENSAJE_CAPTCHA =
+  'No pudimos verificar que eres una persona. Vuelve a intentarlo.'
+
 const CODIGOS_DE_CREDENCIALES = new Set([
   'invalid_credentials',
   'user_not_found',

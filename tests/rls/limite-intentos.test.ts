@@ -126,6 +126,69 @@ describe('limite de intentos de login', () => {
     expect(errorAdmin).toBeNull()
   })
 
+  /**
+   * Modo degradado del hallazgo I3.
+   *
+   * Cuando no hay una IP de confianza, la aplicacion pasa NULL en vez de
+   * inventarse una. Estas dos pruebas fijan lo que NULL significa en la base:
+   * ventana por correo, sin discriminar IP. Es un limite mas estricto, no mas
+   * laxo -- y "mas laxo" es justo el fallo que habria que detectar, porque
+   * dejaria el modo degradado como un bypass del limitador.
+   */
+  it('con IP desconocida la ventana cuenta los fallos del correo desde cualquier IP', async () => {
+    // Cinco fallos repartidos entre dos IPs distintas: con la ventana normal
+    // ninguna de las dos combinaciones llega al limite.
+    for (let i = 0; i < 3; i++) {
+      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+    }
+    for (let i = 0; i < 2; i++) {
+      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: '198.51.100.9', p_exitoso: false })
+    }
+
+    // Control: por separado, ninguna de las dos IPs esta bloqueada.
+    const { data: porIpUno } = await clienteAdmin()
+      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+    const { data: porIpDos } = await clienteAdmin()
+      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: '198.51.100.9' })
+    expect(porIpUno).toBe(false)
+    expect(porIpDos).toBe(false)
+
+    // Sin IP de confianza, los cinco cuentan juntos y la cuenta queda cerrada.
+    const { data: sinIp, error } = await clienteAdmin()
+      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: null })
+    expect(error).toBeNull()
+    expect(sinIp).toBe(true)
+
+    // Y sigue siendo por correo: otra cuenta no se ve arrastrada.
+    const { data: otroCorreo } = await clienteAdmin()
+      .rpc('login_bloqueado', { p_correo: 'ajeno@prueba.test', p_ip: null })
+    expect(otroCorreo).toBe(false)
+  })
+
+  // `ip = p_ip` con p_ip NULL no es falso, es NULL: nunca cierto. Si el DELETE
+  // de limpieza no llevara el `(p_ip IS NULL OR ...)`, la ventana de un usuario
+  // legitimo no se vaciaria jamas en modo degradado y el bloqueo seria
+  // permanente. Es un fallo que no se ve hasta que le pasa a alguien.
+  it('un login exitoso sin IP limpia la ventana por correo', async () => {
+    for (let i = 0; i < 3; i++) {
+      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+    }
+    for (let i = 0; i < 2; i++) {
+      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: null, p_exitoso: false })
+    }
+    const { data: antes } = await clienteAdmin()
+      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: null })
+    expect(antes).toBe(true)
+
+    const { error } = await clienteAdmin()
+      .rpc('registrar_intento_login', { p_correo: CORREO, p_ip: null, p_exitoso: true })
+    expect(error).toBeNull()
+
+    const { data: despues } = await clienteAdmin()
+      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: null })
+    expect(despues).toBe(false)
+  })
+
   it('un usuario autenticado no puede leer la tabla de intentos', async () => {
     // Control positivo: se registra un intento y se prueba que el admin
     // (service_role, que ignora RLS) SI lo ve. Sin este paso, la aserción
