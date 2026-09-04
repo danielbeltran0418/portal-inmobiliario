@@ -43,6 +43,15 @@ for (const cuenta of CUENTAS) {
     await nav.getByRole('link', { name: cuenta.enlace }).click()
     await expect(page).toHaveURL(new RegExp(`${cuenta.ruta}$`))
     await expect(page.getByRole('heading', { name: cuenta.encabezado })).toBeVisible()
+
+    // Ruta privada: no se indexa. La prueba unitaria fija el objeto `metadata`;
+    // esto fija lo que de verdad ve un rastreador, que es la etiqueta del HTML
+    // servido. Son cosas distintas: Next podria dejar de emitirla y el objeto
+    // seguiria correcto.
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      'content',
+      /noindex.*nofollow/,
+    )
   })
 }
 
