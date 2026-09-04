@@ -123,10 +123,16 @@ Supabase local no envia correo de verdad: lo captura **Mailpit**.
 | Comando | Que corre | Necesita |
 |---|---|---|
 | `npm run test:unit` | pruebas unitarias (`tests/unit/`) | nada |
-| `npm run test:rls` | RLS y privilegios contra la base real (`tests/rls/`) | Supabase levantado + `.env.local` |
-| `npm run test:e2e` | flujos de punta a punta con Playwright (`tests/e2e/`) | Supabase levantado + `.env.local` |
+| `npm run test:rls` | RLS y privilegios contra la base real (`tests/rls/`) | Supabase levantado + las cuatro variables de §3 |
+| `npm run test:e2e` | flujos de punta a punta con Playwright (`tests/e2e/`) | Supabase levantado + las cuatro variables de §3 |
 | `npm run lint` | ESLint | nada |
 | `npm run build` | build de produccion de Next | variables `NEXT_PUBLIC_*` |
+
+Las variables **no tienen que venir de `.env.local`**: basta con que esten en el
+entorno del proceso. `.env.local` es una comodidad para trabajar en local, y se
+carga solo si existe; lo que ya este exportado gana sobre el archivo. Es lo que
+hace CI, donde ese archivo no existe. Si falta alguna, la suite aborta diciendo
+cual y como obtenerla — no falla en silencio.
 
 La primera vez que corras Playwright:
 
