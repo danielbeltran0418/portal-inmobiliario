@@ -37,4 +37,9 @@ describe('generarSlug', () => {
       expect(generarSlug(titulo)).toMatch(PATRON)
     }
   })
+
+  it('un sufijo invalido (mayusculas u otros caracteres) no puede colarse en el slug', () => {
+    expect(() => generarSlug('Casa', 'ABCD')).toThrow()
+    expect(() => generarSlug('Casa', 'a-1!')).toThrow()
+  })
 })
