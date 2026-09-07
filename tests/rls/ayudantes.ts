@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
 
@@ -110,10 +111,20 @@ export async function clienteComo(correo: string, password: string): Promise<Sup
   return cliente
 }
 
-// Cuenta fija del seed (supabase/seed.sql), no un usuario desechable creado
-// por la suite. Para pruebas que solo necesitan "un vendedor cualquiera" -- no
-// dos vendedores enfrentados por RLS de propiedad ajena -- esto evita
-// duplicar el alta de un usuario de prueba en cada archivo.
+// Vendedor EFIMERO, con correo unico por llamada -- NO la cuenta fija del
+// seed (vendedor@portal.com). Esa cuenta la borra y recrea seed.test.ts
+// dentro de su prueba del guardia de produccion, y vitest corre los
+// ficheros de prueba en paralelo por defecto (no hay fileParallelism: false
+// ni singleFork en vitest.config.ts): una suite que este a mitad de
+// sesionVendedor() mientras seed.test.ts borra esa misma cuenta se
+// encuentra con "AuthRetryableFetchError: Database error granting user".
+// Reproducido: 1 de cada ~3 corridas de `npm run test:rls` completo caia en
+// rojo por esto, sin que el trigger de esta tarea tuviera nada que ver.
+// randomUUID() en el correo es lo que elimina la colision, tanto con
+// seed.test.ts como entre esta funcion llamada desde varias suites a la vez.
 export async function sesionVendedor(): Promise<SupabaseClient> {
-  return clienteComo('vendedor@portal.com', 'VendedorPrueba2026*')
+  const correo = `vendedor-${randomUUID()}@prueba.test`
+  const password = 'VendedorEfimero2026*'
+  await crearUsuarioDePrueba({ correo, password, rol: 'vendedor', nombre: 'Vendedor Efimero' })
+  return clienteComo(correo, password)
 }
