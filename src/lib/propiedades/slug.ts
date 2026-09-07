@@ -2,11 +2,24 @@
 const LONGITUD_MAXIMA_BASE = 60
 
 /**
+ * El generador interno solo produce esto, pero un llamador (el reintento ante
+ * colision de la Task 7/8) puede pasar su propio sufijo: se exige el mismo
+ * patron para que nunca llegue a incumplir el CHECK de la base.
+ */
+const PATRON_SUFIJO = /^[a-z0-9]+$/
+
+/**
  * El slug se genera UNA vez, al crear la propiedad, y no cambia nunca mas
  * aunque el vendedor edite el titulo: un slug que muta rompe los enlaces ya
  * publicados y es de lo peor que se le puede hacer al SEO.
  */
 export function generarSlug(titulo: string, sufijo: string = sufijoAleatorio()): string {
+  if (!PATRON_SUFIJO.test(sufijo)) {
+    throw new Error(
+      `generarSlug: sufijo invalido "${sufijo}". Se esperaba [a-z0-9]+ (p. ej. hex en minusculas, como produce el generador interno).`
+    )
+  }
+
   const base = titulo
     .normalize('NFD')
     // Rango de diacriticos combinantes, escrito con escapes: los caracteres
