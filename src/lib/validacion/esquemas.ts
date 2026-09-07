@@ -26,15 +26,22 @@ export const TIPOS_INMUEBLE = ['apartamento', 'casa', 'local', 'lote', 'oficina'
 // vez de un mensaje de formulario.
 const PRECIO_MAXIMO = 999_999_999_999.99
 
-// Un campo de formulario HTML vacio llega como '', no como undefined. Sin
-// normalizar, z.coerce.number() convierte '' en 0 en silencio (guardaria
-// "0 habitaciones" como si fuera un dato real) y z.string().uuid() rechaza
-// '' pese a estar marcado .optional(): dos comportamientos distintos para
-// el mismo "el vendedor no ha escrito nada todavia". Este preprocesado hace
-// que los cinco campos opcionales signifiquen lo mismo ante una cadena
-// vacia: ausencia de dato, no un valor por defecto ni un error.
+// Un campo de formulario HTML vacio no siempre llega como undefined: puede
+// llegar como '' (input vacio), como una cadena de solo espacios (el
+// vendedor toco el campo y no escribio nada visible) o como null (limpiado
+// desde el cliente). Las tres significan lo mismo: "sin dato". Sin
+// normalizar, z.coerce.number() convierte cualquiera de ellas en 0 en
+// silencio (Number('') === Number('   ') === Number(null) === 0, guardaria
+// "0 habitaciones" como si fuera un dato real) y z.string().uuid() las
+// rechaza con un mensaje crudo de zod pese a estar marcado .optional().
+// Este preprocesado hace que los cinco campos opcionales signifiquen lo
+// mismo ante las tres: ausencia de dato, no un valor por defecto ni un
+// error.
+const esVacio = (valor: unknown) =>
+  valor === null || (typeof valor === 'string' && valor.trim() === '')
+
 const opcional = <T extends z.ZodTypeAny>(esquema: T) =>
-  z.preprocess((valor) => (valor === '' ? undefined : valor), esquema.optional())
+  z.preprocess((valor) => (esVacio(valor) ? undefined : valor), esquema.optional())
 
 /** Alta: solo el titulo. El resto se completa despues, sobre el borrador. */
 export const esquemaPropiedadNueva = z.object({
