@@ -21,10 +21,27 @@ describe('imagenes de propiedad', () => {
       vendedor_id: idA, barrio_id: barrio!.id, operacion: 'arriendo',
       tipo_inmueble: 'casa', precio: 2500000, descripcion: 'x',
     }
+    // Nace en borrador y se publica con una imagen PRESTADA que se borra
+    // enseguida: desde 20260904000300_exigir_imagen_publicar.sql, un INSERT
+    // directo con estado 'publicada' sin imagenes lo rechaza el trigger con
+    // 23514 -- pero las pruebas de abajo pinan el conteo exacto de imagenes
+    // de idPublicada ("Control positivo: pin exacto del conteo"), asi que no
+    // puede quedar con una imagen de fixture puesta aqui. El trigger solo se
+    // evalua al insertar/actualizar la fila de propiedades, no al borrar una
+    // imagen despues: una vez publicada, borrar la imagen prestada no la
+    // vuelve a poner en borrador.
     const { data: p } = await admin.from('propiedades')
-      .insert({ ...base, slug: 'casa-riomar-imagenes', titulo: 'Casa con imagenes', estado: 'publicada' })
+      .insert({ ...base, slug: 'casa-riomar-imagenes', titulo: 'Casa con imagenes' })
       .select('id').single()
     idPublicada = p!.id
+    const { data: imagenPrestada, error: errorPrestada } = await admin.from('imagenes_propiedad')
+      .insert({ propiedad_id: idPublicada, ruta_storage: 'fixtures/prestada.webp', alt_text: 'Imagen prestada para publicar' })
+      .select('id').single()
+    if (errorPrestada) throw errorPrestada
+    const { error: errorPublicar } = await admin.from('propiedades')
+      .update({ estado: 'publicada' }).eq('id', idPublicada)
+    if (errorPublicar) throw errorPublicar
+    await admin.from('imagenes_propiedad').delete().eq('id', imagenPrestada!.id)
     const { data: b } = await admin.from('propiedades')
       .insert({ ...base, slug: 'casa-riomar-borrador', titulo: 'Casa en borrador', estado: 'borrador' })
       .select('id').single()
@@ -137,12 +154,24 @@ describe('imagenes de propiedad', () => {
     // imagenes_lectura_publica, asi que lo unico que puede impedir el
     // movimiento es el WITH CHECK de la politica de UPDATE. Que es lo que se
     // quiere medir.
+    // Igual que arriba: nace en borrador, se le presta una imagen para poder
+    // publicarse (23514 sin ella desde 20260904000300), y esa imagen
+    // prestada se borra para que el unico movimiento de imagenes sobre esta
+    // propiedad, mas abajo, sea el que la prueba esta midiendo.
     const { data: propiedadB, error: errorPropiedadB } = await admin.from('propiedades').insert({
       vendedor_id: idVendedorB, barrio_id: barrio!.id, operacion: 'arriendo',
       tipo_inmueble: 'casa', precio: 1800000, descripcion: 'x',
-      slug: 'casa-del-vendedor-b', titulo: 'Casa del vendedor B', estado: 'publicada',
+      slug: 'casa-del-vendedor-b', titulo: 'Casa del vendedor B',
     }).select('id').single()
     expect(errorPropiedadB).toBeNull()
+    const { data: imagenPrestadaB, error: errorImagenPrestadaB } = await admin.from('imagenes_propiedad')
+      .insert({ propiedad_id: propiedadB!.id, ruta_storage: 'fixtures/prestada-b.webp', alt_text: 'Imagen prestada para publicar' })
+      .select('id').single()
+    expect(errorImagenPrestadaB).toBeNull()
+    const { error: errorPublicarB } = await admin.from('propiedades')
+      .update({ estado: 'publicada' }).eq('id', propiedadB!.id)
+    expect(errorPublicarB).toBeNull()
+    await admin.from('imagenes_propiedad').delete().eq('id', imagenPrestadaB!.id)
 
     const { data: imagen, error: errorImagen } = await admin.from('imagenes_propiedad').insert({
       propiedad_id: idPublicada, ruta_storage: 'x/secuestro.webp',

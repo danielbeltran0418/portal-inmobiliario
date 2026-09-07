@@ -109,3 +109,11 @@ export async function clienteComo(correo: string, password: string): Promise<Sup
   if (error) throw error
   return cliente
 }
+
+// Cuenta fija del seed (supabase/seed.sql), no un usuario desechable creado
+// por la suite. Para pruebas que solo necesitan "un vendedor cualquiera" -- no
+// dos vendedores enfrentados por RLS de propiedad ajena -- esto evita
+// duplicar el alta de un usuario de prueba en cada archivo.
+export async function sesionVendedor(): Promise<SupabaseClient> {
+  return clienteComo('vendedor@portal.com', 'VendedorPrueba2026*')
+}
