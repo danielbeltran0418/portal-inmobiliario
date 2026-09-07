@@ -47,33 +47,61 @@ describe('esquemaPropiedad', () => {
     precio: '350000000',
   }
 
-  // Un input HTML vacio no envia undefined, envia ''. Cada uno de los cinco
-  // campos opcionales tiene que tratar esa cadena vacia como "sin dato": ni
-  // un valor por defecto silencioso (habitaciones/banos) ni un error
-  // (area_m2/barrio_id) pese a estar marcados .optional().
-  it('trata la cadena vacia de habitaciones como ausente, no como cero', () => {
-    const r = esquemaPropiedad.parse({ ...base, habitaciones: '' })
+  // Un input HTML vacio no siempre envia undefined: puede llegar como ''
+  // (input vacio), como una cadena de solo espacios (el vendedor toco el
+  // campo y no escribio nada visible) o como null. Las tres significan lo
+  // mismo -- "sin dato" -- y los cinco campos opcionales tienen que
+  // tratarlas igual: ni un valor por defecto silencioso (habitaciones/banos
+  // convertian cualquiera de las tres en 0) ni un error (area_m2/barrio_id
+  // las rechazaban pese a estar marcados .optional(), y con null el mensaje
+  // ademas era el crudo de zod, no el de formulario).
+  const SIN_DATO: Array<[string, string | null]> = [
+    ['cadena vacia', ''],
+    ['solo espacios', '   '],
+    ['null', null],
+  ]
+
+  it.each(SIN_DATO)('habitaciones con %s queda ausente, no en 0', (_etiqueta, valor) => {
+    const r = esquemaPropiedad.parse({ ...base, habitaciones: valor })
     expect(r.habitaciones).toBeUndefined()
   })
 
-  it('trata la cadena vacia de banos como ausente, no como cero', () => {
-    const r = esquemaPropiedad.parse({ ...base, banos: '' })
+  it.each(SIN_DATO)('banos con %s queda ausente, no en 0', (_etiqueta, valor) => {
+    const r = esquemaPropiedad.parse({ ...base, banos: valor })
     expect(r.banos).toBeUndefined()
   })
 
-  it('trata la cadena vacia de area_m2 como ausente, no como error', () => {
-    const r = esquemaPropiedad.parse({ ...base, area_m2: '' })
+  it.each(SIN_DATO)('area_m2 con %s queda ausente, no en error', (_etiqueta, valor) => {
+    const r = esquemaPropiedad.parse({ ...base, area_m2: valor })
     expect(r.area_m2).toBeUndefined()
   })
 
-  it('trata la cadena vacia de barrio_id como ausente, no como error', () => {
-    const r = esquemaPropiedad.parse({ ...base, barrio_id: '' })
+  it.each(SIN_DATO)('barrio_id con %s queda ausente, no en error', (_etiqueta, valor) => {
+    const r = esquemaPropiedad.parse({ ...base, barrio_id: valor })
     expect(r.barrio_id).toBeUndefined()
   })
 
-  it('trata la cadena vacia de direccion como ausente', () => {
-    const r = esquemaPropiedad.parse({ ...base, direccion: '' })
+  it.each(SIN_DATO)('direccion con %s queda ausente', (_etiqueta, valor) => {
+    const r = esquemaPropiedad.parse({ ...base, direccion: valor })
     expect(r.direccion).toBeUndefined()
+  })
+
+  // El caso contrario al de arriba: normalizar de mas rompe un dato real.
+  // Un valor de verdad en cada campo opcional tiene que sobrevivir intacto.
+  it('un valor real en cada campo opcional se conserva intacto', () => {
+    const r = esquemaPropiedad.parse({
+      ...base,
+      habitaciones: '3',
+      banos: '2',
+      area_m2: '85.5',
+      barrio_id: '11111111-1111-4111-8111-111111111111',
+      direccion: 'Calle 10 # 20-30',
+    })
+    expect(r.habitaciones).toBe(3)
+    expect(r.banos).toBe(2)
+    expect(r.area_m2).toBe(85.5)
+    expect(r.barrio_id).toBe('11111111-1111-4111-8111-111111111111')
+    expect(r.direccion).toBe('Calle 10 # 20-30')
   })
 
   // La columna es numeric(14,2): 12 digitos enteros + 2 decimales.
@@ -84,6 +112,12 @@ describe('esquemaPropiedad', () => {
   it('acepta un precio justo en la cota de numeric(14,2)', () => {
     const r = esquemaPropiedad.parse({ ...base, precio: '999999999999.99' })
     expect(r.precio).toBe(999999999999.99)
+  })
+
+  // Sin esta prueba, una cota generosa de mas (p. ej. 1e13) pasaria las dos
+  // pruebas de arriba sin que nadie lo note: fija el borde exacto.
+  it('rechaza el precio un centavo por encima de la cota de numeric(14,2)', () => {
+    expect(esquemaPropiedad.safeParse({ ...base, precio: '1000000000000.00' }).success).toBe(false)
   })
 
   // El caso que promete el sub-proyecto: guardar un borrador a medias. El
