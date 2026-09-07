@@ -21,10 +21,22 @@ describe('RLS de propiedades', () => {
       tipo_inmueble: 'apartamento', precio: 350000000, habitaciones: 3, banos: 2,
       area_m2: 78, direccion: 'Calle 1 #2-3', descripcion: 'Descripcion de prueba',
     }
+    // Nace en borrador (el default) y se publica en un segundo paso, con una
+    // imagen de por medio: desde 20260904000300_exigir_imagen_publicar.sql,
+    // un INSERT directo con estado 'publicada' sin imagenes lo rechaza el
+    // trigger con 23514. Esta suite no prueba ese trigger -- lo hace
+    // imagen-publicar.test.ts -- asi que el fixture solo necesita rodearlo.
     const { data: pub } = await admin.from('propiedades')
-      .insert({ ...base, slug: 'apartamento-villa-carolina-prueba', titulo: 'Apartamento publicado', estado: 'publicada' })
+      .insert({ ...base, slug: 'apartamento-villa-carolina-prueba', titulo: 'Apartamento publicado' })
       .select('id').single()
     idPublicada = pub!.id
+    await admin.from('imagenes_propiedad').insert({
+      propiedad_id: idPublicada, ruta_storage: 'fixtures/apartamento-villa-carolina.webp',
+      alt_text: 'Fachada del apartamento de prueba',
+    })
+    const { error: errorPublicar } = await admin.from('propiedades')
+      .update({ estado: 'publicada' }).eq('id', idPublicada)
+    if (errorPublicar) throw errorPublicar
 
     const { data: bor } = await admin.from('propiedades')
       .insert({ ...base, slug: 'apartamento-borrador-prueba', titulo: 'Apartamento borrador', estado: 'borrador' })
