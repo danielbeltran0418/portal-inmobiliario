@@ -331,14 +331,18 @@ describe('imagenes de propiedad', () => {
     })
   })
 
-  it('la URL publica del objeto sigue resolviendo sin autenticacion', async () => {
-    // Verifica empiricamente que restringir la politica de SELECT (que solo
-    // gobierna listado/lectura autenticados) no rompe la ruta de URL publica
-    // de Storage, que sirve el objeto sin consultar RLS porque el bucket es
-    // public=true.
+  it('la URL publica del objeto YA NO resuelve: el bucket es privado', async () => {
+    // Hasta la migracion 20260904000100 este objeto SI se serviria sin
+    // autenticacion: ese era exactamente el agujero que SP0 documento y
+    // aplazo (bucket public=true servido por /object/public/... sin
+    // consultar RLS). La cobertura detallada de ese cierre vive en
+    // tests/rls/bucket-privado.test.ts; esta prueba confirma ademas que
+    // ninguna politica de storage.objects definida en esta suite (lectura
+    // por carpeta del dueno, moderacion del super_admin) reabre la via
+    // publica sin querer.
     const { data } = clienteAnonimo().storage.from('propiedades').getPublicUrl(rutaObjetoPrueba)
     const respuesta = await fetch(data.publicUrl)
-    expect(respuesta.ok).toBe(true)
-    expect(respuesta.status).toBe(200)
+    expect(respuesta.ok).toBe(false)
+    expect(respuesta.status).toBe(400)
   })
 })
