@@ -205,4 +205,49 @@ describe('PaginaPanelVendedor', () => {
 
     expect(tieneEnlaceA(elemento, '/panel/propiedades/nueva')).toBe(true)
   })
+
+  /**
+   * El hallazgo Critico de la revision final: SIN este enlace, una propiedad
+   * solo era editable durante la visita que la creaba (el redirect de
+   * crearBorrador deja al vendedor ya dentro de /panel/propiedades/<id>, pero
+   * nada lo trae de vuelta despues). Reutiliza tieneEnlaceA de la prueba de
+   * arriba, con el destino real de la fila -- no un string fijo -- para que
+   * la prueba falle tambien si el id se hardcodea o se usa el id equivocado.
+   */
+  it('cada propiedad de la lista enlaza a su propia pantalla de edicion', async () => {
+    crearClienteServidor.mockResolvedValue(clienteFalso([
+      {
+        id: 'p1',
+        titulo: 'Casa en Villa Carolina',
+        estado: 'borrador',
+        precio: null,
+        barrio_id: null,
+        descripcion: '',
+        imagenes_propiedad: [],
+      },
+      {
+        id: 'p2',
+        titulo: 'Apartamento en el Prado',
+        estado: 'publicada',
+        precio: 300000000,
+        barrio_id: '11111111-1111-1111-1111-111111111111',
+        descripcion: 'Una descripcion con suficiente detalle para el catalogo.',
+        imagenes_propiedad: [{ id: 'img-1' }],
+      },
+    ]))
+
+    const elemento = await PaginaPanelVendedor()
+
+    function tieneEnlaceA(nodo: unknown, destino: string): boolean {
+      if (nodo === null || nodo === undefined || typeof nodo !== 'object') return false
+      if (Array.isArray(nodo)) return nodo.some((n) => tieneEnlaceA(n, destino))
+      const props = (nodo as { props?: Record<string, unknown> }).props
+      if (!props) return false
+      if (props.href === destino) return true
+      return tieneEnlaceA(props.children, destino)
+    }
+
+    expect(tieneEnlaceA(elemento, '/panel/propiedades/p1')).toBe(true)
+    expect(tieneEnlaceA(elemento, '/panel/propiedades/p2')).toBe(true)
+  })
 })
