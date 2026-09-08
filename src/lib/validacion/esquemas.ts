@@ -48,15 +48,31 @@ export const esquemaPropiedadNueva = z.object({
   titulo: z.string().trim().min(10, 'Minimo 10 caracteres').max(120, 'Maximo 120'),
 })
 
-/** Edicion del borrador. Casi todo opcional: se guarda a medias a proposito. */
+/**
+ * Edicion del borrador. Casi todo opcional: se guarda a medias a proposito.
+ *
+ * `precio` es opcional desde la correccion del hallazgo Importante "un
+ * borrador no se puede guardar sin precio": la columna admite NULL desde
+ * 20260907000100 (un borrador recien creado GENUINAMENTE no tiene precio
+ * todavia) y el input del formulario nunca llevo `required`, pero este
+ * esquema seguia exigiendolo positivo -- `actualizarPropiedad` (acciones.ts)
+ * hace un `.update()` todo-o-nada, asi que un vendedor que guardara sin
+ * precio perdia TAMBIEN la descripcion, el barrio y las habitaciones recien
+ * escritas, aunque esos campos fueran validos. La puerta real sigue en la
+ * base: publicar sin precio ya esta bloqueado por el trigger
+ * propiedades_exigir_precio (mismo criterio que barrio y descripcion, que
+ * son solo guia del panel -- ver completitud.ts).
+ */
 export const esquemaPropiedad = z.object({
   titulo: z.string().trim().min(10, 'Minimo 10 caracteres').max(120, 'Maximo 120'),
   descripcion: z.string().trim().max(4000).default(''),
   operacion: z.enum(OPERACIONES),
   tipo_inmueble: z.enum(TIPOS_INMUEBLE),
-  precio: z.coerce.number()
-    .positive('El precio debe ser mayor que cero')
-    .max(PRECIO_MAXIMO, 'El precio supera el maximo permitido'),
+  precio: opcional(
+    z.coerce.number()
+      .positive('El precio debe ser mayor que cero')
+      .max(PRECIO_MAXIMO, 'El precio supera el maximo permitido'),
+  ),
   habitaciones: opcional(z.coerce.number().int().min(0).max(50)),
   banos: opcional(z.coerce.number().int().min(0).max(50)),
   area_m2: opcional(z.coerce.number().positive().max(100000)),
