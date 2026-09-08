@@ -8,6 +8,7 @@ import { textoPrecio } from '@/lib/propiedades/panel'
 import { cambiarEstado, type EstadoDestino } from '../acciones'
 import { FormularioDatos, type PropiedadFormulario, type BarrioOpcion } from './formulario-datos'
 import { PanelFotos, type ImagenPanel } from './panel-fotos'
+import { BotonEliminar } from './boton-eliminar'
 
 export const metadata: Metadata = {
   title: 'Editar propiedad | Portal Inmobiliario',
@@ -189,6 +190,19 @@ export default async function PaginaEditarPropiedad({
           maximoFotos={MAXIMO_IMAGENES_POR_PROPIEDAD}
           alMaximo={imagenes.length >= MAXIMO_IMAGENES_POR_PROPIEDAD}
         />
+      </section>
+
+      {/* Hallazgo Importante de la revision final de rama: eliminarPropiedad()
+          (acciones.ts) ya estaba construida y probada, pero ninguna pantalla la
+          llamaba -- y por eso drenarLimpieza(), que solo se invoca desde ahi
+          dentro, nunca corria en produccion. Seccion propia, separada de "Datos"
+          y "Fotos": es la unica accion irreversible de esta pantalla. */}
+      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
+        <h2 className="text-lg font-medium">Eliminar propiedad</h2>
+        <p className="mt-1 text-sm opacity-80">
+          Borra la propiedad y todas sus fotos de forma permanente.
+        </p>
+        <BotonEliminar id={id} />
       </section>
     </main>
   )

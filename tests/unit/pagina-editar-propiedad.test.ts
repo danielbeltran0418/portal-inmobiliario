@@ -34,6 +34,7 @@ const { PanelFotos } = await import('@/app/(vendedor)/panel/propiedades/[id]/pan
 const { FormularioDatos, valorInicialNumerico } = await import(
   '@/app/(vendedor)/panel/propiedades/[id]/formulario-datos'
 )
+const { BotonEliminar } = await import('@/app/(vendedor)/panel/propiedades/[id]/boton-eliminar')
 
 /**
  * Extrae el texto plano de un arbol de elementos de React SIN renderizarlo a
@@ -329,6 +330,28 @@ describe('boton Publicar', () => {
     expect(texto).toContain('Al menos una foto')
     expect(texto).toContain('El barrio')
     expect(texto).toContain('El precio')
+  })
+})
+
+/**
+ * Hallazgo Importante de la revision final: eliminarPropiedad() (acciones.ts)
+ * estaba construida y probada, pero ninguna pantalla la llamaba, asi que la
+ * cola de limpieza de Storage nunca se drenaba en produccion. BotonEliminar es
+ * un componente cliente con hooks (useTransition/useRouter): no se puede
+ * invocar fuera de un render real, igual que FormularioDatos y PanelFotos --
+ * ver el comentario de cabecera de esos dos ficheros. Por eso esta prueba
+ * verifica que la PAGINA lo incluye con el `id` correcto, sin renderizarlo.
+ */
+describe('boton eliminar', () => {
+  it('la pantalla de edicion incluye BotonEliminar con el id de la propiedad', async () => {
+    const cliente = clientePropiedad({ filaPropiedad: BASE_PROPIA })
+    crearClienteServidor.mockResolvedValue(cliente)
+
+    const elemento = await PaginaEditarPropiedad({ params: Promise.resolve({ id: BASE_PROPIA.id }) })
+    const nodoBoton = buscarNodo(elemento, (el) => el.type === BotonEliminar)
+
+    expect(nodoBoton).not.toBeNull()
+    expect(nodoBoton!.props!.id).toBe(BASE_PROPIA.id)
   })
 })
 
