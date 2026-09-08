@@ -58,6 +58,7 @@ test('crear, completar, publicar y pausar una propiedad desde el panel', async (
   await page.fill('input[name="titulo"]', titulo)
   await enviarYEsperar(page, 'Crear borrador')
   await expect(page).toHaveURL(/\/panel\/propiedades\/[0-9a-f-]{36}$/)
+  const idPropiedad = page.url().match(/\/panel\/propiedades\/([0-9a-f-]{36})$/)![1]
 
   // 4. Completar datos y guardar. Barrio, precio y descripcion se llenan aqui
   // a proposito: lo unico que debe faltar despues es la foto, para que el
@@ -112,5 +113,22 @@ test('crear, completar, publicar y pausar una propiedad desde el panel', async (
 
   // 8. Pausar; comprobar pausada.
   await enviarYEsperar(page, 'Pausar')
+  await expect(page.getByText(/Estado: pausada/)).toBeVisible()
+
+  // 9. EL PASO QUE FALTABA (hallazgo Critico de la revision final de rama):
+  // volver a /panel y reabrir la propiedad desde la lista. Antes de este
+  // arreglo, ninguna fila del listado tenia un enlace -- el unico <Link> del
+  // area vendedor era el de "Publicar una propiedad" (paso 2) -- asi que una
+  // propiedad solo era editable durante la misma visita que la creaba. Sin
+  // este paso, la suite entera pasaba igual sin salir jamas de
+  // /panel/propiedades/<id> (el redirect del paso 3 ya deja al vendedor ahi
+  // dentro): exactamente el hueco por el que se colo el fallo. Se pulsa por
+  // el TITULO -- el <Link> envuelve el <h2> de la fila, ver panel/page.tsx --
+  // y se comprueba tanto la URL de destino como que el formulario trae los
+  // datos ya guardados, no solo que la navegacion aterrice en algun sitio.
+  await page.goto('/panel')
+  await page.getByRole('link', { name: titulo }).click()
+  await expect(page).toHaveURL(new RegExp(`/panel/propiedades/${idPropiedad}$`))
+  await expect(page.locator('#precio')).toHaveValue('350000000')
   await expect(page.getByText(/Estado: pausada/)).toBeVisible()
 })

@@ -65,8 +65,20 @@ export default async function PaginaPanelVendedor() {
               key={fila.id}
               className="rounded border border-black/10 p-4 dark:border-white/15"
             >
+              {/* Correccion del hallazgo Critico de la revision final de rama: esta era
+                  la UNICA fila sin forma de volver a la propiedad. La Task 11 (este
+                  listado) y la Task 12 (la pantalla de edicion en
+                  /panel/propiedades/[id]) se dieron por completas cada una por su lado,
+                  pero ningun enlace las conectaba -- una propiedad solo era editable
+                  durante la misma visita que la creaba (el redirect de crearBorrador ya
+                  deja al vendedor ahi dentro). fila.id ya viajaba en FilaPanel: bastaba
+                  usarlo. */}
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-lg font-medium">{fila.titulo}</h2>
+                <h2 className="text-lg font-medium">
+                  <Link href={`/panel/propiedades/${fila.id}`} className="hover:underline">
+                    {fila.titulo}
+                  </Link>
+                </h2>
                 <span className="text-sm opacity-70">{fila.estadoTexto}</span>
               </div>
               <p className="mt-1 opacity-80">{fila.precioTexto}</p>
