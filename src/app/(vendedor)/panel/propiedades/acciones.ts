@@ -42,7 +42,14 @@ export async function crearBorrador(
         descripcion: '',
         operacion: 'venta',
         tipo_inmueble: 'apartamento',
-        precio: 1,
+        // precio se omite: la migracion 20260907000100 quito su NOT NULL
+        // exactamente para esto. Un borrador recien creado GENUINAMENTE no
+        // tiene precio todavia; forzar un marcador (antes: `precio: 1`) para
+        // satisfacer un NOT NULL era la causa de que faltantesParaPublicar
+        // (src/lib/propiedades/completitud.ts) lo diera por puesto -- 1 es
+        // positivo, pasa "!p.precio || p.precio <= 0" sin ser un precio real.
+        // El trigger propiedades_exigir_precio impide publicar mientras siga
+        // en NULL, igual que propiedades_exigir_imagen exige una foto.
       })
       .select('id')
       .single()
