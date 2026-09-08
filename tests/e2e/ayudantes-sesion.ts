@@ -19,7 +19,15 @@ export const CUENTAS = [
     clave: 'VendedorPrueba2026*',
     enlace: 'Panel',
     ruta: '/panel',
-    encabezado: /Panel del vendedor/i,
+    // Hallazgo de la Task 13 (SP3): la Task 11
+    // (src/app/(vendedor)/panel/page.tsx, commit 37de7b7) reemplazo la
+    // pantalla provisional ("Panel del vendedor", solo un parrafo) por el
+    // listado real de propiedades, con encabezado "Mis propiedades". Esta
+    // constante se quedo apuntando al texto viejo y ninguna tarea entre la
+    // 11 y la 13 volvio a correr `npm run test:e2e` para notarlo (ver
+    // progress.md: la ultima corrida registrada de la suite completa es de
+    // la Task 3). Corregido para reflejar la pantalla real.
+    encabezado: /Mis propiedades/i,
   },
   {
     rol: 'super_admin',

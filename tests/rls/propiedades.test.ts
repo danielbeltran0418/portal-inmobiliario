@@ -21,10 +21,22 @@ describe('RLS de propiedades', () => {
       tipo_inmueble: 'apartamento', precio: 350000000, habitaciones: 3, banos: 2,
       area_m2: 78, direccion: 'Calle 1 #2-3', descripcion: 'Descripcion de prueba',
     }
+    // Nace en borrador (el default) y se publica en un segundo paso, con una
+    // imagen de por medio: desde 20260904000300_exigir_imagen_publicar.sql,
+    // un INSERT directo con estado 'publicada' sin imagenes lo rechaza el
+    // trigger con 23514. Esta suite no prueba ese trigger -- lo hace
+    // imagen-publicar.test.ts -- asi que el fixture solo necesita rodearlo.
     const { data: pub } = await admin.from('propiedades')
-      .insert({ ...base, slug: 'apartamento-villa-carolina-prueba', titulo: 'Apartamento publicado', estado: 'publicada' })
+      .insert({ ...base, slug: 'apartamento-villa-carolina-prueba', titulo: 'Apartamento publicado' })
       .select('id').single()
     idPublicada = pub!.id
+    await admin.from('imagenes_propiedad').insert({
+      propiedad_id: idPublicada, ruta_storage: 'fixtures/apartamento-villa-carolina.webp',
+      alt_text: 'Fachada del apartamento de prueba',
+    })
+    const { error: errorPublicar } = await admin.from('propiedades')
+      .update({ estado: 'publicada' }).eq('id', idPublicada)
+    if (errorPublicar) throw errorPublicar
 
     const { data: bor } = await admin.from('propiedades')
       .insert({ ...base, slug: 'apartamento-borrador-prueba', titulo: 'Apartamento borrador', estado: 'borrador' })
@@ -52,6 +64,40 @@ describe('RLS de propiedades', () => {
     const cliente = await clienteComo(B.correo, B.password)
     const { data } = await cliente.from('propiedades').select('id').eq('id', idBorrador)
     expect(data).toHaveLength(0)
+  })
+
+  /**
+   * Hallazgo bloqueante de la Task 11 (SP3): esta es la prueba que fija la
+   * verdad de las politicas. Las demas pruebas de esta suite SIEMPRE filtran
+   * por `.eq('id', ...)` puntual -- por eso ninguna ejercitaba lo que pasa
+   * con una consulta SIN filtro, que es justo como la hacia el panel del
+   * vendedor antes de este arreglo.
+   *
+   * Postgres combina las politicas SELECT permisivas del MISMO comando con
+   * OR: propiedades_lectura_dueno (vendedor_id = auth.uid()) OR
+   * propiedades_lectura_publica (estado = 'publicada', que tambien alcanza a
+   * `authenticated`, no solo a `anon`). Resultado real: un vendedor
+   * autenticado que pide la tabla sin filtro recibe sus propias filas MAS
+   * las publicadas de cualquier otro vendedor. RLS NO basta para que "mis
+   * propiedades" signifique "las mias" -- hace falta un
+   * `.eq('vendedor_id', ...)` explicito en la aplicacion (ver
+   * src/app/(vendedor)/panel/page.tsx).
+   */
+  it('SIN filtro explicito, el vendedor B TAMBIEN ve la propiedad publicada del vendedor A', async () => {
+    const cliente = await clienteComo(B.correo, B.password)
+    const { data, error } = await cliente.from('propiedades').select('id, vendedor_id, estado')
+    expect(error).toBeNull()
+
+    const ids = (data ?? []).map((fila) => fila.id)
+
+    // El bug: la publicada de A se cuela en una consulta de B sin filtro.
+    expect(ids).toContain(idPublicada)
+
+    // Caso de control, en la MISMA consulta sin filtro: el borrador de A no
+    // es publico y B no es su dueno, asi que no deberia aparecer. Sin este
+    // control, un cambio que devolviera la tabla entera sin RLS alguna
+    // tambien haria pasar la linea de arriba.
+    expect(ids).not.toContain(idBorrador)
   })
 
   it('el vendedor dueno SI puede editar su propia propiedad publicada', async () => {

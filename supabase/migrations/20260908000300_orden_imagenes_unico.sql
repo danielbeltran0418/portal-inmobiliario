@@ -1,0 +1,61 @@
+-- ============================================================================
+-- UNIQUE (propiedad_id, orden) sobre imagenes_propiedad, DEFERRABLE.
+--
+-- EL HALLAZGO (revision final de rama, punto 5)
+-- ----------------------------------------------------------------------------
+-- subirImagen() (acciones-imagenes.ts) asignaba `orden: count ?? 0`, leyendo
+-- el CONTEO de imagenes existentes en vez de su `orden` mas alto. Eso es
+-- correcto mientras nunca se borre nada del medio, pero se rompe en cuanto
+-- se hace: subir 3 fotos dejaba orden 0, 1, 2; borrar la del medio dejaba
+-- 0 y 2 (cuenta = 2, pero el orden mas alto seguia siendo 2); subir una
+-- cuarta foto reutilizaba `orden: 2` -- EMPATADA con la que ya tenia ese
+-- valor. Con el empate, reordenarImagen() podia elegir como "vecina" a su
+-- propia gemela, e intercambiar_orden_imagenes() (20260908000100) cambiaba
+-- 2 por 2: un no-op silencioso, Subir/Bajar dejaba de mover nada sin que el
+-- vendedor recibiera ningun error. Es el mismo orden indeterminado que esa
+-- migracion se escribio para evitar, alcanzado por otra via: el patron "leo
+-- el conteo, luego escribo" en vez de leer el dato que realmente importa.
+--
+-- El arreglo de la aplicacion (acciones-imagenes.ts: `max(orden) + 1` en vez
+-- de reutilizar el conteo) cierra el caso reproducido -- ya no hay huecos
+-- que reutilizar mal. Esta migracion es la segunda linea de defensa, en la
+-- base: el mismo criterio que ya aplica este proyecto a otros invariantes
+-- (propiedades_exigir_imagen, propiedades_exigir_precio, el CHECK de slug)
+-- -- una regla de integridad no debe depender solo de que la aplicacion la
+-- respete. Sin este UNIQUE, una carrera entre dos subidas simultaneas del
+-- mismo vendedor (RIESGO 2, ya documentado en acciones-imagenes.ts) podria
+-- seguir calculando el mismo `max + 1` dos veces y colar un duplicado
+-- silencioso; con el, la segunda de las dos choca con un error en vez de
+-- corromper el orden.
+--
+-- POR QUE DEFERRABLE INITIALLY DEFERRED, Y NO UN VALOR TEMPORAL
+-- ----------------------------------------------------------------------------
+-- intercambiar_orden_imagenes() (20260908000100 / 20260908000200) intercambia
+-- el `orden` de dos filas con DOS UPDATE dentro de la MISMA funcion. Esa
+-- funcion es una unica invocacion via RPC de PostgREST, que envuelve cada
+-- peticion en una unica transaccion -- asi que los dos UPDATE ya corren
+-- dentro de la misma transaccion, sean cuales sean sus valores intermedios.
+-- Con un UNIQUE normal (IMMEDIATE, el default), Postgres comprobaria la
+-- restriccion DESPUES DE CADA UPDATE, y el primero de los dos dejaria
+-- momentaneamente dos filas con el mismo `orden` (la fila que se esta
+-- actualizando y su companera, antes de que la segunda tambien cambie) --
+-- practicamente cualquier swap de dos valores existentes pasa por ese
+-- instante. DEFERRABLE INITIALLY DEFERRED mueve la comprobacion al FINAL de
+-- la transaccion (aqui, al final de la funcion): el estado intermedio
+-- duplicado nunca se comprueba, solo el estado final -- que es,
+-- precisamente, el que la funcion garantiza sin duplicados. No hace falta
+-- ademas un valor temporal negativo ni tocar intercambiar_orden_imagenes():
+-- el swap sigue igual, y la unica diferencia es CUANDO Postgres mira la
+-- restriccion.
+--
+-- Un INSERT normal (subirImagen) es su propia transaccion de una sola
+-- sentencia: para el, "diferir al final de la transaccion" coincide con "al
+-- final de la sentencia", asi que el comportamiento pasa a ser identico al
+-- de un UNIQUE inmediato -- el duplicado se sigue rechazando de inmediato,
+-- solo cambia el mecanismo interno de cuando se evalua.
+-- ============================================================================
+
+ALTER TABLE public.imagenes_propiedad
+  ADD CONSTRAINT imagenes_propiedad_orden_unico
+  UNIQUE (propiedad_id, orden)
+  DEFERRABLE INITIALLY DEFERRED;

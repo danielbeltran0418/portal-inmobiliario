@@ -28,11 +28,29 @@ export function construirCabeceras(nonce: string): Record<string, string> {
   // prueba unitaria que fija que en produccion NO aparece.
   const evalDeDesarrollo = process.env.NODE_ENV !== 'production' ? ` 'unsafe-eval'` : ''
 
+  // Task 12 es la primera pantalla que carga un <img> (next/image
+  // `unoptimized`, ver panel-fotos.tsx) apuntando de verdad a Storage. En
+  // produccion NEXT_PUBLIC_SUPABASE_URL es https://<ref>.supabase.co, que
+  // "https://*.supabase.co" ya cubre. En LOCAL corre en
+  // http://127.0.0.1:<puerto> -- ni el esquema (http) ni el host (una IP, no
+  // *.supabase.co) coinciden con ese comodin, y sin esto el navegador
+  // bloquea la imagen por CSP aunque la URL firmada sea correcta (visto en
+  // vivo al probar el flujo a mano). Condicionado a NODE_ENV, igual que
+  // 'unsafe-eval' arriba: en produccion no anade nada.
+  const origenSupabaseLocal = (() => {
+    if (process.env.NODE_ENV === 'production') return ''
+    try {
+      return ` ${new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').origin}`
+    } catch {
+      return ''
+    }
+  })()
+
   const csp = [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${evalDeDesarrollo} ${ORIGENES_SCRIPT.join(' ')}`,
     `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' data: blob: https://*.supabase.co`,
+    `img-src 'self' data: blob: https://*.supabase.co${origenSupabaseLocal}`,
     `font-src 'self'`,
     `connect-src 'self' ${ORIGENES_CONEXION.join(' ')}`,
     `frame-src https://challenges.cloudflare.com`,
