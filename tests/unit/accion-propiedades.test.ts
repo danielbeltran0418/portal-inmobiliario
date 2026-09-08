@@ -7,15 +7,28 @@ const singleMock = vi.fn()
 const updateMock = vi.fn()
 const eqMock = vi.fn()
 const selectUpdateMock = vi.fn()
+const eqSelectMock = vi.fn()
+const maybeSingleMock = vi.fn()
+const deleteMock = vi.fn()
+const eqDeleteMock = vi.fn()
+const selectDeleteMock = vi.fn()
 const crearClienteServidor = vi.fn()
+const crearClienteAdmin = vi.fn()
 const redirect = vi.fn()
 const revalidatePath = vi.fn()
 
+// Igual que en tests/unit/limite-intentos.test.ts: cliente-admin.ts importa
+// 'server-only', que revienta con "This module cannot be imported from a
+// Client Component module" en cuanto se carga bajo Node/Vitest (no hay
+// condicion "react-server" fuera de Next). Sin este mock, importar acciones.ts
+// mas abajo -- que ahora importa crearClienteAdmin para drenarLimpieza --
+// tira abajo TODA la suite, no solo las pruebas nuevas.
 vi.mock('@/lib/supabase/cliente-servidor', () => ({ crearClienteServidor }))
+vi.mock('@/lib/supabase/cliente-admin', () => ({ crearClienteAdmin }))
 vi.mock('next/navigation', () => ({ redirect }))
 vi.mock('next/cache', () => ({ revalidatePath }))
 
-const { crearBorrador, actualizarPropiedad } = await import(
+const { crearBorrador, actualizarPropiedad, cambiarEstado, eliminarPropiedad } = await import(
   '@/app/(vendedor)/panel/propiedades/acciones'
 )
 
@@ -36,7 +49,42 @@ function clienteFalso() {
           },
         }
       },
+      // Cadena de faltaParaPublicar() en cambiarEstado():
+      // .select('precio, imagenes_propiedad(id)').eq('id', id).maybeSingle()
+      select: (columnas: string) => ({
+        eq: (columna: string, valor: string) => {
+          eqSelectMock(columnas, columna, valor)
+          return { maybeSingle: maybeSingleMock }
+        },
+      }),
+      // Cadena de eliminarPropiedad(): .delete().eq('id', id).select('id')
+      delete: () => {
+        deleteMock()
+        return {
+          eq: (columna: string, valor: string) => {
+            eqDeleteMock(columna, valor)
+            return { select: selectDeleteMock }
+          },
+        }
+      },
     }),
+  }
+}
+
+// admin.from('limpieza_almacenamiento').select('id, ruta').limit(100)
+// admin.storage.from(BUCKET_PROPIEDADES).remove([...])
+// admin.from('limpieza_almacenamiento').delete().in('id', [...])
+const limiteMock = vi.fn()
+const removeMock = vi.fn()
+const inMock = vi.fn()
+
+function clienteAdminFalso() {
+  return {
+    from: () => ({
+      select: () => ({ limit: limiteMock }),
+      delete: () => ({ in: inMock }),
+    }),
+    storage: { from: () => ({ remove: removeMock }) },
   }
 }
 
@@ -232,5 +280,172 @@ describe('actualizarPropiedad', () => {
     expect(r).toEqual({})
     expect(revalidatePath).toHaveBeenCalledWith('/panel/propiedades/prop-1')
     expect(revalidatePath).toHaveBeenCalledWith('/panel')
+  })
+})
+
+describe('cambiarEstado', () => {
+  beforeEach(() => {
+    eqSelectMock.mockReset()
+    maybeSingleMock.mockReset()
+    updateMock.mockReset()
+    eqMock.mockReset()
+    selectUpdateMock.mockReset().mockResolvedValue({ data: [{ id: 'prop-1' }], error: null })
+    crearClienteServidor.mockReset().mockResolvedValue(clienteFalso())
+    revalidatePath.mockReset()
+  })
+
+  // El defecto que corrigio esta tarea: el brief original mandaba mapear
+  // 23514 -> "necesitas una foto" a ciegas, pero hay DOS triggers que lanzan
+  // ese mismo codigo (propiedades_exigir_imagen y propiedades_exigir_precio,
+  // ver mapear.ts). faltaParaPublicar() evita la ambiguedad consultando la
+  // fila real ANTES del UPDATE, asi que ninguna de estas dos pruebas depende
+  // en absoluto del codigo de error de Postgres.
+  it('al publicar sin fotos, devuelve el mensaje de foto y no llega a hacer el UPDATE', async () => {
+    maybeSingleMock.mockResolvedValue({ data: { precio: 300000, imagenes_propiedad: [] } })
+
+    const r = await cambiarEstado('prop-1', 'publicada')
+
+    expect(r.error).toBe('Para publicar necesitas subir al menos una foto de la propiedad.')
+    expect(updateMock).not.toHaveBeenCalled()
+  })
+
+  it('al publicar con fotos pero sin precio, devuelve el mensaje de precio y no llega a hacer el UPDATE', async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: { precio: null, imagenes_propiedad: [{ id: 'img-1' }] },
+    })
+
+    const r = await cambiarEstado('prop-1', 'publicada')
+
+    expect(r.error).toBe('Para publicar necesitas fijar un precio para la propiedad.')
+    expect(updateMock).not.toHaveBeenCalled()
+  })
+
+  // Decision documentada: si faltan las dos cosas se avisa de la foto
+  // primero, igual que en la base (los triggers BEFORE se ejecutan en orden
+  // alfabetico de nombre: 'imagen' antes que 'precio').
+  it('si faltan foto y precio a la vez, se muestra el mensaje de la foto', async () => {
+    maybeSingleMock.mockResolvedValue({ data: { precio: null, imagenes_propiedad: [] } })
+
+    const r = await cambiarEstado('prop-1', 'publicada')
+
+    expect(r.error).toBe('Para publicar necesitas subir al menos una foto de la propiedad.')
+  })
+
+  it('con foto y precio, publicar SI actualiza el estado y revalida las rutas', async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: { precio: 300000, imagenes_propiedad: [{ id: 'img-1' }] },
+    })
+
+    const r = await cambiarEstado('prop-1', 'publicada')
+
+    expect(r).toEqual({})
+    expect(updateMock).toHaveBeenCalledWith({ estado: 'publicada' })
+    expect(revalidatePath).toHaveBeenCalledWith('/panel')
+    expect(revalidatePath).toHaveBeenCalledWith('/panel/propiedades/prop-1')
+  })
+
+  // Pausar, marcar vendida o devolver a borrador no tienen requisito alguno
+  // en la base: la comprobacion previa es SOLO para 'publicada'.
+  it('cambiar a un estado que no es publicada no consulta faltaParaPublicar', async () => {
+    const r = await cambiarEstado('prop-1', 'pausada')
+
+    expect(r).toEqual({})
+    expect(maybeSingleMock).not.toHaveBeenCalled()
+    expect(updateMock).toHaveBeenCalledWith({ estado: 'pausada' })
+  })
+
+  it('si RLS filtra todas las filas (no es el dueno) responde el error generico', async () => {
+    selectUpdateMock.mockResolvedValue({ data: [], error: null })
+
+    const r = await cambiarEstado('prop-1', 'pausada')
+
+    expect(r.error).toBeTruthy()
+  })
+
+  // Red de seguridad: si el UPDATE llega a fallar con 23514 pese a la
+  // comprobacion previa (la carrera que documenta MENSAJE_REQUISITOS_PUBLICACION
+  // en mapear.ts), cambiarEstado usa mapearError(error).mensaje, no el
+  // mensaje generico a secas.
+  it('si el UPDATE falla con 23514 pese a la comprobacion previa, usa el mensaje combinado de mapearError', async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: { precio: 300000, imagenes_propiedad: [{ id: 'img-1' }] },
+    })
+    selectUpdateMock.mockResolvedValue({ data: null, error: { code: '23514' } })
+
+    const r = await cambiarEstado('prop-1', 'publicada')
+
+    expect(r.error).toBe('Para publicar, la propiedad necesita al menos una foto y un precio.')
+  })
+})
+
+describe('eliminarPropiedad', () => {
+  beforeEach(() => {
+    deleteMock.mockReset()
+    eqDeleteMock.mockReset()
+    selectDeleteMock.mockReset().mockResolvedValue({ data: [{ id: 'prop-1' }], error: null })
+    crearClienteServidor.mockReset().mockResolvedValue(clienteFalso())
+    crearClienteAdmin.mockReset().mockReturnValue(clienteAdminFalso())
+    limiteMock.mockReset().mockResolvedValue({ data: [] })
+    removeMock.mockReset().mockResolvedValue({ data: [] })
+    inMock.mockReset().mockResolvedValue({ data: null, error: null })
+    revalidatePath.mockReset()
+  })
+
+  it('si RLS filtra todas las filas (no es el dueno) responde el error generico y no drena la cola', async () => {
+    selectDeleteMock.mockResolvedValue({ data: [], error: null })
+
+    const r = await eliminarPropiedad('prop-ajena')
+
+    expect(r.error).toBeTruthy()
+    expect(crearClienteAdmin).not.toHaveBeenCalled()
+  })
+
+  it('si el DELETE de la base falla, responde el error generico y no drena la cola', async () => {
+    selectDeleteMock.mockResolvedValue({ data: null, error: { code: '42501' } })
+
+    const r = await eliminarPropiedad('prop-1')
+
+    expect(r.error).toBeTruthy()
+    expect(crearClienteAdmin).not.toHaveBeenCalled()
+  })
+
+  it('borra la propiedad, no hay nada pendiente en la cola: no llama a Storage', async () => {
+    const r = await eliminarPropiedad('prop-1')
+
+    expect(r).toEqual({})
+    expect(deleteMock).toHaveBeenCalled()
+    expect(eqDeleteMock).toHaveBeenCalledWith('id', 'prop-1')
+    expect(limiteMock).toHaveBeenCalled()
+    expect(removeMock).not.toHaveBeenCalled()
+    expect(revalidatePath).toHaveBeenCalledWith('/panel')
+  })
+
+  it('drena la cola: borra en Storage y quita de limpieza_almacenamiento solo lo confirmado', async () => {
+    limiteMock.mockResolvedValue({
+      data: [
+        { id: 1, ruta: 'vendedor-1/a.webp' },
+        { id: 2, ruta: 'vendedor-1/b.webp' },
+      ],
+    })
+    // Storage solo confirma UNA de las dos rutas: la otra debe quedarse en
+    // la cola, no perderse en silencio.
+    removeMock.mockResolvedValue({ data: [{ name: 'vendedor-1/a.webp' }] })
+
+    const r = await eliminarPropiedad('prop-1')
+
+    expect(r).toEqual({})
+    expect(removeMock).toHaveBeenCalledWith(['vendedor-1/a.webp', 'vendedor-1/b.webp'])
+    expect(inMock).toHaveBeenCalledWith('id', [1])
+  })
+
+  it('si Storage no confirma ninguna ruta, no borra nada de limpieza_almacenamiento', async () => {
+    limiteMock.mockResolvedValue({ data: [{ id: 1, ruta: 'vendedor-1/a.webp' }] })
+    removeMock.mockResolvedValue({ data: [] })
+
+    const r = await eliminarPropiedad('prop-1')
+
+    expect(r).toEqual({})
+    expect(removeMock).toHaveBeenCalled()
+    expect(inMock).not.toHaveBeenCalled()
   })
 })
