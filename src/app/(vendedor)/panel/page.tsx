@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { filasDelPanel, type PropiedadCruda } from '@/lib/propiedades/panel'
 
@@ -17,18 +18,28 @@ const CLASE_BOTON_PRIMARIO =
 /**
  * Listado de propiedades del vendedor: la primera pantalla que ve al entrar.
  *
- * RLS (propiedades_lectura_dueno, ver 20260827000600_propiedades.sql) ya
- * filtra por dueño: un .eq('vendedor_id', ...) aqui seria redundante. La
- * consulta trae `imagenes_propiedad(id)` -- relacion anidada de PostgREST,
- * no una columna -- solo para poder contar sus imagenes, que es lo que pide
- * faltantesParaPublicar via filasDelPanel.
+ * El .eq('vendedor_id', ...) de abajo NO es redundante: 20260827000600_propiedades.sql
+ * define DOS politicas SELECT permisivas para `authenticated` sobre esta tabla
+ * (propiedades_lectura_dueno: vendedor_id = auth.uid(); propiedades_lectura_publica:
+ * estado = 'publicada', que tambien alcanza a authenticated). Postgres combina
+ * politicas permisivas del mismo comando con OR, asi que sin este filtro un
+ * vendedor autenticado recibe sus propias filas MAS todas las propiedades
+ * publicadas de cualquier otro vendedor -- "mis propiedades" dejaria de
+ * significar "las mias" (visto en vivo: ver tests/rls/propiedades.test.ts,
+ * "SIN filtro explicito"). La consulta trae `imagenes_propiedad(id)` --
+ * relacion anidada de PostgREST, no una columna -- solo para poder contar sus
+ * imagenes, que es lo que pide faltantesParaPublicar via filasDelPanel.
  */
 export default async function PaginaPanelVendedor() {
   const supabase = await crearClienteServidor()
 
+  const { data: usuario } = await supabase.auth.getUser()
+  if (!usuario.user) redirect('/login')
+
   const { data } = await supabase
     .from('propiedades')
     .select('id, titulo, estado, precio, barrio_id, descripcion, imagenes_propiedad(id)')
+    .eq('vendedor_id', usuario.user.id)
     .order('actualizado_en', { ascending: false })
 
   const filas = filasDelPanel((data ?? []) as unknown as PropiedadCruda[])

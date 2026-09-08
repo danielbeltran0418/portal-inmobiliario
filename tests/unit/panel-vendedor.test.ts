@@ -95,12 +95,29 @@ function textoPlano(nodo: unknown): string {
   return ''
 }
 
+const ID_USUARIO = 'usuario-de-prueba-11111111-1111-1111-1111-111111111111'
+
+/**
+ * `.eq('vendedor_id', ...)` es el arreglo del hallazgo bloqueante: el panel
+ * NO puede confiar solo en RLS (ver el comentario de page.tsx). `builder`
+ * imita el encadenado real de PostgREST-js, donde `.eq()` y `.order()`
+ * cuelgan del mismo objeto y cualquiera puede llamarse sin el otro -- asi,
+ * si alguien quita el `.eq('vendedor_id', ...)` del codigo, la cadena NO
+ * revienta (seguiria compilando una consulta sin filtro, que es justo el
+ * bug), y la prueba de mas abajo lo detecta por una asercion clara
+ * (`eqMock` sin llamar) en vez de un TypeError que tumbe toda la suite.
+ */
 function clienteFalso(data: unknown[]) {
   const orderMock = vi.fn().mockResolvedValue({ data, error: null })
-  const selectMock = vi.fn().mockReturnValue({ order: orderMock })
+  const eqMock = vi.fn()
+  const builder = { eq: eqMock, order: orderMock }
+  eqMock.mockReturnValue(builder)
+  const selectMock = vi.fn().mockReturnValue(builder)
   return {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: ID_USUARIO } } }) },
     from: vi.fn().mockReturnValue({ select: selectMock }),
     _selectMock: selectMock,
+    _eqMock: eqMock,
     _orderMock: orderMock,
   }
 }
@@ -150,6 +167,23 @@ describe('PaginaPanelVendedor', () => {
     await PaginaPanelVendedor()
 
     expect(cliente._orderMock).toHaveBeenCalledWith('actualizado_en', { ascending: false })
+  })
+
+  /**
+   * Hallazgo bloqueante de la Task 11: RLS por si sola NO filtra "propiedades"
+   * por dueño (dos politicas SELECT permisivas para `authenticated` se
+   * combinan con OR -- ver tests/rls/propiedades.test.ts, "SIN filtro
+   * explicito"). El panel tiene que filtrar el mismo, con el id del usuario
+   * autenticado, o "mis propiedades" muestra tambien las publicadas de otros.
+   */
+  it('filtra la consulta por vendedor_id, con el id del usuario autenticado', async () => {
+    const cliente = clienteFalso([])
+    crearClienteServidor.mockResolvedValue(cliente)
+
+    await PaginaPanelVendedor()
+
+    expect(cliente.auth.getUser).toHaveBeenCalled()
+    expect(cliente._eqMock).toHaveBeenCalledWith('vendedor_id', ID_USUARIO)
   })
 
   it('el enlace a /panel/propiedades/nueva siempre esta presente', async () => {
