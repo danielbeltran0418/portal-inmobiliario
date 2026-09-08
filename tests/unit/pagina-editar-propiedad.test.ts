@@ -317,6 +317,28 @@ describe('boton Publicar', () => {
     expect(encontrarBoton(elemento, 'Pausar')).not.toBeNull()
   })
 
+  // Hallazgo Importante de la revision final de rama, y decision del
+  // controlador ("manda la base"): el boton se condiciona SOLO a foto y
+  // precio -- las dos unicas condiciones que la base impone de verdad (ver
+  // el comentario de puedePublicar en completitud.ts). Antes de este
+  // arreglo, faltar el barrio (o una descripcion de 40+ caracteres) dejaba
+  // el boton deshabilitado para siempre, aunque la base publicara sin
+  // problema.
+  it('con foto y precio, SIN barrio, el boton esta HABILITADO (la base publica igual)', async () => {
+    const sinBarrio: FilaPropiedadFalsa = { ...BASE_PROPIA, barrio_id: null, descripcion: 'Corta' }
+    const cliente = clientePropiedad({ filaPropiedad: sinBarrio })
+    crearClienteServidor.mockResolvedValue(cliente)
+
+    const elemento = await PaginaEditarPropiedad({ params: Promise.resolve({ id: sinBarrio.id }) })
+    const boton = encontrarBoton(elemento, 'Publicar')
+
+    expect(boton).not.toBeNull()
+    expect(boton!.props!.disabled).toBe(false)
+    // Y la lista de guia sigue mostrando el barrio entero: dejar de bloquear
+    // no es dejar de avisar.
+    expect(textoPlano(elemento)).toContain('El barrio')
+  })
+
   it('lista los faltantes visibles junto al boton', async () => {
     const incompleta: FilaPropiedadFalsa = {
       ...BASE_PROPIA, precio: null, barrio_id: null, descripcion: '', imagenes_propiedad: [],

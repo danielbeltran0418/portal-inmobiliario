@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { firmarImagenes } from '@/lib/imagenes/firmar'
 import { MAXIMO_IMAGENES_POR_PROPIEDAD } from '@/lib/imagenes/procesar'
-import { faltantesParaPublicar } from '@/lib/propiedades/completitud'
+import { faltantesParaPublicar, puedePublicar } from '@/lib/propiedades/completitud'
 import { textoPrecio } from '@/lib/propiedades/panel'
 import { cambiarEstado, type EstadoDestino } from '../acciones'
 import { FormularioDatos, type PropiedadFormulario, type BarrioOpcion } from './formulario-datos'
@@ -115,12 +115,19 @@ export default async function PaginaEditarPropiedad({
   // de Storage. Toda URL que llegue a PanelFotos sale de firmarImagenes.
   const firmadas = await firmarImagenes(imagenes.map((img) => img.ruta_storage))
 
-  const faltantes = faltantesParaPublicar({
+  const datosParaCompletitud = {
     descripcion: p.descripcion,
     barrio_id: p.barrio_id,
     precio: p.precio,
     numeroDeImagenes: imagenes.length,
-  })
+  }
+  // faltantes: la lista COMPLETA (foto, precio, barrio, descripcion) es solo
+  // guia y se sigue mostrando entera. bloqueaPublicar: hallazgo Importante de
+  // la revision final -- el boton "Publicar" solo debe condicionarse a lo
+  // que la base impone de verdad (foto y precio), nunca a barrio ni
+  // descripcion. Ver el comentario de puedePublicar() en completitud.ts.
+  const faltantes = faltantesParaPublicar(datosParaCompletitud)
+  const bloqueaPublicar = !puedePublicar(datosParaCompletitud)
 
   const imagenesPanel: ImagenPanel[] = imagenes.map((img) => ({
     id: img.id,
@@ -167,7 +174,7 @@ export default async function PaginaEditarPropiedad({
           <form key={destino} action={accionCambiarEstado.bind(null, id, destino)}>
             <button
               type="submit"
-              disabled={destino === 'publicada' && faltantes.length > 0}
+              disabled={destino === 'publicada' && bloqueaPublicar}
               className="rounded border px-4 py-2 text-sm disabled:opacity-40"
             >
               {ETIQUETA_ESTADO[destino]}

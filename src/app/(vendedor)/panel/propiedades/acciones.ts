@@ -137,6 +137,17 @@ export type EstadoDestino = 'publicada' | 'pausada' | 'vendida' | 'borrador'
  * propiedad sin barrio SI puede publicarse -- y usarla aqui tal cual
  * bloquearia una publicacion que la base permite.
  *
+ * Correccion del hallazgo Importante de la revision final de rama: este
+ * comentario ya avisaba del error correcto, pero [id]/page.tsx lo cometia
+ * de todos modos -- deshabilitaba el boton "Publicar" con
+ * `faltantesParaPublicar(...).length > 0` completo, bloqueando por barrio o
+ * descripcion algo que esta misma funcion (y la base) SI permiten publicar.
+ * Ahora esa pantalla usa puedePublicar() (completitud.ts), que replica estas
+ * mismas DOS condiciones -- foto y precio, nada mas -- para decidir si el
+ * boton se puede pulsar. Las dos funciones quedan alineadas a proposito: si
+ * un requisito nuevo se vuelve exigencia real de la base, debe anadirse en
+ * los dos sitios (o factorizarse), nunca solo en uno.
+ *
  * Se consulta con el cliente del propio vendedor (RLS de por medio a
  * proposito): si `id` no es suyo, `propiedad` sale null y esta funcion no
  * dice nada -- el UPDATE que sigue en cambiarEstado() se encarga de la
