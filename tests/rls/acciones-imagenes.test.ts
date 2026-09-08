@@ -362,5 +362,64 @@ describe('acciones de imagenes (contra Postgres y Storage reales)', () => {
       expect(porId.get(img0!.id)).toBe(1)
       expect(porId.get(img1!.id)).toBe(0)
     })
+
+    // Hallazgo Importante de la revision final de rama: REPRODUCCION EXACTA
+    // a traves de subirImagen()/eliminarImagen() reales (no insertando
+    // `orden` a mano, como crearTresImagenes de arriba) -- exactamente como
+    // lo dispara un vendedor de verdad. Subir 3 fotos, borrar la del medio y
+    // subir una cuarta: antes de la correccion, la cuarta entraba con
+    // `orden: count` (la CUENTA tras borrar, que es 2), EMPATADA con la
+    // tercera foto (que seguia en orden 2). Con el empate,
+    // intercambiar_orden_imagenes() podia elegir como "vecina" a su propia
+    // gemela y el intercambio se volvia un no-op silencioso.
+    it('subir 3, borrar la del medio y subir una 4a no deja duplicados de orden, y Subir/Bajar sigue moviendo', async () => {
+      const propiedad = await propiedadVaciaDeA()
+
+      async function subir(etiqueta: string) {
+        const archivo = archivoDePrueba(`${etiqueta}.jpg`, contenidoJpeg)
+        const r = await subirImagen(
+          {},
+          formularioDeSubida(propiedad, `Foto ${etiqueta} de la propiedad`, archivo),
+        )
+        expect(r).toEqual({})
+      }
+
+      await subir('primera')
+      await subir('segunda')
+      await subir('tercera')
+
+      const { data: trasTresSubidas } = await clienteAdmin()
+        .from('imagenes_propiedad').select('id, orden').eq('propiedad_id', propiedad)
+        .order('orden', { ascending: true })
+      expect(trasTresSubidas!.map((f) => f.orden)).toEqual([0, 1, 2])
+      const idDelMedio = trasTresSubidas![1]!.id
+
+      const rBorrar = await eliminarImagen(idDelMedio, propiedad)
+      expect(rBorrar).toEqual({})
+
+      // Sin el arreglo, esta subida reutilizaria `orden: 2` -- la cuenta
+      // tras el borrado -- empatando con la tercera foto.
+      await subir('cuarta')
+
+      const { data: trasCuartaSubida } = await clienteAdmin()
+        .from('imagenes_propiedad').select('id, orden').eq('propiedad_id', propiedad)
+        .order('orden', { ascending: true })
+      const ordenes = trasCuartaSubida!.map((f) => f.orden)
+
+      // Sin duplicados: tantos valores distintos como filas.
+      expect(new Set(ordenes).size).toBe(ordenes.length)
+      expect(ordenes).toEqual([0, 2, 3])
+
+      // Y Subir/Bajar sigue moviendo de verdad: la ultima foto (orden 3)
+      // sube y pasa a ocupar el 2, y la que tenia el 2 pasa al 3. Con el
+      // bug, un empate previo podia hacer de esto un no-op silencioso.
+      const idUltima = trasCuartaSubida![trasCuartaSubida!.length - 1]!.id
+      const rMover = await reordenarImagen(idUltima, propiedad, 'arriba')
+      expect(rMover).toEqual({})
+
+      const { data: trasMover } = await clienteAdmin()
+        .from('imagenes_propiedad').select('orden').eq('id', idUltima).single()
+      expect(trasMover!.orden).toBe(2)
+    })
   })
 })

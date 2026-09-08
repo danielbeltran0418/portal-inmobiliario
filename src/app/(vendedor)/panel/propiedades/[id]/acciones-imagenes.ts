@@ -37,25 +37,46 @@ export async function subirImagen(
   const { data: usuario } = await supabase.auth.getUser()
   if (!usuario.user) return { error: MENSAJE_GENERICO }
 
-  // RIESGO 2 (ver task-10-report.md): este conteo y el INSERT de abajo no son
-  // atomicos. Entre los dos cabe otra subida del mismo vendedor en otra
-  // pestana, y la propiedad podria terminar con 13 imagenes en vez de 12.
-  // Aceptado a proposito, sin trigger ni funcion que lo cierre: la
-  // consecuencia de pasarse es COSMETICA (una foto de mas en el carrusel),
-  // nunca de seguridad ni de integridad -- no hay fila ajena de por medio, y
-  // el propio vendedor puede borrar el sobrante con eliminarImagen() de
-  // inmediato. Cerrar esta carrera con un trigger de conteo en la base
-  // anadiria una segunda fuente de verdad para "cuantas fotos tiene esta
-  // propiedad" (la primera es este SELECT) por un beneficio que es solo
-  // estetico.
-  const { count } = await supabase
+  // RIESGO 2 (ver task-10-report.md): esta lectura y el INSERT de abajo no
+  // son atomicos. Entre los dos cabe otra subida del mismo vendedor en otra
+  // pestana, y la propiedad podria terminar con 13 imagenes en vez de 12 (o,
+  // si las dos calculan el mismo `orden` a la vez, un choque que el UNIQUE
+  // (propiedad_id, orden) -- ver 20260908000300 -- convierte en un error en
+  // vez de un duplicado silencioso). Aceptado a proposito, sin trigger que lo
+  // cierre: la consecuencia de pasarse de 12 es COSMETICA (una foto de mas en
+  // el carrusel), nunca de seguridad ni de integridad -- no hay fila ajena de
+  // por medio, y el propio vendedor puede borrar el sobrante con
+  // eliminarImagen() de inmediato. Cerrar esta carrera con un trigger de
+  // conteo en la base anadiria una segunda fuente de verdad para "cuantas
+  // fotos tiene esta propiedad" (la primera es este SELECT) por un beneficio
+  // que es solo estetico.
+  //
+  // Hallazgo Importante de la revision final de rama: el codigo anterior
+  // reutilizaba este mismo conteo como `orden` del INSERT de abajo
+  // (`orden: count ?? 0`). Eso es correcto la PRIMERA vez que se llena una
+  // propiedad (0, 1, 2, ...) pero se rompe en cuanto se borra algo del medio:
+  // subir 3 fotos (orden 0, 1, 2), borrar la del medio (quedan 0 y 2, cuenta
+  // = 2) y subir una nueva reutiliza `orden: 2` -- EMPATE con la que ya
+  // tenia ese valor. Con el empate, reordenarImagen() puede elegir como
+  // "vecina" a su propia gemela e intercambiar_orden_imagenes() cambia 2 por
+  // 2: un no-op silencioso, Subir/Bajar deja de mover nada y el vendedor no
+  // recibe ningun error. Se selecciona el `orden` real de las filas
+  // existentes en vez de derivarlo del conteo: `max(orden) + 1` no puede
+  // colisionar con ninguna fila que ya exista, sea cual sea el hueco dejado
+  // por un borrado anterior.
+  const { data: existentes } = await supabase
     .from('imagenes_propiedad')
-    .select('id', { count: 'exact', head: true })
+    .select('orden')
     .eq('propiedad_id', propiedadId)
 
-  if ((count ?? 0) >= MAXIMO_IMAGENES_POR_PROPIEDAD) {
+  const cantidadActual = existentes?.length ?? 0
+  if (cantidadActual >= MAXIMO_IMAGENES_POR_PROPIEDAD) {
     return { error: `Maximo ${MAXIMO_IMAGENES_POR_PROPIEDAD} fotos por propiedad.` }
   }
+
+  const siguienteOrden = cantidadActual === 0
+    ? 0
+    : Math.max(...existentes!.map((img) => img.orden)) + 1
 
   let procesada: Buffer
   try {
@@ -75,7 +96,7 @@ export async function subirImagen(
   if (errorSubida) { mapearError(errorSubida); return { error: MENSAJE_GENERICO } }
 
   const { error: errorFila } = await supabase.from('imagenes_propiedad').insert({
-    propiedad_id: propiedadId, ruta_storage: ruta, alt_text: altText, orden: count ?? 0,
+    propiedad_id: propiedadId, ruta_storage: ruta, alt_text: altText, orden: siguienteOrden,
   })
 
   // Si la fila no entra -- por ejemplo, RIESGO 1 de seguridad real:
