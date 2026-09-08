@@ -147,6 +147,7 @@ describe('cambiarEstado: un vendedor no puede cambiar el estado de la propiedad 
   let clienteA: SupabaseClient
   let clienteB: SupabaseClient
   let propiedadDeA = ''
+  let propiedadIncompletaDeA = ''
 
   beforeAll(async () => {
     clienteA = await sesionVendedor()
@@ -156,6 +157,12 @@ describe('cambiarEstado: un vendedor no puede cambiar el estado de la propiedad 
 
     clienteActual = clienteA
     propiedadDeA = await crearBorrador(clienteA, idA, { precio: 100000000 })
+    // Sin extra: nace sin precio (NULL, 20260907000100) y sin ninguna imagen.
+    // A proposito para la prueba de abajo -- le faltan las DOS cosas que
+    // exige faltaParaPublicar, para que su camino se ejecute de verdad con
+    // el cliente de B y no quede sin ejercitar por el guard de estado
+    // ('publicada' es el unico destino que lo invoca).
+    propiedadIncompletaDeA = await crearBorrador(clienteA, idA)
   })
 
   it('el vendedor B no puede cambiar el estado de la propiedad del vendedor A: cero filas y dato intacto', async () => {
@@ -184,5 +191,35 @@ describe('cambiarEstado: un vendedor no puede cambiar el estado de la propiedad 
     const { data: enBase } = await clienteAdmin()
       .from('propiedades').select('estado').eq('id', propiedadDeA).single()
     expect(enBase!.estado).toBe('pausada')
+  })
+
+  // Hallazgo Medio de revision: el escenario mas delicado del diseno --B
+  // intentando PUBLICAR la propiedad de A-- no tenia prueba de regresion
+  // permanente. Las dos pruebas de arriba usan 'pausada', que ni siquiera
+  // invoca faltaParaPublicar (el guard de estado en acciones.ts lo salta).
+  // Esta prueba usa 'publicada' sobre una propiedad de A a la que le faltan
+  // foto Y precio a proposito: si faltaParaPublicar() alguna vez perdiera el
+  // `if (!propiedad) return null` -- por ejemplo "simplificandolo" a
+  // encadenamiento opcional con valores por defecto en vez de un return
+  // temprano-- B dejaria de recibir el mensaje generico y empezaria a
+  // recibir el mensaje especifico de foto o precio de una propiedad que ni
+  // siquiera puede leer. Ver la falsificacion en el reporte de la Task 9.
+  it('el vendedor B no puede extraer los mensajes especificos de faltaParaPublicar sobre una propiedad ajena', async () => {
+    clienteActual = clienteB
+
+    const r = await cambiarEstado(propiedadIncompletaDeA, 'publicada')
+
+    // RLS ya escondio la fila (propiedadIncompletaDeA no es de B y sigue en
+    // 'borrador', asi que ni propiedades_lectura_dueno ni
+    // propiedades_lectura_publica aplican): faltaParaPublicar no debe llegar
+    // a evaluar foto ni precio, y el UPDATE que sigue tampoco afecta filas.
+    // Lo unico que B puede recibir es el mensaje generico.
+    expect(r.error).toBe('No pudimos completar la operacion. Intenta de nuevo en un momento.')
+    expect(r.error).not.toBe('Para publicar necesitas subir al menos una foto de la propiedad.')
+    expect(r.error).not.toBe('Para publicar necesitas fijar un precio para la propiedad.')
+
+    const { data: enBase } = await clienteAdmin()
+      .from('propiedades').select('estado').eq('id', propiedadIncompletaDeA).single()
+    expect(enBase!.estado).toBe('borrador')
   })
 })
