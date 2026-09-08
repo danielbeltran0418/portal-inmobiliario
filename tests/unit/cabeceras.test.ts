@@ -7,6 +7,10 @@ function directivaDeScripts(csp: string): string {
   return csp.split(';').find((d) => d.trim().startsWith('script-src'))!
 }
 
+function directivaDeImagenes(csp: string): string {
+  return csp.split(';').find((d) => d.trim().startsWith('img-src'))!.trim()
+}
+
 describe('cabeceras de seguridad', () => {
   const cabeceras = construirCabeceras('abc123')
 
@@ -64,6 +68,46 @@ describe('cabeceras de seguridad', () => {
       const script = directivaDeScripts(construirCabeceras('abc123')['Content-Security-Policy'])
       expect(script).toContain(`'nonce-abc123'`)
       expect(script).toContain(`'strict-dynamic'`)
+    })
+  })
+
+  /**
+   * Task 12 es la primera pantalla que carga un <img> (next/image
+   * `unoptimized`) apuntando de verdad a Storage con una URL firmada. Visto
+   * en vivo probando el flujo a mano: en local, Storage corre en
+   * http://127.0.0.1:<puerto>, que "https://*.supabase.co" no cubre (ni el
+   * esquema ni el host coinciden), y el navegador bloqueaba la imagen aunque
+   * la URL firmada fuera correcta. Mismo patron que 'unsafe-eval': las dos
+   * caras se fijan juntas, condicionadas a NODE_ENV.
+   */
+  describe('el origen local de Supabase en img-src, solo fuera de produccion', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs()
+    })
+
+    it('en produccion, img-src NO anade el origen de NEXT_PUBLIC_SUPABASE_URL', () => {
+      vi.stubEnv('NODE_ENV', 'production')
+      vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://algun-proyecto.supabase.co')
+      const csp = construirCabeceras('abc123')['Content-Security-Policy']
+
+      // El comodin de produccion ya cubre https://<ref>.supabase.co: anadir
+      // el origen exacto tambien seria redundante, no inseguro, pero la
+      // regla es "nada nuevo en produccion" -- igual que unsafe-eval.
+      expect(directivaDeImagenes(csp)).toBe(`img-src 'self' data: blob: https://*.supabase.co`)
+    })
+
+    it('fuera de produccion, img-src SI incluye el origen de NEXT_PUBLIC_SUPABASE_URL', () => {
+      vi.stubEnv('NODE_ENV', 'development')
+      vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'http://127.0.0.1:54321')
+      const csp = construirCabeceras('abc123')['Content-Security-Policy']
+
+      expect(directivaDeImagenes(csp)).toContain('http://127.0.0.1:54321')
+    })
+
+    it('si la URL de Supabase no esta definida, no revienta la construccion de cabeceras', () => {
+      vi.stubEnv('NODE_ENV', 'development')
+      vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '')
+      expect(() => construirCabeceras('abc123')).not.toThrow()
     })
   })
 
