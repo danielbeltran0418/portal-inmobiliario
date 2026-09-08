@@ -280,6 +280,40 @@ describe('actualizarPropiedad', () => {
   // invocar el UPDATE -- perdiendo tambien titulo/descripcion/operacion,
   // aunque fueran validos por su cuenta. Un borrador recien creado
   // (crearBorrador, Task 8) nace con precio NULL a proposito.
+  // Hallazgo Importante de la revision final: esquemaPropiedad normaliza
+  // vacio a `undefined` en la VALIDACION (correcto, sigue significando "sin
+  // dato"), pero pasar esa clave `undefined` tal cual a `.update()` equivale
+  // a NO enviarla -- JSON.stringify la omite del cuerpo real de la peticion
+  // -- y PostgREST deja la columna intacta en vez de vaciarla. paraElUpdate()
+  // debe convertir cada uno de los SEIS opcionales vaciados en `null`
+  // explicito antes de llegar al UPDATE.
+  it('cada campo opcional vaciado llega al UPDATE como null explicito, no ausente', async () => {
+    const r = await actualizarPropiedad({}, formulario({
+      ...datosValidos,
+      precio: '',
+      habitaciones: '',
+      banos: '',
+      area_m2: '',
+      barrio_id: '',
+      direccion: '',
+    }))
+
+    expect(r).toEqual({})
+    const payload = updateMock.mock.calls[0]![0] as Record<string, unknown>
+    expect(payload.precio).toBeNull()
+    expect(payload.habitaciones).toBeNull()
+    expect(payload.banos).toBeNull()
+    expect(payload.area_m2).toBeNull()
+    expect(payload.barrio_id).toBeNull()
+    expect(payload.direccion).toBeNull()
+    // Y las seis claves estan de verdad PRESENTES en el objeto -- lo que
+    // JSON.stringify preservaria -- no solo `undefined` en un objeto que las
+    // omitiria al serializar.
+    for (const campo of ['precio', 'habitaciones', 'banos', 'area_m2', 'barrio_id', 'direccion']) {
+      expect(Object.prototype.hasOwnProperty.call(payload, campo)).toBe(true)
+    }
+  })
+
   it('guarda un borrador sin precio: no es error de campo, y SI llega a llamar al UPDATE', async () => {
     const r = await actualizarPropiedad({}, formulario({ ...datosValidos, precio: '' }))
 
