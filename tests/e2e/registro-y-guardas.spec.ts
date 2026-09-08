@@ -20,7 +20,10 @@ test('registro, verificacion por correo, login y guardas de rol', async ({ page 
   const enlace = await ultimoEnlaceDeConfirmacion(CORREO)
   await page.goto(enlace)
 
-  await expect(page.getByRole('heading', { name: /Panel del vendedor/i })).toBeVisible()
+  // "Mis propiedades", no "Panel del vendedor": la Task 11 (SP3, commit
+  // 37de7b7) reemplazo la pantalla provisional por el listado real de
+  // propiedades. Mismo hallazgo que en ayudantes-sesion.ts (Task 13).
+  await expect(page.getByRole('heading', { name: /Mis propiedades/i })).toBeVisible()
 
   // Guarda de rol: un vendedor no entra al control del super admin.
   await page.goto('/control')
