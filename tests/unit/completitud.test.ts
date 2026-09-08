@@ -23,6 +23,15 @@ describe('faltantesParaPublicar', () => {
       .toContain('El barrio')
   })
 
+  // El tipo de precio es `number | null`: desde la migracion 20260907000100
+  // un borrador recien creado nace con precio NULL de verdad (antes,
+  // crearBorrador mandaba un marcador `precio: 1` que pasaba este chequeo
+  // sin ser un precio real). null debe reportarse igual que 0.
+  it('sin precio (null, como nace un borrador nuevo) lo reporta', () => {
+    expect(faltantesParaPublicar({ ...COMPLETA, precio: null }))
+      .toContain('El precio')
+  })
+
   it('con descripcion demasiado corta lo reporta', () => {
     expect(faltantesParaPublicar({ ...COMPLETA, descripcion: 'Corta' }))
       .toContain('Una descripcion de al menos 40 caracteres')
