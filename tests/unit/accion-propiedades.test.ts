@@ -274,6 +274,22 @@ describe('actualizarPropiedad', () => {
     expect(r.error).toBeTruthy()
   })
 
+  // Correccion del hallazgo Importante "un borrador no se puede guardar sin
+  // precio": antes de esta correccion, esquemaPropiedad exigia precio
+  // positivo y esta llamada devolvia { errores: { precio } } SIN llegar a
+  // invocar el UPDATE -- perdiendo tambien titulo/descripcion/operacion,
+  // aunque fueran validos por su cuenta. Un borrador recien creado
+  // (crearBorrador, Task 8) nace con precio NULL a proposito.
+  it('guarda un borrador sin precio: no es error de campo, y SI llega a llamar al UPDATE', async () => {
+    const r = await actualizarPropiedad({}, formulario({ ...datosValidos, precio: '' }))
+
+    expect(r).toEqual({})
+    expect(r.errores?.precio).toBeUndefined()
+    expect(updateMock).toHaveBeenCalledTimes(1)
+    const payload = updateMock.mock.calls[0]![0] as Record<string, unknown>
+    expect(payload.titulo).toBe(datosValidos.titulo)
+  })
+
   it('actualiza correctamente y revalida las rutas del panel y de la propiedad', async () => {
     const r = await actualizarPropiedad({}, formulario(datosValidos))
 

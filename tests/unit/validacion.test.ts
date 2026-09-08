@@ -86,6 +86,18 @@ describe('esquemaPropiedad', () => {
     expect(r.direccion).toBeUndefined()
   })
 
+  // Correccion del hallazgo Importante "un borrador no se puede guardar sin
+  // precio": la columna admite NULL desde 20260907000100 (un borrador recien
+  // creado GENUINAMENTE no tiene precio todavia), asi que precio se une al
+  // mismo tratamiento que los otros cinco campos opcionales. Sin este
+  // cambio, safeParse fallaba y actualizarPropiedad (acciones.ts) devolvia
+  // el error de campo SIN llegar a llamar al UPDATE -- perdiendo tambien la
+  // descripcion, el barrio y cualquier otro dato valido del mismo envio.
+  it.each(SIN_DATO)('precio con %s queda ausente, no en error (borrador sin precio todavia)', (_etiqueta, valor) => {
+    const r = esquemaPropiedad.parse({ ...base, precio: valor })
+    expect(r.precio).toBeUndefined()
+  })
+
   // El caso contrario al de arriba: normalizar de mas rompe un dato real.
   // Un valor de verdad en cada campo opcional tiene que sobrevivir intacto.
   it('un valor real en cada campo opcional se conserva intacto', () => {
@@ -97,6 +109,7 @@ describe('esquemaPropiedad', () => {
       barrio_id: '11111111-1111-4111-8111-111111111111',
       direccion: 'Calle 10 # 20-30',
     })
+    expect(r.precio).toBe(350000000)
     expect(r.habitaciones).toBe(3)
     expect(r.banos).toBe(2)
     expect(r.area_m2).toBe(85.5)
