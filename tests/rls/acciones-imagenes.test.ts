@@ -308,5 +308,59 @@ describe('acciones de imagenes (contra Postgres y Storage reales)', () => {
       expect(porId.get(img0!.id)).toBe(0)
       expect(porId.get(img1!.id)).toBe(1)
     })
+
+    // Hallazgo de la revision de esta tarea: intercambiar_orden_imagenes()
+    // solo verificaba, fila por fila, que RLS dejara ver/editar cada imagen
+    // (imagenes_actualizacion_dueno) -- nunca que las dos pertenecieran a la
+    // MISMA propiedad. Un vendedor dueno de DOS propiedades distintas pasa
+    // ambos chequeos de RLS con una imagen de cada una, y el intercambio
+    // tenia exito cruzando propiedades: exactamente el orden
+    // indeterminado/duplicado que esta funcion existe para evitar, solo que
+    // reabierto por otra via.
+    //
+    // reordenarImagen() (el server action) NUNCA arma ese par -- la "vecina"
+    // sale siempre de la lista ya filtrada por propiedad_id -- asi que el
+    // producto no lo dispara. El vector real es invocar el RPC directamente,
+    // que cualquier authenticated puede hacer via PostgREST (GRANT EXECUTE
+    // ... TO authenticated). Por eso estas dos pruebas llaman a
+    // clienteA.rpc(...) en vez de a reordenarImagen(): es la unica forma de
+    // ejercitar el par cruzado que el hallazgo describe.
+    it('el mismo vendedor NO puede intercambiar el orden entre imagenes de DOS propiedades suyas distintas', async () => {
+      const propiedadX = await propiedadVaciaDeA()
+      const propiedadY = await propiedadVaciaDeA()
+      const [imgX] = await crearTresImagenes(clienteA, propiedadX)
+      const [imgY] = await crearTresImagenes(clienteA, propiedadY)
+
+      const { error } = await clienteA.rpc('intercambiar_orden_imagenes', {
+        p_imagen_id_1: imgX!.id,
+        p_imagen_id_2: imgY!.id,
+      })
+
+      // Regla global: cero cambios no basta sin fijar el codigo exacto.
+      expect(error?.code).toBe('42501')
+
+      const { data: intacto } = await clienteAdmin()
+        .from('imagenes_propiedad').select('id, orden').in('id', [imgX!.id, imgY!.id])
+      const porId = new Map(intacto!.map((f) => [f.id, f.orden]))
+      expect(porId.get(imgX!.id)).toBe(0)
+      expect(porId.get(imgY!.id)).toBe(0)
+    })
+
+    it('CASO POSITIVO: el RPC intercambia el orden de dos imagenes de la MISMA propiedad', async () => {
+      const propiedad = await propiedadVaciaDeA()
+      const [img0, img1] = await crearTresImagenes(clienteA, propiedad)
+
+      const { error } = await clienteA.rpc('intercambiar_orden_imagenes', {
+        p_imagen_id_1: img0!.id,
+        p_imagen_id_2: img1!.id,
+      })
+      expect(error).toBeNull()
+
+      const { data: trasIntercambio } = await clienteAdmin()
+        .from('imagenes_propiedad').select('id, orden').in('id', [img0!.id, img1!.id])
+      const porId = new Map(trasIntercambio!.map((f) => [f.id, f.orden]))
+      expect(porId.get(img0!.id)).toBe(1)
+      expect(porId.get(img1!.id)).toBe(0)
+    })
   })
 })
