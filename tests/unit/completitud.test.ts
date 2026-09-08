@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { faltantesParaPublicar } from '@/lib/propiedades/completitud'
+import { faltantesParaPublicar, puedePublicar } from '@/lib/propiedades/completitud'
 
 const COMPLETA = {
   descripcion: 'Una descripcion con suficiente detalle para el catalogo.',
@@ -42,5 +42,39 @@ describe('faltantesParaPublicar', () => {
       descripcion: '', barrio_id: null, precio: 0, numeroDeImagenes: 0,
     })
     expect(faltan).toHaveLength(4)
+  })
+})
+
+/**
+ * Hallazgo Importante de la revision final de rama: el boton "Publicar" del
+ * panel se deshabilitaba con faltantesParaPublicar(...).length > 0 completo,
+ * que ademas de foto y precio tambien exige barrio y una descripcion de 40+
+ * caracteres -- dos requisitos que la base NO impone. puedePublicar() es la
+ * funcion que debe decidir el `disabled` del boton: solo mira las DOS
+ * condiciones reales (propiedades_exigir_imagen y propiedades_exigir_precio).
+ */
+describe('puedePublicar', () => {
+  it('una propiedad completa puede publicarse', () => {
+    expect(puedePublicar(COMPLETA)).toBe(true)
+  })
+
+  // La prueba que exige el brief: foto y precio presentes, SIN barrio (y con
+  // una descripcion corta) deben bastar. Antes de este arreglo, el boton se
+  // habria quedado deshabilitado para siempre pese a que la base publica sin
+  // problema.
+  it('con foto y precio, SIN barrio y con descripcion corta, SI puede publicarse', () => {
+    expect(puedePublicar({ ...COMPLETA, barrio_id: null, descripcion: 'Corta' })).toBe(true)
+  })
+
+  it('sin ninguna foto, NO puede publicarse', () => {
+    expect(puedePublicar({ ...COMPLETA, numeroDeImagenes: 0 })).toBe(false)
+  })
+
+  it('sin precio (null), NO puede publicarse', () => {
+    expect(puedePublicar({ ...COMPLETA, precio: null })).toBe(false)
+  })
+
+  it('con precio en 0, NO puede publicarse', () => {
+    expect(puedePublicar({ ...COMPLETA, precio: 0 })).toBe(false)
   })
 })
