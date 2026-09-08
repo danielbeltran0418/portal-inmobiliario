@@ -66,6 +66,40 @@ describe('RLS de propiedades', () => {
     expect(data).toHaveLength(0)
   })
 
+  /**
+   * Hallazgo bloqueante de la Task 11 (SP3): esta es la prueba que fija la
+   * verdad de las politicas. Las demas pruebas de esta suite SIEMPRE filtran
+   * por `.eq('id', ...)` puntual -- por eso ninguna ejercitaba lo que pasa
+   * con una consulta SIN filtro, que es justo como la hacia el panel del
+   * vendedor antes de este arreglo.
+   *
+   * Postgres combina las politicas SELECT permisivas del MISMO comando con
+   * OR: propiedades_lectura_dueno (vendedor_id = auth.uid()) OR
+   * propiedades_lectura_publica (estado = 'publicada', que tambien alcanza a
+   * `authenticated`, no solo a `anon`). Resultado real: un vendedor
+   * autenticado que pide la tabla sin filtro recibe sus propias filas MAS
+   * las publicadas de cualquier otro vendedor. RLS NO basta para que "mis
+   * propiedades" signifique "las mias" -- hace falta un
+   * `.eq('vendedor_id', ...)` explicito en la aplicacion (ver
+   * src/app/(vendedor)/panel/page.tsx).
+   */
+  it('SIN filtro explicito, el vendedor B TAMBIEN ve la propiedad publicada del vendedor A', async () => {
+    const cliente = await clienteComo(B.correo, B.password)
+    const { data, error } = await cliente.from('propiedades').select('id, vendedor_id, estado')
+    expect(error).toBeNull()
+
+    const ids = (data ?? []).map((fila) => fila.id)
+
+    // El bug: la publicada de A se cuela en una consulta de B sin filtro.
+    expect(ids).toContain(idPublicada)
+
+    // Caso de control, en la MISMA consulta sin filtro: el borrador de A no
+    // es publico y B no es su dueno, asi que no deberia aparecer. Sin este
+    // control, un cambio que devolviera la tabla entera sin RLS alguna
+    // tambien haria pasar la linea de arriba.
+    expect(ids).not.toContain(idBorrador)
+  })
+
   it('el vendedor dueno SI puede editar su propia propiedad publicada', async () => {
     const cliente = await clienteComo(A.correo, A.password)
     const { data, error } = await cliente.from('propiedades')
