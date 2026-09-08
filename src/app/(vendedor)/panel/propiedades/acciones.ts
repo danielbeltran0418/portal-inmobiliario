@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin'
-import { esquemaPropiedad, esquemaPropiedadNueva } from '@/lib/validacion/esquemas'
+import { esquemaPropiedad, esquemaPropiedadNueva, type DatosPropiedad } from '@/lib/validacion/esquemas'
 import {
   mapearError,
   MENSAJE_GENERICO,
@@ -75,6 +75,45 @@ export async function crearBorrador(
   redirect(`/panel/propiedades/${id}`)
 }
 
+// Los SEIS campos opcionales de esquemaPropiedad (precio se unio al grupo en
+// la correccion del hallazgo "un borrador no se puede guardar sin precio"):
+// vacio ('', ' ' o null) se normaliza a `undefined` en la VALIDACION -- eso
+// no cambia, sigue significando "sin dato" -- pero enviar la clave con
+// `undefined` al UPDATE de PostgREST equivale a NO enviarla: JSON.stringify
+// omite las claves `undefined`, asi que PostgREST deja esa columna
+// INTACTA en vez de vaciarla. Ver paraElUpdate() mas abajo, que es donde se
+// corrige -- aqui solo se declara la lista de campos a los que aplica.
+const CAMPOS_OPCIONALES_ANULABLES: readonly (keyof DatosPropiedad)[] = [
+  'precio', 'habitaciones', 'banos', 'area_m2', 'barrio_id', 'direccion',
+]
+
+/**
+ * Hallazgo Importante de la revision final de rama: un campo opcional
+ * vaciado por el vendedor (por ejemplo, borrar toda la "Direccion" y
+ * guardar) no se podia realmente vaciar. `esquemaPropiedad.parse()` ya hace
+ * lo correcto en la VALIDACION -- normaliza '', ' ' y null a `undefined`,
+ * que sigue significando "sin dato" -- pero `analisis.data` con esa clave en
+ * `undefined` se pasaba tal cual a `.update()`. Supabase-js construye el
+ * cuerpo de la peticion con `JSON.stringify(valores)`, que ELIMINA toda
+ * clave cuyo valor sea `undefined`: el PATCH que de verdad viaja a PostgREST
+ * nunca incluye esa columna, y PostgREST dela COLUMNA TAL COMO ESTABA en vez
+ * de ponerla a NULL. El vendedor borraba la direccion, guardaba, no recibia
+ * ningun error -- y al recargar la direccion vieja seguia ahi.
+ *
+ * El arreglo NO toca la validacion (vacio sigue siendo "sin dato" ahi, tal
+ * como lo dejo la Task 5): solo cambia como se ESCRIBE ese "sin dato" en el
+ * UPDATE, sustituyendo cada clave ausente/undefined de los seis campos
+ * opcionales por un `null` EXPLICITO, que SI viaja en el JSON y SI le dice a
+ * PostgREST "pon esta columna a NULL".
+ */
+function paraElUpdate(datos: DatosPropiedad): Record<string, unknown> {
+  const payload: Record<string, unknown> = { ...datos }
+  for (const campo of CAMPOS_OPCIONALES_ANULABLES) {
+    if (payload[campo] === undefined) payload[campo] = null
+  }
+  return payload
+}
+
 export async function actualizarPropiedad(
   _estado: EstadoPropiedad,
   formData: FormData,
@@ -82,7 +121,7 @@ export async function actualizarPropiedad(
   const id = String(formData.get('id') ?? '')
   if (!id) return { error: MENSAJE_GENERICO }
 
-  // Los cinco campos opcionales se pasan tal cual llegan del FormData
+  // Los seis campos opcionales se pasan tal cual llegan del FormData
   // ('', ' ' o null): esquemaPropiedad ya los normaliza a undefined con su
   // propio preprocesado (ver src/lib/validacion/esquemas.ts). Anadir aqui un
   // `|| undefined` seria redundante y, peor, convertiria un '0' legitimo
@@ -113,8 +152,11 @@ export async function actualizarPropiedad(
   // El slug NO se actualiza nunca, aunque cambie el titulo: un slug que muta
   // rompe los enlaces ya publicados. analisis.data sale de esquemaPropiedad,
   // que no tiene un campo `slug`, asi que no hay forma de que se cuele aqui.
+  // paraElUpdate() convierte los opcionales vaciados (undefined) en `null`
+  // explicito -- ver su comentario arriba -- sin anadir ninguna clave nueva
+  // que esquemaPropiedad no tuviera ya.
   const { data, error } = await supabase
-    .from('propiedades').update(analisis.data).eq('id', id).select('id')
+    .from('propiedades').update(paraElUpdate(analisis.data)).eq('id', id).select('id')
 
   if (error) { mapearError(error); return { error: MENSAJE_GENERICO } }
 
