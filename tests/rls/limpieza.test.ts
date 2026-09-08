@@ -37,9 +37,14 @@ describe('cola de limpieza de Storage', () => {
     const rutaA = `prueba-limpieza/${Date.now()}-a.webp`
     const rutaB = `prueba-limpieza/${Date.now()}-b.webp`
 
+    // orden explicito y distinto en cada fila: ambas nacerian en 0 por el
+    // DEFAULT de la columna, y el UNIQUE (propiedad_id, orden) de
+    // 20260908000300 (correccion del punto 5 de la revision final --
+    // subirImagen ya no puede dejar dos fotos con el mismo orden) rechazaria
+    // la segunda con 23505. El orden en si no es lo que esta prueba mide.
     const { error: errorImagenes } = await cliente.from('imagenes_propiedad').insert([
-      { propiedad_id: propiedad!.id, ruta_storage: rutaA, alt_text: 'Fachada de la casa' },
-      { propiedad_id: propiedad!.id, ruta_storage: rutaB, alt_text: 'Cocina de la casa' },
+      { propiedad_id: propiedad!.id, ruta_storage: rutaA, alt_text: 'Fachada de la casa', orden: 0 },
+      { propiedad_id: propiedad!.id, ruta_storage: rutaB, alt_text: 'Cocina de la casa', orden: 1 },
     ])
     expect(errorImagenes).toBeNull()
 

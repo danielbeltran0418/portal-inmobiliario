@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const getUser = vi.fn()
 const insertMock = vi.fn()
-const resultadoConteoMock = vi.fn()
+const resultadoExistentesMock = vi.fn()
 const uploadMock = vi.fn()
 const removeMock = vi.fn()
 const rpcMock = vi.fn()
@@ -34,13 +34,13 @@ function clienteFalso() {
   return {
     auth: { getUser },
     from: () => ({
-      // subirImagen(): .select('id', { count: 'exact', head: true }).eq('propiedad_id', id)
+      // subirImagen(): .select('orden').eq('propiedad_id', id)
       // reordenarImagen(): .select('id, orden').eq('propiedad_id', id).order('orden', {...})
       select: (columnas: string) => {
         if (columnas === 'id, orden') {
           return { eq: () => ({ order: () => resultadoOrdenMock() }) }
         }
-        return { eq: () => resultadoConteoMock() }
+        return { eq: () => resultadoExistentesMock() }
       },
       insert: (payload: unknown) => insertMock(payload),
       // eliminarImagen(): .delete().eq('id', imagenId).select('ruta_storage')
@@ -71,7 +71,7 @@ describe('subirImagen', () => {
   beforeEach(() => {
     getUser.mockReset().mockResolvedValue({ data: { user: { id: 'vendedor-1' } } })
     insertMock.mockReset().mockResolvedValue({ error: null })
-    resultadoConteoMock.mockReset().mockResolvedValue({ count: 0 })
+    resultadoExistentesMock.mockReset().mockResolvedValue({ data: [] })
     uploadMock.mockReset().mockResolvedValue({ error: null })
     removeMock.mockReset().mockResolvedValue({ data: [] })
     procesarImagenMock.mockReset().mockResolvedValue(Buffer.from('webp-procesado'))
@@ -138,7 +138,9 @@ describe('subirImagen', () => {
   })
 
   it('con 12 imagenes ya subidas, rechaza la 13a sin procesar ni subir a Storage', async () => {
-    resultadoConteoMock.mockResolvedValue({ count: 12 })
+    resultadoExistentesMock.mockResolvedValue({
+      data: Array.from({ length: 12 }, (_, i) => ({ orden: i })),
+    })
 
     const r = await subirImagen(
       {},
@@ -148,6 +150,42 @@ describe('subirImagen', () => {
     expect(r.error).toBe('Maximo 12 fotos por propiedad.')
     expect(procesarImagenMock).not.toHaveBeenCalled()
     expect(uploadMock).not.toHaveBeenCalled()
+  })
+
+  // Hallazgo Importante de la revision final de rama: el codigo anterior
+  // asignaba `orden: count ?? 0`, correcto solo mientras nunca se borre nada
+  // del medio. Estas dos pruebas fijan el reemplazo (max(orden) + 1) tanto en
+  // el caso sin huecos como en el caso que reproduce el bug real.
+  it('sin imagenes previas, la primera sube con orden 0', async () => {
+    resultadoExistentesMock.mockResolvedValue({ data: [] })
+
+    const r = await subirImagen(
+      {},
+      formularioDeSubida({ propiedad_id: 'prop-1', alt_text: 'Fachada de la casa', archivo: archivoValido() }),
+    )
+
+    expect(r).toEqual({})
+    const payload = insertMock.mock.calls[0]![0] as Record<string, unknown>
+    expect(payload.orden).toBe(0)
+  })
+
+  // LA REPRODUCCION EXACTA DEL HALLAZGO: subir 3 (orden 0,1,2), borrar la del
+  // medio (quedan 0 y 2 -- CUENTA 2, pero el orden mas alto sigue siendo 2).
+  // Con `orden: count`, la 4a foto habria entrado con orden 2, EMPATADA con
+  // la que ya tenia ese valor. Con max(orden) + 1, entra con 3: sin hueco que
+  // reutilizar mal.
+  it('con huecos por un borrado (orden 0 y 2, sin el 1), la siguiente usa max+1 = 3, no la cuenta (2)', async () => {
+    resultadoExistentesMock.mockResolvedValue({ data: [{ orden: 0 }, { orden: 2 }] })
+
+    const r = await subirImagen(
+      {},
+      formularioDeSubida({ propiedad_id: 'prop-1', alt_text: 'Fachada de la casa', archivo: archivoValido() }),
+    )
+
+    expect(r).toEqual({})
+    const payload = insertMock.mock.calls[0]![0] as Record<string, unknown>
+    expect(payload.orden).toBe(3)
+    expect(payload.orden).not.toBe(2)
   })
 
   it('si procesarImagen lanza, responde el mensaje de procesamiento y no sube nada', async () => {
