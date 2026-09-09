@@ -93,3 +93,100 @@ describe('publicar exige precio (no NULL)', () => {
     expect(data![0].estado).toBe('publicada')
   })
 })
+
+// Ticket de alta prioridad: exigir_precio_para_publicar() (20260907000100)
+// solo vigilaba la TRANSICION hacia 'publicada' (TG_OP = 'INSERT' O
+// OLD.estado IS DISTINCT FROM 'publicada'). Con OLD.estado = 'publicada' Y
+// NEW.estado = 'publicada' (un UPDATE que deja el estado como estaba), esa
+// condicion es falsa y el UPDATE pasaba aunque NEW.precio fuera NULL:
+// `UPDATE propiedades SET precio = NULL WHERE id = <una publicada>` tenia
+// exito. 20260908000400_precio_no_vaciable_en_publicada.sql quita la
+// condicion de transicion: la exigencia aplica siempre que NEW.estado sea
+// 'publicada', sin importar TG_OP ni OLD.estado.
+//
+// FALSIFICACION: con la migracion 20260908000400 revertida (funcion vuelta a
+// la version de 20260907000100) la primera prueba de este bloque
+// ("vaciar el precio de una publicada es rechazado") se puso en ROJO -- el
+// UPDATE tuvo exito y el precio quedo en NULL. Con la migracion restaurada
+// (`supabase db reset`) volvio a verde. Salida real pegada en
+// arreglo-precio-publicada-report.md.
+describe('no se puede vaciar el precio de una propiedad ya publicada', () => {
+  let vendedorId: string
+  let propiedadId: string
+  let borradorId: string
+  let cliente: Awaited<ReturnType<typeof sesionVendedor>>
+
+  beforeAll(async () => {
+    cliente = await sesionVendedor()
+    const { data: usuario } = await cliente.auth.getUser()
+    vendedorId = usuario.user!.id
+
+    // Propiedad que se va a PUBLICAR de verdad (con imagen y precio), para
+    // luego intentar vaciarle el precio sin tocar el estado.
+    const { data, error } = await cliente
+      .from('propiedades')
+      .insert({
+        vendedor_id: vendedorId,
+        titulo: 'Casa publicada para el hallazgo del precio vaciable',
+        descripcion: 'Descripcion suficiente para la prueba.',
+        slug: `prueba-precio-vaciable-${Date.now().toString(36)}`,
+        operacion: 'venta', tipo_inmueble: 'casa',
+        precio: 200000000,
+      })
+      .select('id').single()
+    expect(error).toBeNull()
+    propiedadId = data!.id
+
+    const { error: errorImagen } = await cliente.from('imagenes_propiedad').insert({
+      propiedad_id: propiedadId,
+      ruta_storage: 'prueba/imagen-precio-vaciable.webp',
+      alt_text: 'Fachada de la casa publicada',
+    })
+    expect(errorImagen).toBeNull()
+
+    const { error: errorPublicar } = await cliente
+      .from('propiedades').update({ estado: 'publicada' }).eq('id', propiedadId).select()
+    expect(errorPublicar).toBeNull()
+
+    // Un BORRADOR aparte, con precio puesto, para el caso positivo de mas
+    // abajo: vaciarle el precio a un borrador SI debe seguir funcionando
+    // (esa es la decision de diseno de 20260907000100, y esta migracion no
+    // la toca -- la condicion sigue siendo NEW.estado = 'publicada').
+    const { data: datoBorrador, error: errorBorrador } = await cliente
+      .from('propiedades')
+      .insert({
+        vendedor_id: vendedorId,
+        titulo: 'Borrador con precio para vaciar despues',
+        descripcion: 'Descripcion suficiente para la prueba.',
+        slug: `prueba-borrador-precio-${Date.now().toString(36)}`,
+        operacion: 'venta', tipo_inmueble: 'casa',
+        precio: 100000000,
+      })
+      .select('id').single()
+    expect(errorBorrador).toBeNull()
+    borradorId = datoBorrador!.id
+  })
+
+  afterAll(async () => {
+    await clienteAdmin().from('propiedades').delete().in('id', [propiedadId, borradorId])
+  })
+
+  it('vaciar el precio de una publicada (UPDATE que deja estado = publicada) es rechazado con 23514', async () => {
+    const { error } = await cliente
+      .from('propiedades').update({ precio: null }).eq('id', propiedadId).select()
+    expect(error?.code).toBe('23514')
+
+    const { data } = await clienteAdmin()
+      .from('propiedades').select('precio, estado').eq('id', propiedadId).single()
+    expect(data!.estado).toBe('publicada')
+    expect(data!.precio).toBe(200000000)
+  })
+
+  it('CASO POSITIVO: vaciar el precio de un BORRADOR SI funciona', async () => {
+    const { data, error } = await cliente
+      .from('propiedades').update({ precio: null }).eq('id', borradorId).select('precio, estado')
+    expect(error).toBeNull()
+    expect(data![0].estado).toBe('borrador')
+    expect(data![0].precio).toBeNull()
+  })
+})
