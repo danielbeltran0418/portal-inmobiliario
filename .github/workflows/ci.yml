@@ -20,9 +20,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # 22, no 20. @supabase/realtime-js (dependencia de @supabase/supabase-js,
+      # que usan las pruebas de RLS) exige un WebSocket global, y en Node solo
+      # existe a partir de la 21 -- estable en la 22. Con la 20 el cliente ni
+      # se construye: "Node.js detected but native WebSocket not found", y
+      # `npm run test:rls` cae entero antes de la primera asercion.
+      #
+      # No se veia en local porque alli se corre con Node 22+.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci
