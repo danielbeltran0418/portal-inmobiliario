@@ -120,3 +120,70 @@ test('cerrar sesion destruye la sesion: la ruta protegida se veia y deja de vers
   // (middleware, expiracion) con la cookie todavia puesta.
   expect(await cookiesDeSesion(page)).toHaveLength(0)
 })
+
+/**
+ * ===========================================================================
+ * EL ALCANCE DEL CIERRE: UN DISPOSITIVO, NO TODOS
+ * ===========================================================================
+ *
+ * La prueba de arriba usa UN navegador, y con uno solo las dos opciones de
+ * `scope` se ven exactamente igual: la sesion de ese navegador se cierra en
+ * los dos casos. La diferencia solo existe cuando hay una segunda sesion viva,
+ * y por eso hacen falta dos contextos aqui -- son dos navegadores distintos a
+ * todos los efectos, con sus cookies separadas: el escritorio y el movil del
+ * mismo vendedor.
+ *
+ * Lo que se afirma es la ASIMETRIA. Que el escritorio pierda la sesion no
+ * prueba nada del alcance (eso ya lo prueba el test anterior); lo que la
+ * prueba es que el movil, que no ha tocado nada, la CONSERVA. Y se fija antes
+ * el caso positivo del movil -- con sesion, la ruta protegida se ve -- porque
+ * si no, un movil que nunca hubiera entrado pasaria la mitad de las
+ * aserciones.
+ *
+ * Esto cae si alguien vuelve a `signOut()` sin argumentos: el default de
+ * @supabase/auth-js es `{ scope: 'global' }`, que cierra la sesion en todos
+ * los dispositivos de la cuenta. Ver el bloque "Por que scope: 'local'" de
+ * src/componentes/acciones-sesion.ts.
+ */
+test('cerrar sesion en un dispositivo no cierra la del otro', async ({ browser }) => {
+  const cuenta = CUENTAS[1] // vendedor
+  const escritorio = await browser.newContext()
+  const movil = await browser.newContext()
+
+  try {
+    const enEscritorio = await escritorio.newPage()
+    const enMovil = await movil.newPage()
+
+    await entrar(enEscritorio, cuenta)
+    await entrar(enMovil, cuenta)
+
+    // --- CASO POSITIVO: el movil tiene sesion y ve su ruta protegida --------
+    await enMovil.goto(cuenta.ruta)
+    await expect(enMovil).toHaveURL(new RegExp(`${cuenta.ruta}$`))
+    await expect(enMovil.getByRole('heading', { name: cuenta.encabezado })).toBeVisible()
+
+    // --- Se cierra sesion SOLO en el escritorio -----------------------------
+    await cabecera(enEscritorio).getByRole('button', { name: BOTON_CERRAR_SESION }).click()
+    await expect(enEscritorio).toHaveURL(/127\.0\.0\.1:3000\/$/)
+
+    // El escritorio, el que lo pidio, si la pierde. Sin esto la prueba pasaria
+    // con un cerrarSesion que no cerrara nada en absoluto.
+    await enEscritorio.goto(cuenta.ruta)
+    await expect(enEscritorio).toHaveURL(/\/login$/)
+    expect(await cookiesDeSesion(enEscritorio)).toHaveLength(0)
+
+    // --- Y el movil NO. Esta es la asercion del alcance ---------------------
+    // getUser() revalida contra el servidor de auth en cada peticion (ver
+    // src/lib/auth/sesion.ts y el middleware), asi que esto no es una cookie
+    // rancia que siga puesta: es el servidor de auth confirmando que la sesion
+    // del movil sigue viva.
+    await enMovil.goto(cuenta.ruta)
+    await expect(enMovil).toHaveURL(new RegExp(`${cuenta.ruta}$`))
+    await expect(enMovil.getByRole('heading', { name: cuenta.encabezado })).toBeVisible()
+    await expect(cabecera(enMovil).getByRole('button', { name: BOTON_CERRAR_SESION })).toBeVisible()
+    expect(await cookiesDeSesion(enMovil)).not.toHaveLength(0)
+  } finally {
+    await escritorio.close()
+    await movil.close()
+  }
+})
