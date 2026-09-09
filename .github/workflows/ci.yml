@@ -80,6 +80,19 @@ jobs:
         run: supabase db reset
 
       - run: npm run lint
+
+      # Genera .next/types/, de donde salen los tipos por ruta que escribe Next
+      # (LayoutProps, PageProps...). src/app/layout.tsx usa LayoutProps<"/">, y
+      # tsconfig.json incluye ".next/types/**/*.ts" para verlos.
+      #
+      # Sin este paso `tsc --noEmit` cae con "Cannot find name 'LayoutProps'" y
+      # se lleva por delante el resto del job: las pruebas unitarias, las de RLS
+      # y las e2e ni se ejecutan. En local no se nota porque `next dev` deja
+      # .next/ escrito, asi que el fallo solo se ve aqui.
+      #
+      # Va antes de tsc y no vale con el `npm run build` de mas abajo, que
+      # tambien los genera: para entonces tsc ya ha fallado.
+      - run: npx next typegen
       - run: npx tsc --noEmit
       - run: npm run test:unit
       - run: npm run test:rls
