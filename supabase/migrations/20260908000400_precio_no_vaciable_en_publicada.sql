@@ -31,12 +31,16 @@
 -- 'publicada' -- sea INSERT, sea una transicion hacia publicada, o sea un
 -- UPDATE de una fila que YA estaba publicada y se queda publicada. En los
 -- tres casos el invariante es el mismo: una fila publicada, en el instante
--- en que el trigger termina, tiene precio. Es el mismo criterio que ya usa
--- exigir_imagen_para_publicar() (20260904000300) para las imagenes -- ese
--- trigger tampoco distingue INSERT de UPDATE ni mira OLD.estado, solo mira
--- NEW.estado -- asi que esta migracion no introduce un criterio nuevo, cierra
--- una asimetria que se colo al escribir exigir_precio_para_publicar() con una
--- condicion de mas.
+-- en que el trigger termina, tiene precio. Esto hace que el criterio del
+-- precio sea MAS ESTRICTO que el que usa exigir_imagen_para_publicar()
+-- (20260904000300) para las imagenes: ese trigger SÍ conserva
+-- `AND (TG_OP = 'INSERT' OR OLD.estado IS DISTINCT FROM 'publicada')`,
+-- permitiendo vaciar fotos de una propiedad ya publicada siempre que NO sea
+-- una transicion hacia publicada. El hueco equivalente (vaciar fotos de una
+-- publicada borrando sus filas imagenes_propiedad) sigue abierto: la politica
+-- imagenes_borrado_dueno deja al dueno borrar sin consultar estado, y no hay
+-- trigger en imagenes_propiedad que lo impida. Esta diferencia y ese hueco
+-- estan parqueados con ticket propio.
 --
 -- Que SI sigue funcionando (decision de diseno que esta migracion NO
 -- revoca): vaciar el precio de un BORRADOR. Un borrador tiene
