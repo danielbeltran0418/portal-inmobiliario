@@ -1,3 +1,4 @@
+import { metadatosBarrio } from '@/lib/catalogo/seo'
 import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
@@ -52,4 +53,12 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
       {filtros.pagina * TAMANO_PAGINA < total && <Link href={pagina(filtros.pagina + 1)}>Siguiente</Link>}
     </nav>
   </main>
+}
+
+export async function generateMetadata({ params }: Entrada) {
+  const { barrio: slug } = await params
+  const { data, error } = await crearClientePublico().from('barrios').select('nombre,slug').eq('slug', slug).maybeSingle()
+  if (error) throw new Error('No se pudo cargar el barrio')
+  if (!data) notFound()
+  return metadatosBarrio(data)
 }

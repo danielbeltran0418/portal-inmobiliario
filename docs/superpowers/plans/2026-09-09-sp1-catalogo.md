@@ -61,3 +61,12 @@ La CSP mantiene nonce y render dinámico. upgrade-insecure-requests se conserva 
 Verificaciones: build compiló las nuevas rutas, 124 RLS completas verdes y 14 E2E verdes con --workers=1. La ejecución paralela tuvo una interferencia de sesión entre pruebas antiguas que comparten la cuenta del seed y hacen signOut global. No se cambió ese comportamiento de producción. El ayudante de pruebas y seed ahora recorren todas las páginas de usuarios; antes fallaban al superar la primera página en la base persistente.
 
 Pendiente para cerrar SP1: metadata por barrio/ficha, canonical, sitemap/robots y JSON-LD; estrategia de caché/CSP pública demostrada en producción; historial público para 410 sin revelar borradores; redirecciones 301 (actualmente permanentRedirect usa 308); revisión final y PR. Las rutas actuales no satisfacen todavía esos criterios. No se ha desplegado ni mergeado.
+
+## SEO implementado — 2026-09-09
+- Metadatos por barrio/ficha y canónicas absolutas desde NEXT_PUBLIC_APP_URL (sin confiar en Host).
+- JSON-LD RealEstateListing con precio, fotos estables y barrio; no se copian columnas privadas. Escape de menor-que probado con un cierre de script malicioso.
+- Sitemap dinámico paginado por lotes de 500, solo publicadas con barrio activo y foto. Un fallo de consulta falla explícitamente en vez de devolver un índice parcial como válido. Más de 50.000 entradas exige partición (límite pendiente de escalado).
+- Robots excluye superficies privadas, autenticación e imágenes. No constituye una barrera de acceso; RLS y las guardas siguen siendo responsables de la autorización.
+- Verificación: 311 unitarias, tsc y lint limpios; build con sitemap/robots dinámicos y verificar:render verde. E2E público amplificado: título, canonical, JSON-LD, sitemap positivo y retirada al pausar. La batería RLS previa permanece en 124; no se modificó SQL.
+- Referencias: https://schema.org/RealEstateListing y https://nextjs.org/docs/app/guides/json-ld, contrastadas con la documentación instalada.
+- Aún no se declara SP1 terminado: falta validar 301/410 sin revelar borradores y resolver la incompatibilidad del prerender con nonce/Flight. Las páginas continúan dinámicas deliberadamente durante esta fase.
