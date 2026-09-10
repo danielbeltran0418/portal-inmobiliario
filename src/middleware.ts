@@ -1,3 +1,5 @@
+import { crearClientePublico } from '@/lib/supabase/cliente-publico'
+import { esRutaFicha, resolverRutaPublica } from '@/lib/catalogo/rutas'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { construirCabeceras, generarNonce } from '@/lib/seguridad/cabeceras'
@@ -125,9 +127,32 @@ export async function middleware(peticion: NextRequest) {
     }
   }
 
+  if ((peticion.method === 'GET' || peticion.method === 'HEAD') && esRutaFicha(ruta)) {
+    try {
+      const decision = await resolverRutaPublica(crearClientePublico(), ruta)
+      if (decision.estado === 301) {
+        const salto = NextResponse.redirect(new URL(decision.destino, origenReal(peticion)), 301)
+        salto.headers.set('Cache-Control', 'no-store')
+        return aplicarCabeceras(salto)
+      }
+      if (decision.estado !== 200) {
+        const retirada = decision.estado === 410
+        const html = `<!doctype html><html lang="es"><head><meta name="robots" content="noindex"><title>${retirada ? 'Publicación retirada' : 'Página no encontrada'}</title></head><body><main><h1>${retirada ? 'Esta publicación ya no está disponible' : 'Página no encontrada'}</h1><a href="/catalogo">Explorar propiedades</a></main></body></html>`
+        return aplicarCabeceras(new NextResponse(peticion.method === 'HEAD' ? null : html, {
+          status: decision.estado,
+          headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' },
+        }))
+      }
+    } catch {
+      // Un fallo del servicio no demuestra que una publicación haya desaparecido.
+      return aplicarCabeceras(new NextResponse('Servicio temporalmente no disponible', { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '60' } }))
+    }
+  }
+
   return aplicarCabeceras(respuesta)
 }
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp)$).*)'],
 }
+
