@@ -7,7 +7,6 @@ import { leerFiltros, type ParametrosCatalogo } from '@/lib/catalogo/filtros'
 import { listarPropiedadesPublicas, TAMANO_PAGINA } from '@/lib/catalogo/consultas'
 
 const CAMPO = 'block w-full rounded-sm border border-linea bg-superficie px-3 py-2 text-tinta'
-const ETIQUETA = 'block text-xs font-medium uppercase tracking-wide text-tinta-tenue'
 
 type Entrada = { params: Promise<{ barrio: string }>; searchParams: Promise<ParametrosCatalogo> }
 export default async function PaginaBarrio({ params, searchParams }: Entrada) {
