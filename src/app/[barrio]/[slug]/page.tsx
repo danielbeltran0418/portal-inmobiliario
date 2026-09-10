@@ -1,19 +1,32 @@
+import { cache } from 'react'
+import { metadatosFicha, datosFicha, serializarJsonLd } from '@/lib/catalogo/seo'
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
-export default async function FichaPublica({ params }: { params: Promise<{ barrio: string; slug: string }> }) {
-  const ruta = await params
+const cargarFicha = cache(async (slug: string) => {
   const { data: p, error } = await crearClientePublico().from('propiedades')
     .select('slug,titulo,descripcion,precio,operacion,tipo_inmueble,habitaciones,banos,area_m2,barrios!inner(nombre,slug),imagenes_propiedad(id,alt_text,orden)')
-    .eq('slug', ruta.slug).eq('estado', 'publicada').maybeSingle()
+    .eq('slug', slug).eq('estado', 'publicada').maybeSingle()
   if (error) throw new Error('No se pudo cargar la propiedad')
   if (!p) notFound()
+  return p
+})
+export async function generateMetadata({ params }: { params: Promise<{ barrio: string; slug: string }> }) {
+  const p = await cargarFicha((await params).slug)
+  const barrio = Array.isArray(p.barrios) ? p.barrios[0] : p.barrios
+  if (!barrio) notFound()
+  return metadatosFicha(p, barrio)
+}
+export default async function FichaPublica({ params }: { params: Promise<{ barrio: string; slug: string }> }) {
+  const ruta = await params
+  const p = await cargarFicha(ruta.slug)
   const barrio = Array.isArray(p.barrios) ? p.barrios[0] : p.barrios
   if (!barrio) notFound()
   if (barrio.slug !== ruta.barrio) permanentRedirect(`/${barrio.slug}/${p.slug}`)
   const fotos = [...p.imagenes_propiedad].sort((a, b) => a.orden - b.orden)
   return <main className="mx-auto w-full max-w-5xl px-6 py-12">
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosFicha(p, barrio)) }} />
     <Link href={`/${barrio.slug}`}>Volver a {barrio.nombre}</Link>
     <h1 className="mt-6 text-3xl font-semibold">{p.titulo}</h1>
     <p className="mt-3 text-xl">{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p.precio)} · {p.operacion}</p>

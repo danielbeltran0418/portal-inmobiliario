@@ -4,6 +4,7 @@ const resultado = vi.fn()
 vi.mock('@/lib/supabase/cliente-publico', () => ({ crearClientePublico: () => ({ from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: resultado }) }) }) }) }) }))
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NOT_FOUND') }, permanentRedirect: (url: string) => { throw new Error(`REDIRECT:${url}`) } }))
 const { default: Ficha } = await import('@/app/[barrio]/[slug]/page')
+vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://portal.example')
 const params = Promise.resolve({ barrio: 'prado', slug: 'casa-a123' })
 it('no muestra una ficha invisible', async () => {
   resultado.mockResolvedValue({ data: null, error: null })
