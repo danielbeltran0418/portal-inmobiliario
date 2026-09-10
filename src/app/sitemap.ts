@@ -8,7 +8,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { data: barrios, error: errorBarrios } = await db.from('barrios').select('slug').eq('activo', true).order('slug')
   if (errorBarrios) throw new Error('No se pudo generar el sitemap')
   const entradas: MetadataRoute.Sitemap = [
-    { url: urlPublica('/') }, { url: urlPublica('/catalogo') },
+    { url: urlPublica('/') },
     ...(barrios ?? []).map(b => ({ url: urlPublica(`/${b.slug}`) })),
   ]
   for (let inicio = 0; ; inicio += 500) {
