@@ -22,18 +22,25 @@ export async function Cabecera() {
   const { autenticado, enlaces } = estadoDeCabecera(await sesionActual())
 
   return (
-    <header className="border-b border-black/10 dark:border-white/15">
+    <header className="border-b border-linea bg-superficie">
       <nav
         aria-label="Principal"
         className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4"
       >
-        <Link href="/" className="text-lg font-semibold tracking-tight">
+        <Link
+          href="/"
+          className="font-titulo text-xl font-semibold tracking-tight text-tinta hover:text-marca"
+        >
           {NOMBRE_DEL_SITIO}
         </Link>
 
         <div className="flex flex-wrap items-center gap-5 text-sm">
           {enlaces.map((enlace) => (
-            <Link key={enlace.destino} href={enlace.destino} className="hover:underline">
+            <Link
+              key={enlace.destino}
+              href={enlace.destino}
+              className="text-tinta-suave hover:text-marca hover:underline"
+            >
               {enlace.etiqueta}
             </Link>
           ))}
@@ -46,7 +53,7 @@ export async function Cabecera() {
             <form action={cerrarSesion}>
               <button
                 type="submit"
-                className="cursor-pointer rounded border border-black/20 px-3 py-1.5 hover:bg-black/5 dark:border-white/25 dark:hover:bg-white/10"
+                className="cursor-pointer rounded-sm border border-linea px-3 py-1.5 text-tinta-suave hover:border-marca hover:text-marca"
               >
                 Cerrar sesión
               </button>

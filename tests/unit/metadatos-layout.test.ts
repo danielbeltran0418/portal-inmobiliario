@@ -3,8 +3,8 @@ import { describe, it, expect, vi } from 'vitest'
 // next/font/google solo resuelve dentro del compilador de Next. Mismo mock que
 // en render-dinamico.test.ts: aqui no se prueba la tipografia.
 vi.mock('next/font/google', () => ({
-  Geist: () => ({ variable: 'geist' }),
-  Geist_Mono: () => ({ variable: 'geist-mono' }),
+  Fraunces: () => ({ variable: 'fuente-titulo' }),
+  Karla: () => ({ variable: 'fuente-texto' }),
 }))
 
 /**

@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 import { config } from 'dotenv'
 
 // .env.local es una comodidad del desarrollador, NO la fuente de verdad. Esta
@@ -81,10 +81,21 @@ export async function crearUsuarioDePrueba(opciones: {
   nombre?: string
 }): Promise<string> {
   const admin = clienteAdmin()
-  await admin.auth.admin.listUsers().then(({ data }) => {
-    const existente = data?.users.find((u) => u.email === opciones.correo)
-    return existente ? admin.auth.admin.deleteUser(existente.id) : null
-  })
+  // listUsers devuelve páginas: las cuentas de una base persistente pueden
+  // estar después de la primera. Ignorarlas provoca un falso email duplicado.
+  let pagina = 1
+  while (true) {
+    const { data, error } = await admin.auth.admin.listUsers({ page: pagina, perPage: 50 })
+    if (error) throw error
+    const existente = data.users.find((u) => u.email === opciones.correo)
+    if (existente) {
+      const { error: errorBorrado } = await admin.auth.admin.deleteUser(existente.id)
+      if (errorBorrado) throw errorBorrado
+      break
+    }
+    if (!data.nextPage) break
+    pagina = data.nextPage
+  }
 
   const { data, error } = await admin.auth.admin.createUser({
     email: opciones.correo,
@@ -127,4 +138,18 @@ export async function sesionVendedor(): Promise<SupabaseClient> {
   const password = 'VendedorEfimero2026*'
   await crearUsuarioDePrueba({ correo, password, rol: 'vendedor', nombre: 'Vendedor Efimero' })
   return clienteComo(correo, password)
+}
+
+
+/** Inventario completo para fixtures; no confundir la primera página con toda la base. */
+export async function listarUsuariosDePrueba() {
+  const users: User[] = []
+  let page = 1
+  while (true) {
+    const { data, error } = await clienteAdmin().auth.admin.listUsers({ page, perPage: 50 })
+    if (error) throw error
+    users.push(...data.users)
+    if (!data.nextPage) return { data: { users }, error: null }
+    page = data.nextPage
+  }
 }
