@@ -40,7 +40,6 @@ test.afterAll(async () => {
 })
 test('visitante explora barrio, filtra, abre ficha y ve la foto sin dirección exacta', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: 'Explorar propiedades por barrio' }).click()
   await page.getByRole('link', { name: barrio.nombre, exact: true }).click()
   await page.getByLabel('Precio mínimo').fill('98765432.12')
   await page.getByLabel('Precio máximo').fill('98765432.12')
