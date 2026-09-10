@@ -96,12 +96,12 @@ export default async function PaginaInicio() {
       )}
 
       {/*
-        Sin propiedades de muestra. El catalogo es el SP1 y todavia no hay nada
-        publicado: inventar tarjetas de casas aqui seria enseñar datos falsos.
+        Entrada al catálogo real, sin tarjetas inventadas. El listado muestra lo
+        publicado por los vendedores y visible bajo las políticas públicas.
       */}
       <p className="mt-16 border-t border-black/10 pt-6 text-sm opacity-60 dark:border-white/15">
-        El catálogo público de propiedades está en construcción. Por ahora puedes crear tu cuenta
-        para tenerla lista cuando abra.
+        <Link href="/catalogo" className="font-medium underline">Explorar propiedades por barrio</Link>. Puedes crear tu cuenta
+        para publicar y gestionar tus propiedades.
       </p>
     </main>
   )
