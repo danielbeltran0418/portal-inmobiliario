@@ -137,7 +137,7 @@ export async function middleware(peticion: NextRequest) {
       }
       if (decision.estado !== 200) {
         const retirada = decision.estado === 410
-        const html = `<!doctype html><html lang="es"><head><meta name="robots" content="noindex"><title>${retirada ? 'Publicación retirada' : 'Página no encontrada'}</title></head><body><main><h1>${retirada ? 'Esta publicación ya no está disponible' : 'Página no encontrada'}</h1><a href="/catalogo">Explorar propiedades</a></main></body></html>`
+        const html = `<!doctype html><html lang="es"><head><meta name="robots" content="noindex"><title>${retirada ? 'Publicación retirada' : 'Página no encontrada'}</title></head><body><main><h1>${retirada ? 'Esta publicación ya no está disponible' : 'Página no encontrada'}</h1><a href="/">Volver al inicio</a></main></body></html>`
         return aplicarCabeceras(new NextResponse(peticion.method === 'HEAD' ? null : html, {
           status: decision.estado,
           headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' },
