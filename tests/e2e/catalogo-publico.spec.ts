@@ -28,7 +28,10 @@ test.beforeAll(async () => {
   if (ePublicar) throw ePublicar
 })
 test.afterAll(async () => {
-  if (propiedad) await admin.from('propiedades').delete().eq('id', propiedad)
+  if (propiedad) {
+    await admin.from('propiedades').delete().eq('id', propiedad)
+    await admin.from('rutas_publicas_propiedad').delete().eq('propiedad_id', propiedad)
+  }
   if (ruta) {
     await admin.storage.from('propiedades').remove([ruta])
     await admin.from('limpieza_almacenamiento').delete().eq('ruta', ruta)
@@ -61,7 +64,21 @@ test('visitante explora barrio, filtra, abre ficha y ve la foto sin dirección e
   expect(await mapa.text()).toContain(fichaUrl)
   const reglas = await page.request.get('/robots.txt')
   expect(await reglas.text()).toContain('Disallow: /panel')
+  const { data: otroBarrio, error: eBarrio } = await admin.from('barrios').select('id,slug').eq('activo', true).neq('id', barrio.id).limit(1).single()
+  if (eBarrio) throw eBarrio
+  const { error: eMover } = await admin.from('propiedades').update({ barrio_id: otroBarrio.id }).eq('id', propiedad)
+  if (eMover) throw eMover
+  const salto = await page.request.get(fichaUrl, { maxRedirects: 0 })
+  expect(salto.status()).toBe(301)
+  const nuevaUrl = new URL(salto.headers().location, fichaUrl)
+  expect(nuevaUrl.pathname).toContain(`/${otroBarrio.slug}/`)
+  expect((await page.request.get(nuevaUrl.href)).status()).toBe(200)
   const { error: ePausa } = await admin.from('propiedades').update({ estado: 'pausada' }).eq('id', propiedad)
   if (ePausa) throw ePausa
   expect(await (await page.request.get('/sitemap.xml')).text()).not.toContain(fichaUrl)
+  expect((await page.request.get(fichaUrl, { maxRedirects: 0 })).status()).toBe(410)
+  expect((await page.request.get(nuevaUrl.href)).status()).toBe(410)
+  expect((await page.request.get('/barrio-inexistente/propiedad-inexistente')).status()).toBe(404)
 })
+
+
