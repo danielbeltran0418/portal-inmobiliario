@@ -13,6 +13,12 @@ export async function GET(_peticion: Request, contexto: { params: Promise<{ id: 
   // El cliente privilegiado solo firma la ruta previamente autorizada por la lectura anónima.
   // Una firma ya emitida sigue siendo válida hasta expirar, aunque se pause la propiedad.
   const { data: firma, error: errorFirma } = await crearClienteAdmin().storage.from('propiedades').createSignedUrl(data.ruta_storage, 60)
-  if (errorFirma || !firma) return new Response(null, { status: 503, headers: cabeceras })
+  // Un objeto ausente es un 404, no un 503: 503 significa "problema temporal,
+  // reintentalo", y hace que el navegador y los rastreadores insistan sobre algo
+  // que nunca va a aparecer. Solo un fallo real de Storage merece 503.
+  if (errorFirma || !firma) {
+    const noExiste = /not.?found/i.test(errorFirma?.message ?? '')
+    return new Response(null, { status: noExiste ? 404 : 503, headers: cabeceras })
+  }
   return new Response(null, { status: 307, headers: { ...cabeceras, Location: firma.signedUrl } })
 }

@@ -1,15 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Karla } from "next/font/google";
 import { Cabecera } from "@/componentes/cabecera";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+/**
+ * Fraunces para titulos y Karla para el texto. El contraste entre una serif
+ * con caracter y una sans humanista es lo que da el tono calido sin recargar
+ * la pantalla: la personalidad vive en los titulos, y el texto corrido se
+ * mantiene neutro y legible, que es lo que se lee comparando muchas fichas
+ * seguidas desde el movil.
+ */
+const fuenteTitulo = Fraunces({
+  variable: "--fuente-titulo",
   subsets: ["latin"],
+  weight: ["500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const fuenteTexto = Karla({
+  variable: "--fuente-texto",
   subsets: ["latin"],
 });
 
@@ -42,7 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${fuenteTitulo.variable} ${fuenteTexto.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Cabecera />

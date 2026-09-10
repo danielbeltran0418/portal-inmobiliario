@@ -1,26 +1,145 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Sistema de diseño del portal. Carácter "cálido y local": la personalidad
+ * vive en el CROMADO -- cabecera, fondos, tipografía, acentos -- y los
+ * contenedores de foto se quedan neutros a propósito. Una paleta con carácter
+ * detrás de una foto de tonos cualesquiera se pelea con ella, y en un portal
+ * inmobiliario la foto siempre gana.
+ *
+ * Los tokens crudos se definen aquí; @theme los expone como utilidades de
+ * Tailwind (bg-fondo, text-tinta, border-linea...). Nunca escribir un color
+ * literal en un componente: si hace falta uno nuevo, se añade aquí.
+ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  /* Neutros con sesgo cálido. No son grises: llevan una pizca de arena, que
+     es lo que los hace parecer elegidos y no heredados. */
+  --fondo:          #FBF8F3;
+  --superficie:     #FFFFFF;
+  --superficie-alt: #F3EEE5;
+  --linea:          #E3DACC;
+  --linea-suave:    #EEE8DD;
+
+  --tinta:          #1F1B14;
+  --tinta-suave:    #5C5346;
+  --tinta-tenue:    #8A8071;
+
+  /* Verde caribe. Es el color de marca y se gasta con cuentagotas:
+     enlaces, foco, y la acción principal de cada pantalla. */
+  --marca:          #0B6B5F;
+  --marca-fuerte:   #085249;
+  --marca-suave:    #DDEDE9;
+  --marca-contraste:#FFFFFF;
+
+  /* Ocre. Solo para distinguir arriendo de venta y poco más. */
+  --realce:         #A8630F;
+  --realce-suave:   #F7EAD6;
+
+  /* Estados de una propiedad. Semánticos, separados del color de marca. */
+  --exito:          #1D6B4C;
+  --exito-suave:    #DCEEE4;
+  --aviso:          #8A5A0F;
+  --aviso-suave:    #F5E9D2;
+  --peligro:        #9B3226;
+  --peligro-suave:  #F6DEDA;
+
+  --radio:    0.5rem;
+  --radio-sm: 0.3rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --fondo:          #15120D;
+    --superficie:     #1D1913;
+    --superficie-alt: #262019;
+    --linea:          #342C21;
+    --linea-suave:    #241E17;
+
+    --tinta:          #F2EBDF;
+    --tinta-suave:    #A89D8C;
+    --tinta-tenue:    #7B7163;
+
+    --marca:          #46B5A4;
+    --marca-fuerte:   #63C7B7;
+    --marca-suave:    #10302B;
+    --marca-contraste:#0C1512;
+
+    --realce:         #D9A050;
+    --realce-suave:   #2E2415;
+
+    --exito:          #57B78A;
+    --exito-suave:    #14291F;
+    --aviso:          #D9AA55;
+    --aviso-suave:    #2B2418;
+    --peligro:        #E58E80;
+    --peligro-suave:  #2E1C19;
   }
 }
 
+@theme inline {
+  --color-fondo:           var(--fondo);
+  --color-superficie:      var(--superficie);
+  --color-superficie-alt:  var(--superficie-alt);
+  --color-linea:           var(--linea);
+  --color-linea-suave:     var(--linea-suave);
+
+  --color-tinta:           var(--tinta);
+  --color-tinta-suave:     var(--tinta-suave);
+  --color-tinta-tenue:     var(--tinta-tenue);
+
+  --color-marca:           var(--marca);
+  --color-marca-fuerte:    var(--marca-fuerte);
+  --color-marca-suave:     var(--marca-suave);
+  --color-marca-contraste: var(--marca-contraste);
+
+  --color-realce:          var(--realce);
+  --color-realce-suave:    var(--realce-suave);
+
+  --color-exito:           var(--exito);
+  --color-exito-suave:     var(--exito-suave);
+  --color-aviso:           var(--aviso);
+  --color-aviso-suave:     var(--aviso-suave);
+  --color-peligro:         var(--peligro);
+  --color-peligro-suave:   var(--peligro-suave);
+
+  --font-titulo: var(--fuente-titulo), Georgia, "Times New Roman", serif;
+  --font-sans:   var(--fuente-texto), system-ui, -apple-system, sans-serif;
+
+  --radius-md: var(--radio);
+  --radius-sm: var(--radio-sm);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: var(--fuente-texto), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Los títulos llevan la serif con carácter; el texto corrido, la sans.
+   El contraste entre las dos es lo que da el tono cálido sin recargar. */
+h1, h2, h3 {
+  font-family: var(--fuente-titulo), Georgia, "Times New Roman", serif;
+  text-wrap: balance;
+  letter-spacing: -0.015em;
+}
+
+/* Los precios y las cifras se alinean en columnas al comparar fichas. */
+.cifra {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Un solo foco visible para todo el sitio, en el color de marca. */
+:focus-visible {
+  outline: 2px solid var(--marca);
+  outline-offset: 2px;
+  border-radius: var(--radio-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
