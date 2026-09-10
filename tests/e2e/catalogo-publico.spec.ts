@@ -52,7 +52,25 @@ test('visitante explora barrio, filtra, abre ficha y ve la foto sin dirección e
   await expect.poll(() => imagen.evaluate((nodo: HTMLImageElement) => nodo.naturalWidth)).toBe(80)
   expect(await page.content()).not.toContain('DIRECCION SECRETA E2E')
   await expect(page).toHaveTitle(new RegExp(titulo))
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', page.url())
+  // La canonica se comprueba sobre el HTML SERVIDO, no sobre el DOM, y el
+  // "exactamente una" va aqui: un rastreador no navega por cliente, pide la
+  // URL y lee la respuesta. Esto es lo que cubre el criterio.
+  const htmlServido = await (await page.request.get(page.url())).text()
+  // ?? [] a proposito: sin el, cero canonicas da un "Matcher error: received
+  // has value null" en vez de un "expected 0 to be 1".
+  expect((htmlServido.match(/rel="canonical"/g) ?? []).length).toBe(1)
+  expect(htmlServido).toContain(`<link rel="canonical" href="${page.url()}"/>`)
+  // En el DOM solo se exige que ESTE la de esta ficha, sin prohibir que haya
+  // otra. El motivo es que este suite corre contra `next dev` (ver
+  // playwright.config.ts) y en dev Next NO retira la canonica de la pagina
+  // anterior al navegar por cliente: al venir del barrio quedan las dos para
+  // siempre -- comprobado con 5s de poll. En un build de produccion si la
+  // reemplaza y queda una sola, tambien comprobado. Exigir aqui "exactamente
+  // una" seria afirmar una propiedad del modo desarrollo, no del producto, y
+  // es lo que hacia fallar esta prueba de forma intermitente: solo cuando la
+  // maquina iba cargada la canonica del barrio alcanzaba a aplicarse antes
+  // del salto.
+  await expect(page.locator(`link[rel="canonical"][href="${page.url()}"]`)).toHaveCount(1)
   const json = JSON.parse(await page.locator('script[type="application/ld+json"]').textContent() ?? '{}')
   expect(json['@type']).toBe('RealEstateListing')
   expect(json.offers.price).toBe(98765432.12)
