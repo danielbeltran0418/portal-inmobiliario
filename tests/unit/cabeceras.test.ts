@@ -131,3 +131,12 @@ describe('cabeceras de seguridad', () => {
     expect(sinComentarios).not.toMatch(/from\s+['"]node:/)
   })
 })
+
+it('solo fuerza HTTPS en producción; las redirecciones a Storage local conservan HTTP', () => {
+  try {
+    vi.stubEnv('NODE_ENV', 'development')
+    expect(construirCabeceras('nonce')['Content-Security-Policy']).not.toContain('upgrade-insecure-requests')
+    vi.stubEnv('NODE_ENV', 'production')
+    expect(construirCabeceras('nonce')['Content-Security-Policy']).toContain('upgrade-insecure-requests')
+  } finally { vi.unstubAllEnvs() }
+})

@@ -58,7 +58,8 @@ export function construirCabeceras(nonce: string): Record<string, string> {
     `base-uri 'self'`,
     `form-action 'self'`,
     `object-src 'none'`,
-    `upgrade-insecure-requests`,
+    // Supabase local usa HTTP; forzarlo a HTTPS rompe las imágenes redirigidas.
+    ...(process.env.NODE_ENV === 'production' ? ['upgrade-insecure-requests'] : []),
   ].join('; ')
 
   return {
