@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { sesionActual } from '@/lib/auth/sesion'
 import { enlaceDePanel } from '@/lib/navegacion/enlaces'
+import { crearClientePublico } from '@/lib/supabase/cliente-publico'
 
 export const metadata: Metadata = {
   title: 'Portal Inmobiliario de Barranquilla',
@@ -42,6 +43,18 @@ const PUERTAS = [
 
 export default async function PaginaInicio() {
   const panel = enlaceDePanel(await sesionActual())
+
+  // Los barrios se leen con el cliente publico: RLS decide que es visible, y
+  // un visitante anonimo debe poder ver esta lista sin cuenta.
+  // Un fallo de la consulta NO tumba la portada: se degrada a lista vacia, que
+  // la seccion de abajo trata como caso valido. La portada es lo primero que ve
+  // un desconocido y no puede depender de que la base responda.
+  const { data: barriosCrudos } = await crearClientePublico()
+    .from('barrios')
+    .select('nombre,slug')
+    .eq('activo', true)
+    .order('nombre')
+  const barrios = barriosCrudos ?? []
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-16">
@@ -96,13 +109,32 @@ export default async function PaginaInicio() {
       )}
 
       {/*
-        Sin propiedades de muestra. El catalogo es el SP1 y todavia no hay nada
-        publicado: inventar tarjetas de casas aqui seria enseñar datos falsos.
+        Los barrios viven AQUI, no en una pagina aparte. El spec dice que la
+        portada es "la entrada a los barrios", y una segunda pagina que solo
+        listara lo mismo competiria con esta por la misma intencion de busqueda.
+        Sin tarjetas inventadas: se listan los barrios reales y activos.
       */}
-      <p className="mt-16 border-t border-black/10 pt-6 text-sm opacity-60 dark:border-white/15">
-        El catálogo público de propiedades está en construcción. Por ahora puedes crear tu cuenta
-        para tenerla lista cuando abra.
-      </p>
+      <section className="mt-16 border-t border-linea pt-8">
+        <h2 className="text-2xl font-semibold text-tinta">Explora por barrio</h2>
+        {barrios.length === 0 ? (
+          <p className="mt-3 text-tinta-suave">
+            Todavia no hay barrios disponibles. Vuelve pronto.
+          </p>
+        ) : (
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {barrios.map((barrio) => (
+              <li key={barrio.slug}>
+                <Link
+                  href={`/${barrio.slug}`}
+                  className="block rounded-md border border-linea bg-superficie px-5 py-4 text-tinta transition-colors hover:border-marca hover:text-marca"
+                >
+                  {barrio.nombre}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   )
 }

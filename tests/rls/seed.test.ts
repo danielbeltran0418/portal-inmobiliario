@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { Client } from 'pg'
-import { clienteAdmin, clienteComo, URL_BASE_DE_DATOS } from './ayudantes'
+import { clienteAdmin, clienteComo, URL_BASE_DE_DATOS, listarUsuariosDePrueba } from './ayudantes'
 
 const CUENTAS = [
   { correo: 'admin@portal.com', password: 'AdminPrueba2026*', rol: 'super_admin' },
@@ -112,7 +112,7 @@ async function ejecutarSeed(entorno: string | null): Promise<{ fallo: boolean; m
 }
 
 async function correosExistentes(): Promise<string[]> {
-  const { data, error } = await clienteAdmin().auth.admin.listUsers()
+  const { data, error } = await listarUsuariosDePrueba()
   if (error) throw error
   return data.users
     .map((u) => u.email ?? '')
@@ -184,7 +184,7 @@ describe('seed de desarrollo', () => {
 
   it('con el entorno marcado como produccion el seed aborta y no crea ninguna cuenta', async () => {
     const admin = clienteAdmin()
-    const { data: previos } = await admin.auth.admin.listUsers()
+    const { data: previos } = await listarUsuariosDePrueba()
     for (const usuario of previos!.users) {
       if (CUENTAS.some((c) => c.correo === usuario.email)) {
         await admin.auth.admin.deleteUser(usuario.id)
@@ -227,7 +227,7 @@ describe('seed de desarrollo', () => {
   }
 
   it('las tres cuentas tienen el correo ya confirmado', async () => {
-    const { data } = await clienteAdmin().auth.admin.listUsers()
+    const { data } = await listarUsuariosDePrueba()
     for (const cuenta of CUENTAS) {
       const u = data!.users.find((x) => x.email === cuenta.correo)
       expect(u?.email_confirmed_at).toBeTruthy()

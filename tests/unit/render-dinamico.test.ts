@@ -4,8 +4,8 @@ import { describe, it, expect, vi } from 'vitest'
 // Next. Se sustituye por lo minimo que el layout consume: no se esta probando
 // la tipografia.
 vi.mock('next/font/google', () => ({
-  Geist: () => ({ variable: 'geist' }),
-  Geist_Mono: () => ({ variable: 'geist-mono' }),
+  Fraunces: () => ({ variable: 'fuente-titulo' }),
+  Karla: () => ({ variable: 'fuente-texto' }),
 }))
 
 /**
