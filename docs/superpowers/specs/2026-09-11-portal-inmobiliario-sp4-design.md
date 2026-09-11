@@ -34,6 +34,14 @@ Consume `propiedad_publicada`. Produce `lead_capturado`.
 - **`ipDeConfianza()`** en `src/lib/http/ip-cliente.ts`, con una política documentada que
   importa citar: *«se degrada a un límite más ESTRICTO y no falsificable, nunca a sin
   límite»*. La §9 choca con esto.
+- **Turnstile YA ESTÁ CONSTRUIDO, y está inerte.** `src/lib/seguridad/turnstile.ts`
+  (verificación contra siteverify, con timeout y fallando cerrado),
+  `src/app/(auth)/guion-turnstile.tsx` y `widget-turnstile.tsx`, y la llamada ya puesta en
+  `src/app/(auth)/registro/acciones.ts`. La CSP **ya lo cubre**: `connect-src` y `frame-src`
+  llevan `challenges.cloudflare.com`, y `script-src` no hace falta tocarlo porque bajo
+  `strict-dynamic` el navegador ignora la lista de orígenes y la autorización va por nonce.
+  Sin las variables de entorno, `verificarTurnstile()` devuelve `true` sin mirar nada.
+  **Encenderlo son dos variables, cero código.**
 - **`registro_auditoria`** con cuatro escritores reales, todos en la base (triggers y
   funciones), y lectura solo para `super_admin`.
 - **`limpieza_almacenamiento`**: el patrón del proyecto para «un trigger anota, un consumidor
@@ -51,7 +59,7 @@ Consume `propiedad_publicada`. Produce `lead_capturado`.
 | Qué ve el vendedor | **Mensaje ya, contacto al aceptar** | Privacidad real: sin esto el correo personal del comprador queda expuesto a todo vendedor al que escriba. Ley 1581 de habeas data |
 | Cómo se hace el revelado | **Dos tablas** | Una política por tabla, una expresión cada una, y falsificable. Ver §5 |
 | Emisión de `lead_capturado` | **La fila ES el hecho** | Un bus sin consumidor es infraestructura especulativa. Ver §6 |
-| Anti-spam | **Límite por IP en registro** | No depende de claves de terceros ni toca la CSP. Turnstile queda para después, como capa encima |
+| Anti-spam | **Límite por IP en registro** | Segunda capa, independiente de Turnstile. No depende de que nadie consiga claves, y se puede falsificar en la suite. Ver §9 |
 | Contacto en el lead | **Instantánea al capturar** | Si el comprador cambia de teléfono, el lead debe seguir mostrando el que dio |
 
 ## 4. Modelo de datos
@@ -243,7 +251,19 @@ es un mensaje y un contacto, no cabe una página.
 
 ## 9. El límite de registro, y el agujero que abre
 
-`/registro` pasa a ser la puerta del spam, y hoy no tiene ninguna protección.
+`/registro` pasa a ser la puerta del spam. Tiene **una** barrera construida —Turnstile— y está
+apagada por falta de claves, así que hoy en la práctica no hay ninguna.
+
+Las dos capas son independientes y no se sustituyen:
+
+- **Turnstile** distingue humano de bot, y está a dos variables de entorno de funcionar.
+  Encenderlo no es trabajo de SP4: no hay código que escribir.
+- **El límite por IP** acota el volumen aunque quien registre sea humano, o aunque alguien
+  resuelva el desafío. Es lo que SP4 construye.
+
+Un atacante que rompa el captcha sigue topándose con el límite; un humano con un guion sigue
+topándose con el límite. Por eso la capa nueva vale la pena aunque se enciendan las claves
+mañana.
 
 ### La regla no es la misma que la del login
 
@@ -264,11 +284,26 @@ Las dos funciones mantienen su forma (`SECURITY DEFINER`, revocadas de `PUBLIC`,
 falsificada en `tests/rls/limite-intentos.test.ts`. La migración renombra y amplía; **no se
 edita ninguna migración ya aplicada**.
 
-Consecuencia que hay que aceptar: renombrar la tabla y las funciones **toca código de SP0** —
-`tests/rls/limite-intentos.test.ts` y el server action del login. Es la única parte de SP4 que
-modifica un sub-proyecto anterior más allá del contador de la §8, y el plan tiene que tratarla
-como tal: la prueba existente debe seguir en verde con el nombre nuevo **antes** de que se
-añada la regla de registro, para que si algo se rompe se sepa cuál de los dos cambios fue.
+Consecuencia que hay que aceptar: renombrar la tabla y las funciones **toca código de SP0**, y
+más de lo que parece. Medido, no estimado:
+
+| Fichero | Referencias |
+|---|---|
+| `tests/rls/limite-intentos.test.ts` | 40 |
+| `tests/rls/auditoria.test.ts` | 6 |
+| `tests/unit/limite-intentos.test.ts` | 2 |
+| `tests/rls/privilegios-anon.test.ts` | 1 |
+| `tests/unit/accion-registro.test.ts` | 1 |
+| `src/lib/auth/limite-intentos.ts` | el único de producción |
+| `src/app/(auth)/registro/acciones.ts` | solo un comentario, que queda obsoleto |
+
+El server action del login **no** aparece: pasa por `src/lib/auth/limite-intentos.ts`, que es
+la única frontera real. Eso es una buena noticia para el plan — hay un solo punto de cambio en
+producción y cinco ficheros de prueba que arrastrar.
+
+Por eso el rename es **su propia tarea, y va primero**: las cinco suites deben quedar en verde
+con el nombre nuevo y **sin ninguna regla nueva**, antes de tocar el predicado de registro. Si
+se hacen juntos y algo se pone rojo, no se sabe cuál de los dos cambios fue.
 
 ### El agujero: sin IP de confianza no hay límite de registro
 
@@ -348,7 +383,8 @@ del comprador **no** está en la página antes de aceptar — no contra la inter
 ## 13. Fuera de alcance
 
 - **Citas y agenda.** Es SP5. De un lead aceptado nace una cita, y ahí se para SP4.
-- **Turnstile.** Capa posterior sobre el límite por IP, sin rehacer nada.
+- **Turnstile.** No porque sea trabajo futuro, sino porque **ya está construido** (§2). Sacarlo
+  de la inercia es pegar dos variables de entorno, y eso no es una tarea de implementación.
 - **Notificar al vendedor por correo o WhatsApp.** Necesita SMTP propio (hoy el de cortesía de
   Supabase tiene un límite muy bajo) y es una decisión de canal que no está tomada.
 - **Que el comprador vea sus leads enviados.** Es SP2. El modelo lo soporta.
