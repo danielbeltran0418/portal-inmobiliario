@@ -31,9 +31,10 @@ export async function registrarUsuario(
   }
 
   /**
-   * Captcha (hallazgo I4). El registro no tiene limite de intentos que lo
-   * proteja -- el de intentos_login solo cubre el login -- asi que aqui es la
-   * unica barrera contra el alta masiva de cuentas.
+   * Captcha (hallazgo I4). El registro todavia no tiene limite de intentos que
+   * lo proteja -- la regla de 'registro' sobre intentos_accion llega en la
+   * migracion siguiente (20260911000200) -- asi que aqui es la unica barrera
+   * contra el alta masiva de cuentas.
    *
    * Se verifica en el SERVIDOR contra siteverify. Con las variables de
    * Turnstile sin definir, verificarTurnstile devuelve true sin mirar nada y

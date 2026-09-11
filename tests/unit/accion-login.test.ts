@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const signInWithPassword = vi.fn()
-const loginBloqueado = vi.fn()
-const registrarIntentoLogin = vi.fn()
+const accionBloqueada = vi.fn()
+const registrarIntentoAccion = vi.fn()
 const redirect = vi.fn()
 const verificarTurnstile = vi.fn()
 
 vi.mock('@/lib/supabase/cliente-servidor', () => ({
   crearClienteServidor: async () => ({ auth: { signInWithPassword } }),
 }))
-vi.mock('@/lib/auth/limite-intentos', () => ({ loginBloqueado, registrarIntentoLogin }))
+vi.mock('@/lib/auth/limite-intentos', () => ({ accionBloqueada, registrarIntentoAccion }))
 // x-forwarded-for con un valor hostil, a proposito: lo manda el cliente. La
 // accion ya no lo lee (hallazgo I3) -- resuelve la IP con ipDeConfianza, que
 // fuera de produccion devuelve 127.0.0.1 sin mirar ninguna cabecera. Se deja
@@ -44,8 +44,8 @@ function formulario(correo: string, password: string): FormData {
 describe('iniciarSesion', () => {
   beforeEach(() => {
     signInWithPassword.mockReset()
-    loginBloqueado.mockReset().mockResolvedValue(false)
-    registrarIntentoLogin.mockReset().mockResolvedValue(true)
+    accionBloqueada.mockReset().mockResolvedValue(false)
+    registrarIntentoAccion.mockReset().mockResolvedValue(true)
     redirect.mockReset()
     verificarTurnstile.mockReset().mockResolvedValue(true)
   })
@@ -66,13 +66,13 @@ describe('iniciarSesion', () => {
       // Y NO se contabiliza como intento fallido de login. Si contara, cinco
       // envios con el captcha en blanco bloquearian la cuenta de cualquiera
       // durante 15 minutos sin haber tocado su contrasena.
-      expect(registrarIntentoLogin).not.toHaveBeenCalled()
+      expect(registrarIntentoAccion).not.toHaveBeenCalled()
     })
 
     // El limitador va primero: a una cuenta ya bloqueada se le responde sin
     // gastar una peticion a Cloudflare por cada intento.
     it('no consulta el captcha si la cuenta ya esta bloqueada', async () => {
-      loginBloqueado.mockResolvedValue(true)
+      accionBloqueada.mockResolvedValue(true)
 
       const r = await iniciarSesion({}, formulario('a@b.com', 'ClaveLargaSegura1'))
 
@@ -104,7 +104,7 @@ describe('iniciarSesion', () => {
   })
 
   it('rechaza sin llamar a Supabase cuando la combinacion esta bloqueada', async () => {
-    loginBloqueado.mockResolvedValue(true)
+    accionBloqueada.mockResolvedValue(true)
     const r = await iniciarSesion({}, formulario('a@b.com', 'ClaveLargaSegura1'))
     expect(signInWithPassword).not.toHaveBeenCalled()
     expect(r.error).toContain('Demasiados intentos')
@@ -113,7 +113,7 @@ describe('iniciarSesion', () => {
   it('registra el intento fallido', async () => {
     signInWithPassword.mockResolvedValue({ data: {}, error: { code: 'invalid_credentials' } })
     await iniciarSesion({}, formulario('a@b.com', 'ClaveLargaSegura1'))
-    expect(registrarIntentoLogin).toHaveBeenCalledWith('a@b.com', '127.0.0.1', false)
+    expect(registrarIntentoAccion).toHaveBeenCalledWith('login', 'a@b.com', '127.0.0.1', false)
   })
 
   /**
@@ -128,13 +128,13 @@ describe('iniciarSesion', () => {
 
     await iniciarSesion({}, formulario('a@b.com', 'ClaveLargaSegura1'))
 
-    const [, ipUsada] = registrarIntentoLogin.mock.calls[0]
+    const [, , ipUsada] = registrarIntentoAccion.mock.calls[0]
     expect(ipUsada).not.toBe('203.0.113.7')
     // Caso positivo: se llamo, y con la IP que resuelve la politica en un
     // entorno de desarrollo. Sin esto, una accion que no llamara al limitador
     // en absoluto pasaria el `not.toBe`.
     expect(ipUsada).toBe('127.0.0.1')
-    expect(loginBloqueado).toHaveBeenCalledWith('a@b.com', '127.0.0.1')
+    expect(accionBloqueada).toHaveBeenCalledWith('login', 'a@b.com', '127.0.0.1')
   })
 
   it('usa el mismo mensaje ante credenciales invalidas', async () => {
@@ -149,14 +149,14 @@ describe('iniciarSesion', () => {
     expect(r.error).toBe(MENSAJE_CREDENCIALES)
   })
 
-  // Antes, registrarIntentoLogin devolvia void y el error del RPC se perdia:
+  // Antes, registrarIntentoAccion devolvia void y el error del RPC se perdia:
   // si la llamada empezaba a fallar, los intentos dejaban de contarse y el
   // limite se apagaba sin que nadie lo notara. Ahora informa del fallo y
   // iniciarSesion degrada hacia el lado seguro.
   describe('cuando el RPC del limitador falla', () => {
     it('deniega si no se pudo contabilizar el intento FALLIDO', async () => {
       signInWithPassword.mockResolvedValue({ data: {}, error: { code: 'invalid_credentials' } })
-      registrarIntentoLogin.mockResolvedValue(false)
+      registrarIntentoAccion.mockResolvedValue(false)
 
       const r = await iniciarSesion({}, formulario('a@b.com', 'ClaveLargaSegura1'))
 
@@ -172,7 +172,7 @@ describe('iniciarSesion', () => {
     // pasaria la prueba de arriba.
     it('con el intento fallido bien registrado responde el mensaje uniforme', async () => {
       signInWithPassword.mockResolvedValue({ data: {}, error: { code: 'invalid_credentials' } })
-      registrarIntentoLogin.mockResolvedValue(true)
+      registrarIntentoAccion.mockResolvedValue(true)
 
       const r = await iniciarSesion({}, formulario('a@b.com', 'ClaveLargaSegura1'))
 
@@ -188,7 +188,7 @@ describe('iniciarSesion', () => {
       const parte = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
       const token = `${parte({})}.${parte({ app_metadata: { rol: 'comprador' } })}.f`
       signInWithPassword.mockResolvedValue({ data: { session: { access_token: token } }, error: null })
-      registrarIntentoLogin.mockResolvedValue(false)
+      registrarIntentoAccion.mockResolvedValue(false)
 
       const r = await iniciarSesion({}, formulario('v@b.com', 'ClaveLargaSegura1'))
 
@@ -203,7 +203,7 @@ describe('iniciarSesion', () => {
     signInWithPassword.mockResolvedValue({ data: { session: { access_token: token } }, error: null })
 
     await iniciarSesion({}, formulario('v@b.com', 'ClaveLargaSegura1'))
-    expect(registrarIntentoLogin).toHaveBeenCalledWith('v@b.com', '127.0.0.1', true)
+    expect(registrarIntentoAccion).toHaveBeenCalledWith('login', 'v@b.com', '127.0.0.1', true)
     expect(redirect).toHaveBeenCalledWith('/panel')
   })
 })

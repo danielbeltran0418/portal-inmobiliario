@@ -43,7 +43,7 @@ describe('registrarUsuario', () => {
 
   /**
    * Hallazgo I4. El registro no tiene limite de intentos que lo proteja -- el
-   * de intentos_login solo cubre el login -- asi que el captcha es aqui la
+   * de intentos_accion solo cubre el login -- asi que el captcha es aqui la
    * unica barrera contra el alta masiva de cuentas.
    */
   describe('captcha', () => {

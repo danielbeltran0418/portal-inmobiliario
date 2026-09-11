@@ -146,7 +146,7 @@ describe('escritura de la auditoria', () => {
     const id = await crearUsuarioDePrueba({ correo, password: 'ClaveDePrueba123!', rol: 'vendedor' })
 
     const { error } = await clienteAdmin()
-      .rpc('registrar_intento_login', { p_correo: correo, p_ip: '203.0.113.10', p_exitoso: false })
+      .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: correo, p_ip: '203.0.113.10', p_exitoso: false })
     expect(error).toBeNull()
 
     const { data: filas } = await clienteAdmin().from('registro_auditoria')
@@ -161,7 +161,7 @@ describe('escritura de la auditoria', () => {
     // Contraste dentro del mismo test: el exito se distingue del fallo. Sin
     // esto, una funcion que escribiera siempre 'login_fallido' pasaria.
     await clienteAdmin()
-      .rpc('registrar_intento_login', { p_correo: correo, p_ip: '203.0.113.10', p_exitoso: true })
+      .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: correo, p_ip: '203.0.113.10', p_exitoso: true })
     const { data: exitos } = await clienteAdmin().from('registro_auditoria')
       .select('actor_id').eq('accion', 'login_exitoso').contains('metadatos', { correo })
     expect(exitos).toHaveLength(1)
@@ -176,7 +176,7 @@ describe('escritura de la auditoria', () => {
     const correo = `aud-inexistente-${SUFIJO}@prueba.test`
 
     const { error } = await clienteAdmin()
-      .rpc('registrar_intento_login', { p_correo: correo, p_ip: null, p_exitoso: false })
+      .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: correo, p_ip: null, p_exitoso: false })
     expect(error).toBeNull()
 
     const { data: filas } = await clienteAdmin().from('registro_auditoria')
@@ -199,19 +199,21 @@ describe('escritura de la auditoria', () => {
     const ip = '203.0.113.11'
 
     for (let i = 0; i < 4; i++) {
-      await clienteAdmin().rpc('registrar_intento_login', { p_correo: correo, p_ip: ip, p_exitoso: false })
+      await clienteAdmin()
+        .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: correo, p_ip: ip, p_exitoso: false })
     }
     // Control del umbral: con cuatro fallos la cuenta NO esta bloqueada y no
     // hay ninguna fila de bloqueo todavia.
     const { data: bloqueadoAlCuarto } = await clienteAdmin()
-      .rpc('login_bloqueado', { p_correo: correo, p_ip: ip })
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: correo, p_ip: ip })
     expect(bloqueadoAlCuarto).toBe(false)
     const { data: sinBloqueo } = await clienteAdmin().from('registro_auditoria')
       .select('id').eq('accion', 'bloqueo_por_intentos').contains('metadatos', { correo })
     expect(sinBloqueo ?? []).toHaveLength(0)
 
     for (let i = 0; i < 2; i++) {
-      await clienteAdmin().rpc('registrar_intento_login', { p_correo: correo, p_ip: ip, p_exitoso: false })
+      await clienteAdmin()
+        .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: correo, p_ip: ip, p_exitoso: false })
     }
 
     const { data: bloqueos } = await clienteAdmin().from('registro_auditoria')

@@ -78,7 +78,7 @@ describe('privilegios de tabla del rol anon', () => {
       expect.arrayContaining([
         'barrios',
         'imagenes_propiedad',
-        'intentos_login',
+        'intentos_accion',
         'perfiles',
         'propiedades',
         'registro_auditoria',

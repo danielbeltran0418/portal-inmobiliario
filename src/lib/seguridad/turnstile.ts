@@ -35,7 +35,7 @@ import 'server-only'
  * -- dejar pasar cuando el verificador no contesta -- convierte una caida de
  * Cloudflare, o cualquier interferencia con esa peticion saliente, en un
  * interruptor para apagar el captcha. Es el mismo criterio que ya sigue
- * loginBloqueado en src/lib/auth/limite-intentos.ts.
+ * accionBloqueada en src/lib/auth/limite-intentos.ts.
  *
  * El coste esta asumido y es real: mientras Cloudflare este caido, nadie entra
  * ni se registra. Se acota con un tiempo limite corto para que la peticion no

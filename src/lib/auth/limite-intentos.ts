@@ -20,19 +20,22 @@ function registrarFallo(operacion: string, error: unknown): void {
 /**
  * `ip` en null significa "no se pudo determinar una IP de confianza", no "sin
  * IP que comprobar". Las dos funciones de la base lo interpretan como ventana
- * por correo sin discriminar IP (migracion 20260831000500): un limite MAS
- * estricto que el normal y, sobre todo, no falsificable, porque el correo lo
- * fija el formulario y no una cabecera que manda el cliente.
+ * por clave sin discriminar IP (migracion 20260831000500, generalizada en
+ * 20260911000100): un limite MAS estricto que el normal y, sobre todo, no
+ * falsificable, porque la clave la fija el formulario y no una cabecera que
+ * manda el cliente.
  * Quien decide cuando no hay IP fiable es src/lib/http/ip-cliente.ts.
  */
-export async function loginBloqueado(correo: string, ip: string | null): Promise<boolean> {
+export async function accionBloqueada(
+  accion: string, clave: string, ip: string | null,
+): Promise<boolean> {
   const { data, error } = await crearClienteAdmin()
-    .rpc('login_bloqueado', { p_correo: correo, p_ip: ip })
+    .rpc('accion_bloqueada', { p_accion: accion, p_clave: clave, p_ip: ip })
 
   // Ante un fallo de infraestructura se falla cerrado: bloquear es mas seguro
   // que dejar pasar intentos ilimitados.
   if (error) {
-    registrarFallo('login_bloqueado', error)
+    registrarFallo('accion_bloqueada', error)
     return true
   }
   return data === true
@@ -51,14 +54,16 @@ export async function loginBloqueado(correo: string, ip: string | null): Promise
  * llamadas no significan lo mismo: ver iniciarSesion en
  * src/app/(auth)/login/acciones.ts.
  */
-export async function registrarIntentoLogin(
-  correo: string, ip: string | null, exitoso: boolean,
+export async function registrarIntentoAccion(
+  accion: string, clave: string, ip: string | null, exitoso: boolean,
 ): Promise<boolean> {
   const { error } = await crearClienteAdmin()
-    .rpc('registrar_intento_login', { p_correo: correo, p_ip: ip, p_exitoso: exitoso })
+    .rpc('registrar_intento_accion', {
+      p_accion: accion, p_clave: clave, p_ip: ip, p_exitoso: exitoso,
+    })
 
   if (error) {
-    registrarFallo('registrar_intento_login', error)
+    registrarFallo('registrar_intento_accion', error)
     return false
   }
   return true

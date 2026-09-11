@@ -7,7 +7,7 @@ const rpc = vi.fn()
 vi.mock('server-only', () => ({}))
 vi.mock('@/lib/supabase/cliente-admin', () => ({ crearClienteAdmin: () => ({ rpc }) }))
 
-const { loginBloqueado, registrarIntentoLogin } = await import('@/lib/auth/limite-intentos')
+const { accionBloqueada, registrarIntentoAccion } = await import('@/lib/auth/limite-intentos')
 
 const ERROR_RPC = { code: '42501', message: 'permission denied for function' }
 
@@ -23,18 +23,18 @@ describe('limite de intentos: manejo del error del RPC', () => {
     errorDeConsola.mockRestore()
   })
 
-  describe('registrarIntentoLogin', () => {
+  describe('registrarIntentoAccion', () => {
     // Antes esta funcion devolvia void y no miraba el error: si el RPC
     // empezaba a fallar, los intentos dejaban de contarse y el limite se
     // apagaba sin dejar rastro.
     it('devuelve false y deja el fallo en el log del servidor si el RPC falla', async () => {
       rpc.mockResolvedValue({ data: null, error: ERROR_RPC })
 
-      const registrado = await registrarIntentoLogin('a@b.com', '203.0.113.7', false)
+      const registrado = await registrarIntentoAccion('login', 'a@b.com', '203.0.113.7', false)
 
       expect(registrado).toBe(false)
       expect(errorDeConsola).toHaveBeenCalledOnce()
-      expect(String(errorDeConsola.mock.calls[0][0])).toContain('registrar_intento_login')
+      expect(String(errorDeConsola.mock.calls[0][0])).toContain('registrar_intento_accion')
     })
 
     // Control positivo: sin el, una funcion que devolviera siempre false
@@ -42,7 +42,7 @@ describe('limite de intentos: manejo del error del RPC', () => {
     it('devuelve true y no ensucia el log si el RPC funciona', async () => {
       rpc.mockResolvedValue({ data: null, error: null })
 
-      const registrado = await registrarIntentoLogin('a@b.com', '203.0.113.7', false)
+      const registrado = await registrarIntentoAccion('login', 'a@b.com', '203.0.113.7', false)
 
       expect(registrado).toBe(true)
       expect(errorDeConsola).not.toHaveBeenCalled()
@@ -52,19 +52,19 @@ describe('limite de intentos: manejo del error del RPC', () => {
     it('no escribe el correo en el log', async () => {
       rpc.mockResolvedValue({ data: null, error: ERROR_RPC })
 
-      await registrarIntentoLogin('victima@ejemplo.com', '203.0.113.7', false)
+      await registrarIntentoAccion('login', 'victima@ejemplo.com', '203.0.113.7', false)
 
       expect(JSON.stringify(errorDeConsola.mock.calls)).not.toContain('victima@ejemplo.com')
     })
   })
 
-  describe('loginBloqueado', () => {
+  describe('accionBloqueada', () => {
     it('falla cerrado y registra el fallo si el RPC falla', async () => {
       rpc.mockResolvedValue({ data: null, error: ERROR_RPC })
 
-      expect(await loginBloqueado('a@b.com', '203.0.113.7')).toBe(true)
+      expect(await accionBloqueada('login', 'a@b.com', '203.0.113.7')).toBe(true)
       expect(errorDeConsola).toHaveBeenCalledOnce()
-      expect(String(errorDeConsola.mock.calls[0][0])).toContain('login_bloqueado')
+      expect(String(errorDeConsola.mock.calls[0][0])).toContain('accion_bloqueada')
     })
 
     // Controles positivos: la funcion tiene que seguir distinguiendo bloqueado
@@ -72,13 +72,13 @@ describe('limite de intentos: manejo del error del RPC', () => {
     // pasaria la prueba de arriba.
     it('devuelve true cuando el RPC dice que esta bloqueado', async () => {
       rpc.mockResolvedValue({ data: true, error: null })
-      expect(await loginBloqueado('a@b.com', '203.0.113.7')).toBe(true)
+      expect(await accionBloqueada('login', 'a@b.com', '203.0.113.7')).toBe(true)
       expect(errorDeConsola).not.toHaveBeenCalled()
     })
 
     it('devuelve false cuando el RPC dice que no esta bloqueado', async () => {
       rpc.mockResolvedValue({ data: false, error: null })
-      expect(await loginBloqueado('a@b.com', '203.0.113.7')).toBe(false)
+      expect(await accionBloqueada('login', 'a@b.com', '203.0.113.7')).toBe(false)
       expect(errorDeConsola).not.toHaveBeenCalled()
     })
   })
