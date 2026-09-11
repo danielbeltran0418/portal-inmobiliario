@@ -17,7 +17,7 @@ const COOKIE_DE_SESION = /^sb-.+-auth-token(\.\d+)?$/
  * prueba pueda afirmar el valor por identidad y para que quien busque
  * "cerrar sesion en todos los dispositivos" caiga aqui.
  */
-const ALCANCE_DEL_CIERRE = 'local' as const
+const ALCANCE_DEL_CIERRE = 'global' as const
 
 /**
  * Cierre de sesion.
