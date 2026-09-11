@@ -142,7 +142,10 @@ describe('el cierre de sesion no viaja por GET', () => {
   it('la accion esta declarada como server action', () => {
     const codigo = fuente('src/componentes/acciones-sesion.ts')
     expect(codigo.trimStart().startsWith("'use server'")).toBe(true)
-    expect(codigo).toContain('signOut()')
+    // Que ademas LLAME a signOut, no solo que sea un server action. El
+    // argumento con el que lo llama (el alcance del cierre, que decide si se
+    // cierra un dispositivo o todos) se afirma en acciones-sesion.test.ts.
+    expect(codigo).toMatch(/auth\.signOut\(/)
   })
 
   it('la cabecera lo envia con un <form>, no con un <Link> ni un <a>', () => {
