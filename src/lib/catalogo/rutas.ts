@@ -27,7 +27,7 @@ export async function resolverRutaPublica(db: SupabaseClient, ruta: string): Pro
     .maybeSingle()
 
   if (error) throw new Error('No se pudo resolver la URL pública')
-  if (!propiedad) return { estado: 200 }
+  if (!propiedad) return { estado: 410 }
 
   const barrio = Array.isArray(propiedad.barrios) ? propiedad.barrios[0] : propiedad.barrios
   if (!barrio) return { estado: 410 }
