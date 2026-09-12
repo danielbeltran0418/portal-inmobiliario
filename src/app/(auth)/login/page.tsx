@@ -17,11 +17,14 @@ export const metadata: Metadata = {
  * publica del widget se decide en el servidor para que la bandera de entorno no
  * dependa de una variable NEXT_PUBLIC_ visible en el bundle.
  */
-export default function PaginaLogin() {
+export default async function PaginaLogin(
+  { searchParams }: { searchParams: Promise<{ volver?: string }> },
+) {
+  const { volver } = await searchParams
   return (
     <>
       <GuionTurnstile />
-      <FormularioLogin claveTurnstile={claveDeSitioTurnstile()} />
+      <FormularioLogin claveTurnstile={claveDeSitioTurnstile()} volver={volver ?? null} />
     </>
   )
 }

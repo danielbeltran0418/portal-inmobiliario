@@ -34,10 +34,11 @@ vi.mock('@/lib/seguridad/turnstile', () => ({
 const { iniciarSesion } = await import('@/app/(auth)/login/acciones')
 const { MENSAJE_CAPTCHA, MENSAJE_CREDENCIALES } = await import('@/lib/errores/mapear')
 
-function formulario(correo: string, password: string): FormData {
+function formulario(correo: string, password: string, volver?: string): FormData {
   const fd = new FormData()
   fd.append('correo', correo)
   fd.append('password', password)
+  if (volver !== undefined) fd.append('volver', volver)
   return fd
 }
 
@@ -205,5 +206,49 @@ describe('iniciarSesion', () => {
     await iniciarSesion({}, formulario('v@b.com', 'ClaveLargaSegura1'))
     expect(registrarIntentoAccion).toHaveBeenCalledWith('login', 'v@b.com', '127.0.0.1', true)
     expect(redirect).toHaveBeenCalledWith('/panel')
+  })
+
+  /**
+   * Task 7 (SP4): tras entrar, se vuelve a la ficha que pidio el login en vez
+   * de al panel del rol. rutaDeRetorno ya esta probada a fondo en
+   * tests/unit/volver.test.ts; lo que se comprueba aqui es el CABLEADO -- que
+   * iniciarSesion pasa `volver` por ahi antes de usarlo, y en que orden
+   * respecto al panel del rol.
+   */
+  describe('volver', () => {
+    it('redirige a la ruta interna de "volver" en vez de al panel del rol', async () => {
+      const parte = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
+      const token = `${parte({})}.${parte({ app_metadata: { rol: 'comprador' } })}.f`
+      signInWithPassword.mockResolvedValue({ data: { session: { access_token: token } }, error: null })
+
+      await iniciarSesion({}, formulario('c@b.com', 'ClaveLargaSegura1', '/prado/casa-a123'))
+
+      expect(redirect).toHaveBeenCalledWith('/prado/casa-a123')
+    })
+
+    // El caso que de verdad importa: un volver externo (redirect abierto) no
+    // se sigue. rutaDeRetorno lo degrada a '/', y '/' cae al panel del rol.
+    it('un volver que apunta fuera del sitio no se sigue -- cae al panel del rol', async () => {
+      const parte = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
+      const token = `${parte({})}.${parte({ app_metadata: { rol: 'comprador' } })}.f`
+      signInWithPassword.mockResolvedValue({ data: { session: { access_token: token } }, error: null })
+
+      await iniciarSesion({}, formulario('c@b.com', 'ClaveLargaSegura1', 'https://malo.test/phishing'))
+
+      expect(redirect).toHaveBeenCalledWith('/mi-cuenta')
+      expect(redirect).not.toHaveBeenCalledWith('https://malo.test/phishing')
+    })
+
+    // Control del caso normal, sin volver: sigue yendo al panel del rol,
+    // exactamente como antes de esta tarea.
+    it('sin volver, sigue yendo al panel del rol', async () => {
+      const parte = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
+      const token = `${parte({})}.${parte({ app_metadata: { rol: 'comprador' } })}.f`
+      signInWithPassword.mockResolvedValue({ data: { session: { access_token: token } }, error: null })
+
+      await iniciarSesion({}, formulario('c@b.com', 'ClaveLargaSegura1'))
+
+      expect(redirect).toHaveBeenCalledWith('/mi-cuenta')
+    })
   })
 })

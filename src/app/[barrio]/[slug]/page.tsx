@@ -4,9 +4,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
+import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
+import { sesionActual } from '@/lib/auth/sesion'
+import { FormularioLead } from './formulario-lead'
 const cargarFicha = cache(async (slug: string) => {
   const { data: p, error } = await crearClientePublico().from('propiedades')
-    .select('slug,titulo,descripcion,precio,operacion,tipo_inmueble,habitaciones,banos,area_m2,barrios!inner(nombre,slug),imagenes_propiedad(id,alt_text,orden)')
+    .select('id,vendedor_id,slug,titulo,descripcion,precio,operacion,tipo_inmueble,habitaciones,banos,area_m2,barrios!inner(nombre,slug),imagenes_propiedad(id,alt_text,orden)')
     .eq('slug', slug).eq('estado', 'publicada').maybeSingle()
   if (error) throw new Error('No se pudo cargar la propiedad')
   if (!p) notFound()
@@ -25,6 +28,31 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
   if (!barrio) notFound()
   if (barrio.slug !== ruta.barrio) permanentRedirect(`/${barrio.slug}/${p.slug}`)
   const fotos = [...p.imagenes_propiedad].sort((a, b) => a.orden - b.orden)
+
+  // La ficha es publica y esta cacheada por SP1; esta parte depende de la
+  // sesion, asi que se resuelve en cada peticion. El layout raiz ya declara
+  // force-dynamic, de modo que no cuesta nada extra.
+  const sesion = await sesionActual()
+  const rutaFicha = `/${barrio.slug}/${p.slug}`
+
+  // Las dos lecturas solo tienen sentido con sesion, y se saltan sin ella.
+  let yaContacto = false
+  let telefonoPrevio = ''
+  let esDelVendedor = false
+
+  if (sesion.hayUsuario) {
+    const db = await crearClienteServidor()
+    // RLS ya limita `leads` al propio comprador (politica leads_lectura_comprador),
+    // asi que no hace falta filtrar por comprador_id: hacerlo duplicaria la regla.
+    const [{ data: previo }, { data: perfil }] = await Promise.all([
+      db.from('leads').select('id').eq('propiedad_id', p.id).maybeSingle(),
+      db.from('perfiles').select('telefono').maybeSingle(),
+    ])
+    yaContacto = previo !== null
+    telefonoPrevio = perfil?.telefono ?? ''
+    esDelVendedor = sesion.idUsuario === p.vendedor_id
+  }
+
   return <main className="mx-auto w-full max-w-5xl px-6 py-12">
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosFicha(p, barrio)) }} />
     <Link href={`/${barrio.slug}`}>Volver a {barrio.nombre}</Link>
@@ -39,5 +67,23 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
       {p.banos != null && <div><dt>Baños</dt><dd>{p.banos}</dd></div>}
       {p.area_m2 != null && <div><dt>Área</dt><dd>{p.area_m2} m²</dd></div>}
     </dl>
+
+    {!sesion.hayUsuario ? (
+      <p className="mt-8 rounded-md border border-linea bg-superficie p-6">
+        <Link href={`/login?volver=${encodeURIComponent(rutaFicha)}`}
+          className="font-medium text-marca hover:underline">
+          Entra o crea cuenta para contactar
+        </Link>{' '}
+        al vendedor de esta propiedad.
+      </p>
+    ) : yaContacto ? (
+      <p className="mt-8 rounded-md border border-linea bg-superficie p-6 text-tinta-suave">
+        Ya contactaste sobre esta propiedad.
+      </p>
+    ) : esDelVendedor ? null : (
+      <div className="mt-8">
+        <FormularioLead propiedadId={p.id} telefonoPrevio={telefonoPrevio} />
+      </div>
+    )}
   </main>
 }

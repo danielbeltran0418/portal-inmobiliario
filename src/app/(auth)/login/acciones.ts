@@ -7,6 +7,7 @@ import { esquemaLogin } from '@/lib/validacion/esquemas'
 import { mapearError, MENSAJE_CAPTCHA, MENSAJE_CREDENCIALES } from '@/lib/errores/mapear'
 import { accionBloqueada, registrarIntentoAccion } from '@/lib/auth/limite-intentos'
 import { rolDesdeToken, rutaDePanel } from '@/lib/auth/roles'
+import { rutaDeRetorno } from '@/lib/navegacion/volver'
 import { ipDeConfianza } from '@/lib/http/ip-cliente'
 import { CAMPO_TURNSTILE, verificarTurnstile } from '@/lib/seguridad/turnstile'
 
@@ -88,5 +89,10 @@ export async function iniciarSesion(
   // de demostrar su contrasena seria una negacion de servicio autoinfligida sin
   // ninguna ganancia de seguridad. El error ya queda en el log del servidor.
   await registrarIntentoAccion('login', correo, ip, true)
-  redirect(rutaDePanel(rolDesdeToken(data.session.access_token)))
+
+  // `volver` viaja en un campo del formulario, leido de la URL con la que se
+  // llego al login -- lo controla quien mando el enlace. Sin pasar por
+  // rutaDeRetorno seria un redirect abierto justo tras escribir la contrasena.
+  const volver = rutaDeRetorno(formData.get('volver') as string | null)
+  redirect(volver !== '/' ? volver : rutaDePanel(rolDesdeToken(data.session.access_token)))
 }
