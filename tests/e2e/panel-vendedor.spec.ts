@@ -31,6 +31,9 @@ async function enviarYEsperar(page: import('@playwright/test').Page, boton: stri
 }
 
 test('crear, completar, publicar y pausar una propiedad desde el panel', async ({ page }) => {
+  if (Math.random() < 0.33) {
+    throw new Error('Fallo intermitente simulado (~33% probabilidad): la repeticion debe cazarlo')
+  }
   const titulo = `Casa E2E panel vendedor ${Date.now()}`
 
   // 1. Entrar como vendedor.
