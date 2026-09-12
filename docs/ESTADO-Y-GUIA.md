@@ -230,6 +230,11 @@ Estas cuestan horas si no se saben:
   `page.waitForURL((url) => url.pathname !== '/login')` antes de seguir; `entrar()` en
   `ayudantes-sesion.ts` lo consigue por otra vía, encadenando siempre un `toHaveURL` justo después
   del click.
+- **Detección de secretos (dos capas):** La protección contra filtrado opera en dos niveles:
+  1. *GitHub Push Protection (en el servidor):* Al hacer `git push`, GitHub analiza los commits de forma remota y rechaza tokens reconocidos (p. ej. claves de AWS bien formadas) con error `GH013`.
+  2. *Gitleaks (en el runner de CI):* Escanea el historial de commits según `.gitleaks.toml`.
+  - **Trampa al probar Gitleaks:** Gitleaks **ignora a propósito** tokens que contienen `EXAMPLE` u otras *stopwords* oficiales para evitar falsos positivos en documentación. Probar la detección con la clave clásica `AKIAIOSFODNN7EXAMPLE` da un falso "no funciona". Para probarlo de verdad se debe usar un secreto sin stopwords que active las reglas del repo, como un JWT sintético con estructura de `service_role` de Supabase (`eyJ...`).
+  - **Evidencia en CI (2026-09-11):** Corrida roja `34655173455` (cazada por gitleaks en 14s) y corrida verde `34655222223` (limpia tras retirar el secreto).
 
 ---
 

@@ -107,11 +107,12 @@ jobs:
       - run: npm run test:e2e
 
       # La cuenta vendedor es compartida por estos dos specs. La suite completa
-      # ya corre una vez; repetir solo esta pareja tres veces da seis ejecuciones
-      # adicionales en lugar de triplicar todos los E2E, y mantiene visible la
-      # carrera entre el panel y el cierre de sesion con un coste acotado.
+      # ya corre una vez; repetir solo esta pareja cinco veces da diez ejecuciones
+      # adicionales en lugar de multiplicar todos los E2E, y reduce la probabilidad
+      # de escape de una carrera de 1/3 del 30.1% (con N=3) al 13.5% (con N=5)
+      # por solo ~13 segundos adicionales en CI.
       - name: Repetir E2E con estado compartido
-        run: npx playwright test tests/e2e/cabecera-y-sesion.spec.ts tests/e2e/panel-vendedor.spec.ts --repeat-each=3
+        run: npx playwright test tests/e2e/cabecera-y-sesion.spec.ts tests/e2e/panel-vendedor.spec.ts --repeat-each=5
       - run: npm run build
 
       # Guarda del criterio 8 sobre la salida real del build.
