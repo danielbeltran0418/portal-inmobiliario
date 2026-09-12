@@ -134,7 +134,7 @@ export async function middleware(peticion: NextRequest) {
       }
       const decision = await resolverRutaPublica(crearClientePublico(), ruta)
       if (decision.estado === 301) {
-        const salto = NextResponse.redirect(new URL(decision.destino, origenReal(peticion)), 302)
+        const salto = NextResponse.redirect(new URL(decision.destino, origenReal(peticion)), 301)
         salto.headers.set('Cache-Control', 'no-store')
         return aplicarCabeceras(salto)
       }
