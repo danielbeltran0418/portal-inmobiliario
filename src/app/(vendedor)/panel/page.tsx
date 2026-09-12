@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { filasDelPanel, type PropiedadCruda } from '@/lib/propiedades/panel'
+import { contarLeadsNuevos } from '@/lib/leads/consultas'
 
 export const metadata: Metadata = {
   title: 'Mis propiedades | Portal Inmobiliario',
@@ -43,14 +44,20 @@ export default async function PaginaPanelVendedor() {
     .order('actualizado_en', { ascending: false })
 
   const filas = filasDelPanel((data ?? []) as unknown as PropiedadCruda[])
+  const nuevos = await contarLeadsNuevos(supabase)
 
   return (
     <main className="mx-auto max-w-3xl p-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Mis propiedades</h1>
-        <Link href="/panel/propiedades/nueva" className={CLASE_BOTON_PRIMARIO}>
-          Publicar una propiedad
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/panel/leads" className="text-marca hover:underline">
+            Mensajes recibidos{nuevos > 0 ? ` (${nuevos})` : ''}
+          </Link>
+          <Link href="/panel/propiedades/nueva" className={CLASE_BOTON_PRIMARIO}>
+            Publicar una propiedad
+          </Link>
+        </div>
       </div>
 
       {filas.length === 0 ? (
