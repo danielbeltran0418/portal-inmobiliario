@@ -137,6 +137,11 @@ describe('registrarUsuario', () => {
       expect(resultado.error).toBe(MENSAJE_SIN_IP_CONFIABLE)
       // No se llega a crear la cuenta.
       expect(signUp).not.toHaveBeenCalled()
+      // Y tampoco se gasta una peticion a Cloudflare por una conexion que ya
+      // se rechaza sin IP de confianza. Sin esta linea, invertir el orden del
+      // limitador y el captcha en acciones.ts pasaria esta prueba igual,
+      // porque verificarTurnstile esta mockeado para resolver `true`.
+      expect(verificarTurnstile).not.toHaveBeenCalled()
     })
 
     it('rechaza el registro cuando la ip esta bloqueada', async () => {
@@ -145,6 +150,9 @@ describe('registrarUsuario', () => {
       const resultado = await registrarUsuario({}, formulario(validos))
       expect(resultado.error).toBe(MENSAJE_REGISTRO_BLOQUEADO)
       expect(signUp).not.toHaveBeenCalled()
+      // El limite va ANTES del captcha: a una conexion ya bloqueada se le
+      // responde sin gastar una peticion a Cloudflare por cada intento.
+      expect(verificarTurnstile).not.toHaveBeenCalled()
     })
 
     it('registra el intento exitoso para que cuente en la ventana', async () => {
