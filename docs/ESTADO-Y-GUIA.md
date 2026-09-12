@@ -187,6 +187,10 @@ Estas cuestan horas si no se saben:
   2. *Gitleaks (en el runner de CI):* Escanea el historial de commits según `.gitleaks.toml`.
   - **Trampa al probar Gitleaks:** Gitleaks **ignora a propósito** tokens que contienen `EXAMPLE` u otras *stopwords* oficiales para evitar falsos positivos en documentación. Probar la detección con la clave clásica `AKIAIOSFODNN7EXAMPLE` da un falso "no funciona". Para probarlo de verdad se debe usar un secreto sin stopwords que active las reglas del repo, como un JWT sintético con estructura de `service_role` de Supabase (`eyJ...`).
   - **Evidencia en CI (2026-09-11):** Corrida roja `34655173455` (cazada por gitleaks en 14s) y corrida verde `34655222223` (limpia tras retirar el secreto).
+- **Repetición de E2E en CI y sus límites estadísticos:** Para cazar carreras en specs con cuenta compartida (`cabecera-y-sesion.spec.ts` y `panel-vendedor.spec.ts`), CI ejecuta un paso adicional con `--repeat-each=6`.
+  - **Eficacia según frecuencia:** Para una intermitencia frecuente (p=1/3), N=6 reduce la probabilidad de escape al 8.8% (~9%, (2/3)^6 = 0.0877).
+  - **Límites reales:** Las intermitencias reales suelen ser mucho más raras: con p=1/20 (5%), N=6 deja escapar el **74%** (0.95^6 = 0.735). La repetición caza bien lo frecuente y mal lo raro, y además solo cubre los dos specs con estado compartido, no el resto de la suite. Un guardia cuyos límites nadie conoce acaba dando una confianza que no merece.
+  - **Evidencia de falsificación en CI (2026-09-11):** Inyección de fallo probabilístico (p=1/3, PR #14, corrida `34665755360`): el paso base sin repetición pasó verde (dejó escapar el fallo), y el paso repetido lo cazó en rojo en `repeat4`.
 
 ---
 
