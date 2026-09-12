@@ -231,3 +231,69 @@ describe('limite de intentos de login', () => {
     expect(data ?? []).toHaveLength(0)
   })
 })
+
+// La regla de 'registro' NO es la de 'login'. El login cuenta FALLOS sobre un
+// correo; el spam de altas son registros EXITOSOS, cada uno con un correo
+// distinto, asi que un limitador que contara fallos no bloquearia nada aqui.
+describe('limite de registro', () => {
+  it('el limite de registro cuenta EXITOS por ip, no fallos', async () => {
+    const admin = clienteAdmin()
+    const ip = '203.0.113.77'
+    await admin.from('intentos_accion').delete().eq('ip', ip)
+
+    // Tres altas exitosas desde la misma IP: la tercera todavia pasa.
+    for (let i = 0; i < 3; i++) {
+      const { error } = await admin.rpc('registrar_intento_accion', {
+        p_accion: 'registro', p_clave: `alta-${i}@prueba.test`, p_ip: ip, p_exitoso: true,
+      })
+      expect(error).toBeNull()
+    }
+
+    const { data: bloqueado, error } = await admin.rpc('accion_bloqueada', {
+      p_accion: 'registro', p_clave: 'alta-4@prueba.test', p_ip: ip,
+    })
+    expect(error).toBeNull()
+    expect(bloqueado).toBe(true)
+
+    // Caso positivo: otra IP no esta bloqueada. Sin esto, la asercion de arriba
+    // pasaria aunque la funcion devolviera true para todo.
+    const { data: otra } = await admin.rpc('accion_bloqueada', {
+      p_accion: 'registro', p_clave: 'alta-4@prueba.test', p_ip: '203.0.113.78',
+    })
+    expect(otra).toBe(false)
+
+    await admin.from('intentos_accion').delete().eq('ip', ip)
+  })
+
+  it('los registros FALLIDOS no cuentan para el limite', async () => {
+    const admin = clienteAdmin()
+    const ip = '203.0.113.79'
+    await admin.from('intentos_accion').delete().eq('ip', ip)
+
+    // Diez fallos no bloquean: la regla de registro mira exitos. Un limitador
+    // que contara fallos de registro no pararia el alta masiva, que es toda exitosa.
+    for (let i = 0; i < 10; i++) {
+      await admin.rpc('registrar_intento_accion', {
+        p_accion: 'registro', p_clave: `fallo-${i}@prueba.test`, p_ip: ip, p_exitoso: false,
+      })
+    }
+
+    const { data: bloqueado } = await admin.rpc('accion_bloqueada', {
+      p_accion: 'registro', p_clave: 'otro@prueba.test', p_ip: ip,
+    })
+    expect(bloqueado).toBe(false)
+
+    await admin.from('intentos_accion').delete().eq('ip', ip)
+  })
+
+  it('sin ip de confianza, el registro se bloquea en la base', async () => {
+    // Para el login, p_ip nula degrada a contar por correo, que es MAS estricto.
+    // Para el registro esa degradacion no existe -- cada alta usa otro correo --
+    // asi que degradaria a SIN LIMITE. La base falla cerrado.
+    const { data: bloqueado, error } = await clienteAdmin().rpc('accion_bloqueada', {
+      p_accion: 'registro', p_clave: 'cualquiera@prueba.test', p_ip: null,
+    })
+    expect(error).toBeNull()
+    expect(bloqueado).toBe(true)
+  })
+})
