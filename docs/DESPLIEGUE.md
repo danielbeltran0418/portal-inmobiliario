@@ -30,7 +30,7 @@ npx supabase db push
 `db push` aplica **solo las migraciones**. No toca `seed.sql`, que únicamente corre en
 `db reset` local. Comprueba al terminar que aplicó las 28.
 
-### 3 · Las cuatro variables en Vercel
+### 3 · Las cinco variables en Vercel
 
 ```bash
 vercel login
@@ -39,10 +39,15 @@ vercel env add NEXT_PUBLIC_SUPABASE_URL production
 vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production
 vercel env add SUPABASE_SERVICE_ROLE_KEY production
 vercel env add NEXT_PUBLIC_APP_URL production
+vercel env add IP_CABECERA_CONFIABLE production
 ```
 
 Los tres primeros valores están en Supabase → *Project Settings* → *API*.
 `NEXT_PUBLIC_APP_URL` es la URL que te dé Vercel, **sin barra final**.
+`IP_CABECERA_CONFIABLE` es el **nombre** de la cabecera que tu plataforma garantiza reescribir
+con la IP real del cliente — en Vercel, `x-vercel-forwarded-for`. Ver
+`src/lib/http/ip-cliente.ts` para el porqué (no es `x-forwarded-for`: esa la puede componer
+cualquiera).
 
 > `SUPABASE_SERVICE_ROLE_KEY` **salta RLS por completo**. Solo se usa en el servidor, detrás de
 > `import 'server-only'`. Nunca la pegues en una variable con prefijo `NEXT_PUBLIC_`: eso la
@@ -96,6 +101,30 @@ El spec exige longitud mínima **más** verificación contra contraseñas filtra
 
 En el panel: **Authentication → Settings** → *Prevent use of leaked passwords*.
 
+### Sin `IP_CABECERA_CONFIABLE`, el registro queda CERRADO — no degradado
+
+Esta, a diferencia de las cuatro anteriores, no viene de `config.toml`: es la variable de entorno
+del paso 3. La incluyo aquí porque su ausencia rompe en silencio exactamente igual.
+
+En producción, `ipDeConfianza()` (`src/lib/http/ip-cliente.ts`) lee **únicamente** la cabecera
+cuyo nombre esté en `IP_CABECERA_CONFIABLE`. En Vercel ese valor es `x-vercel-forwarded-for`, no
+`x-forwarded-for` — esa la puede componer cualquiera que mande la petición, y confiar en ella
+dejaría el límite por IP en nada.
+
+Si la variable no está configurada, la función no puede determinar una IP de confianza y
+devuelve `null`. Para el límite de **login** eso es una degradación segura: cuenta por correo en
+vez de por IP, más estricto y no falsificable. Pero para el límite de **registro** no hay
+degradación posible — el spam de altas usa un correo distinto en cada intento, así que "contar
+por clave" contaría siempre uno, que equivale a **sin límite**. `accion_bloqueada('registro', …)`
+resuelve la ausencia de IP al revés que el login: **bloquea siempre**.
+
+Es decir: sin esta variable, `/registro` responde a todo el mundo con "Se han creado demasiadas
+cuentas desde esta conexión" y **nadie puede darse de alta**, en ningún rol. No es un límite más
+estricto, es la puerta cerrada. Es deliberado — la alternativa (fallar abierto) es la que deja el
+alta masiva de cuentas sin ningún control — pero es fácil confundirlo con un bug si nadie lo
+documenta: revisa los logs del servidor buscando `[ip-cliente]` si el registro deja de funcionar
+justo después de un despliegue nuevo.
+
 ---
 
 ## Crear el super admin, a mano
@@ -113,9 +142,10 @@ El paso 3 se hace desde el panel de Supabase a propósito: la aplicación **nunc
 
 ## Antes de compartir la URL, dos avisos
 
-**El registro no tiene límite de intentos.** El captcha está apagado —faltan las claves de
-Cloudflare— y el limitador existente solo cubre el login. Una URL pública queda abierta al alta
-masiva de cuentas. Para que lo vea un compañero es asumible; para dejarlo publicado, no.
+**El captcha del registro está apagado** —faltan las claves de Cloudflare—, y el límite por IP
+(máximo tres altas por hora, ver arriba) es la única barrera que queda contra el alta masiva de
+cuentas; no reemplaza al captcha, solo pone un techo. Para que lo vea un compañero es asumible;
+para dejarlo publicado, no.
 
 **El catálogo estará vacío.** La base remota nace sin propiedades. Tu compañero tendrá que
 registrarse como vendedor y publicar algo, o lo haces tú antes de pasarle el enlace.
