@@ -235,7 +235,7 @@ Estas cuestan horas si no se saben:
 
 # Parte 5 · Trampas del código que muerden
 
-Cinco cosas que ya causaron fallos reales. Léelas antes de tocar nada.
+Siete cosas que ya causaron fallos reales. Léelas antes de tocar nada.
 
 ### 1. «RLS ya filtra por dueño» es FALSO para `propiedades`
 
@@ -271,11 +271,58 @@ Es la forma en que RLS deniega: filtrando filas, no lanzando error. Hay que enca
 `.select()` y comprobar que volvieron cero filas. Si no, se le dice «guardado» a alguien que no
 guardó nada.
 
-### 5. Postgres concede `EXECUTE` a `PUBLIC` por defecto
+### 5. El HTML servido puede llevar un dato que la pantalla no muestra
+
+Al falsificar `contacto_lectura_vendedor` para la Task 9 de SP4 —quitando
+`AND l.estado <> 'nuevo'` de
+`supabase/migrations/20260911000300_leads.sql:107-114`— el correo del comprador
+apareció incrustado en el payload RSC que Next serializa dentro de un
+`<script>` del HTML servido. **La pantalla se veía exactamente igual, con o sin
+esa cláusula**: la lista de leads no pintaba el correo en ningún caso, porque
+nada en la interfaz lo mostraba todavía. El dato ya había viajado hasta el
+navegador; solo no se estaba dibujando.
+
+Una aserción de visibilidad (`toBeVisible`) habría pasado en verde con la fuga
+intacta. Por eso `tests/e2e/leads.spec.ts` comprueba `page.content()` —el HTML
+tal como el servidor lo mandó— y no lo que se ve en pantalla. Es la misma
+lección que la trampa anterior sobre el `UPDATE` de PostgREST: hay que
+comprobar lo que de verdad ocurrió (la fila que cambió, el HTML que se sirvió),
+no la señal que parece indicarlo (el mensaje de éxito, el layout visual).
+
+### 6. Postgres concede `EXECUTE` a `PUBLIC` por defecto
 
 En toda función nueva. `REVOKE ... FROM anon, authenticated` **no quita** lo heredado vía
 `PUBLIC`. Hay que nombrar `PUBLIC` y la firma exacta. Ese error dejó dos funciones
 `SECURITY DEFINER` invocables sin autenticar, con bypass total del límite de intentos.
+
+### 7. `pg_default_acl` concede CRUD completo a `authenticated` en toda tabla nueva
+
+La hermana de la trampa anterior, y la misma familia de error: Postgres concede
+algo que nadie pidió, esta vez sobre tablas y no sobre funciones. Supabase trae
+de fábrica un `ALTER DEFAULT PRIVILEGES` que da a `authenticated` los siete
+privilegios de escritura —`arwdDxtm`: INSERT, SELECT, UPDATE, DELETE, TRUNCATE,
+REFERENCES, TRIGGER, MAINTAIN— sobre **toda tabla que se cree**, sin que nadie
+lo pida. **RLS no cambia nada de esto**: son dos capas distintas, y una tabla
+con RLS activada pero sin `REVOKE` explícito nace escribible por cualquier
+usuario autenticado de todas formas.
+
+Verificado contra `pg_default_acl` antes de escribir `leads`/`leads_contacto`
+(`supabase/migrations/20260911000300_leads.sql:56-80`): sin el
+`REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN ...
+FROM authenticated` de esa migración, las dos tablas habrían nacido con CRUD
+completo para cualquier autenticado, tuvieran política de RLS o no. El mismo
+hallazgo, con la misma cita de `pg_default_acl`, se repite en
+`20260831000700_escritores_auditoria.sql` y
+`20260904000400_limpieza_almacenamiento.sql` — no es un incidente aislado de
+SP4, es de fábrica en cada tabla nueva del proyecto.
+
+`anon` ya viene neutralizado para esto de una vez por todas: un único
+`ALTER DEFAULT PRIVILEGES FOR ROLE postgres` (`20260831000400_revocar_escritura_anon.sql`)
+le reduce el privilegio por defecto a solo `SELECT` en **toda tabla futura**,
+sin que nadie tenga que repetirlo. **`authenticated` no tiene ese seguro
+global** —se dejó así a propósito, porque sus privilegios reales varían tabla
+por tabla— así que cada tabla nueva necesita su propio `REVOKE` explícito, a
+mano, en su propia migración. Falta uno y esa tabla nace abierta.
 
 ---
 
