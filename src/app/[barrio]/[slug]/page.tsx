@@ -42,18 +42,18 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
 
   if (sesion.hayUsuario) {
     const db = await crearClienteServidor()
-    // `leads` tiene DOS politicas permisivas de SELECT que RLS combina con OR
-    // (leads_lectura_comprador Y leads_lectura_vendedor,
-    // supabase/migrations/20260911000300_leads.sql): un vendedor autenticado
-    // tambien ve sus propios leads como vendedor, asi que sin filtrar por
-    // comprador_id esta consulta le devolveria el lead que un COMPRADOR dejo
-    // sobre su propiedad, y yaContacto mentiria -- el vendedor en su propia
-    // ficha veria "ya contactaste" en vez de nada. Mismo patron que ya
-    // mordio en la Task 11 de SP0 y que documenta el comentario sobre
-    // `vendedor_id` desnormalizado en esa misma migracion: RLS filtra por
-    // FILA visible, no por "la fila que yo quiero", y dos politicas
-    // permisivas del mismo comando se combinan con OR, no se restringen entre
-    // si.
+    // `leads` tiene TRES politicas permisivas de SELECT que RLS combina con
+    // OR (leads_lectura_comprador, leads_lectura_vendedor Y
+    // leads_lectura_super_admin, supabase/migrations/20260911000300_leads.sql):
+    // un vendedor autenticado tambien ve sus propios leads como vendedor, asi
+    // que sin filtrar por comprador_id esta consulta le devolveria el lead
+    // que un COMPRADOR dejo sobre su propiedad, y yaContacto mentiria -- el
+    // vendedor en su propia ficha veria "ya contactaste" en vez de nada.
+    // Mismo patron que ya mordio en la Task 11 de SP0 y que documenta el
+    // comentario sobre `vendedor_id` desnormalizado en esa misma migracion:
+    // RLS filtra por FILA visible, no por "la fila que yo quiero", y varias
+    // politicas permisivas del mismo comando se combinan con OR, no se
+    // restringen entre si.
     //
     // `perfiles` tiene una politica de super_admin (perfil_lectura_super_admin)
     // que tampoco restringe por id, asi que sin filtrar por id una cuenta
