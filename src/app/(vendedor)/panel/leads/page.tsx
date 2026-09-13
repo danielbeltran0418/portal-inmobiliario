@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { listarLeadsDelVendedor } from '@/lib/leads/consultas'
 import { AccionesLead } from './acciones-fila'
@@ -10,8 +11,17 @@ export const metadata: Metadata = {
 
 const ETIQUETA_ESTADO = { aceptado: 'Aceptado', descartado: 'Descartado' } as const
 
+// El mismo chequeo que panel/page.tsx (Task 11): el middleware ya protege
+// todo /panel/*, pero este proyecto rechazo antes el argumento de "otra capa
+// ya lo cubre" (hallazgo bloqueante de la Task 11 de SP0). Se repite aqui por
+// consistencia, no porque falte proteccion sin el.
 export default async function PaginaLeads() {
-  const leads = await listarLeadsDelVendedor(await crearClienteServidor())
+  const supabase = await crearClienteServidor()
+
+  const { data: usuario } = await supabase.auth.getUser()
+  if (!usuario.user) redirect('/login')
+
+  const leads = await listarLeadsDelVendedor(supabase)
 
   return <main className="mx-auto w-full max-w-3xl px-6 py-10">
     <h1 className="text-3xl font-semibold text-tinta">Mensajes recibidos</h1>
