@@ -90,7 +90,10 @@ describe('transicion de estado de un lead', () => {
   it('un lead que ya salio de nuevo no vuelve a cambiar', async () => {
     const { vendedorCorreo, password, leadId } = await fixturaConLead()
     const vendedor = await clienteComo(vendedorCorreo, password)
-    await vendedor.from('leads').update({ estado: 'descartado' }).eq('id', leadId).select('id')
+    const primero = await vendedor.from('leads')
+      .update({ estado: 'descartado' }).eq('id', leadId).select('id')
+    expect(primero.error).toBeNull()
+    expect(primero.data?.length).toBe(1)
 
     const segundo = await vendedor.from('leads')
       .update({ estado: 'aceptado' }).eq('id', leadId).select('id')
@@ -110,13 +113,47 @@ describe('transicion de estado de un lead', () => {
     expect(data?.id).toBe(leadId)
   })
 
+  it('un vendedor ajeno no puede cambiar el estado de un lead ajeno', async () => {
+    const { vendedorCorreo, password, leadId } = await fixturaConLead()
+    const ajeno = await sesionVendedor()
+
+    const intento = await ajeno.from('leads')
+      .update({ estado: 'aceptado' }).eq('id', leadId).select('id')
+    // error null es lo esperado -- un UPDATE de PostgREST sin politica
+    // aplicable sobre la fila objetivo NO devuelve 42501, se acepta y no
+    // cambia nada. Por eso el guardia real es el NUMERO DE FILAS, no el
+    // error: una prueba que solo mirara `error` pasaria en verde con este
+    // control roto.
+    expect(intento.error).toBeNull()
+    expect(intento.data?.length).toBe(0)
+
+    // Contra la base, con service_role: el estado no se movio y la fila
+    // nunca paso por el trigger de transicion.
+    const admin = clienteAdmin()
+    const { data: leadTrasIntento } = await admin.from('leads')
+      .select('estado,respondido_en').eq('id', leadId).single()
+    expect(leadTrasIntento?.estado).toBe('nuevo')
+    expect(leadTrasIntento?.respondido_en).toBeNull()
+
+    // Caso positivo en la misma prueba: el vendedor LEGITIMO si consigue una
+    // fila sobre el mismo lead. Sin esto, "cero filas" arriba pasaria igual
+    // si el lead no existiera o el UPDATE estuviera roto para cualquiera.
+    const legitimo = await clienteComo(vendedorCorreo, password)
+    const positivo = await legitimo.from('leads')
+      .update({ estado: 'aceptado' }).eq('id', leadId).select('id')
+    expect(positivo.error).toBeNull()
+    expect(positivo.data?.length).toBe(1)
+  })
+
   it('registra lead_aceptado y lead_descartado en registro_auditoria', async () => {
     const admin = clienteAdmin()
 
     const aceptado = await fixturaConLead()
     const vendedorAceptado = await clienteComo(aceptado.vendedorCorreo, aceptado.password)
-    await vendedorAceptado.from('leads')
+    const actualizarAceptado = await vendedorAceptado.from('leads')
       .update({ estado: 'aceptado' }).eq('id', aceptado.leadId).select('id')
+    expect(actualizarAceptado.error).toBeNull()
+    expect(actualizarAceptado.data?.length).toBe(1)
 
     const { data: eventoAceptado, error: errorAceptado } = await admin
       .from('registro_auditoria')
@@ -133,8 +170,10 @@ describe('transicion de estado de un lead', () => {
 
     const descartado = await fixturaConLead()
     const vendedorDescartado = await clienteComo(descartado.vendedorCorreo, descartado.password)
-    await vendedorDescartado.from('leads')
+    const actualizarDescartado = await vendedorDescartado.from('leads')
       .update({ estado: 'descartado' }).eq('id', descartado.leadId).select('id')
+    expect(actualizarDescartado.error).toBeNull()
+    expect(actualizarDescartado.data?.length).toBe(1)
 
     const { data: eventoDescartado, error: errorDescartado } = await admin
       .from('registro_auditoria')
@@ -144,5 +183,12 @@ describe('transicion de estado de un lead', () => {
     expect(errorDescartado).toBeNull()
     expect(eventoDescartado?.actor_id).toBe(descartado.vendedorId)
     expect(eventoDescartado?.metadatos?.propiedad_id).toBe(descartado.propiedadId)
+
+    // respondido_en tambien se fija en el camino 'descartado', no solo en
+    // 'aceptado' -- las dos ramas del trigger lo tocan antes del INSERT de
+    // auditoria.
+    const { data: leadDescartado } = await admin.from('leads')
+      .select('respondido_en').eq('id', descartado.leadId).single()
+    expect(leadDescartado?.respondido_en).not.toBeNull()
   })
 })
