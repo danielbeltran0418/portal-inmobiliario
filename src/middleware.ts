@@ -159,7 +159,7 @@ export async function middleware(peticion: NextRequest) {
       // (la pagina carga por slug unico), y una ruta retirada da 404 en vez de
       // 410 (la pagina no encuentra la propiedad activa). Ambas anomalias son
       // transitorias y preferibles a tumbar el catalogo publico entero con un 503.
-      return aplicarCabeceras(new NextResponse("Servicio temporalmente no disponible", { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "60" } }))
+      return aplicarCabeceras(respuesta)
     }
   }
 
