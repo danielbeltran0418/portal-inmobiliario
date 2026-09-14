@@ -124,6 +124,13 @@ async function crearBorrador(cliente: SupabaseClient, vendedorId: string) {
  * ningun error, y al recargar la direccion vieja seguia ahi. Contra
  * Postgres real, no un mock: es la unica forma de demostrar que el valor
  * SOBREVIVE hoy y de verdad desaparece con el arreglo.
+ *
+ * Adaptada tras 20260914000100: direccion ya no es una columna de
+ * `propiedades` -- vive en propiedades_ubicacion, escrita con un upsert
+ * aparte (ver actualizarPropiedad en acciones.ts). El mismo comportamiento
+ * documentado ("borrar y guardar deja NULL, nunca el valor viejo") se sigue
+ * comprobando contra Postgres real, solo que ahora en dos tablas: barrio_id
+ * y habitaciones en `propiedades`, direccion en propiedades_ubicacion.
  */
 describe('actualizarPropiedad: vaciar un campo opcional debe vaciarlo de verdad', () => {
   it('rellenar direccion y barrio, guardar, borrarlos, guardar: quedan NULL en la base (hoy sobreviven)', async () => {
@@ -155,8 +162,10 @@ describe('actualizarPropiedad: vaciar un campo opcional debe vaciarlo de verdad'
     expect(rRellenar).toEqual({})
 
     const { data: conDatos } = await clienteAdmin()
-      .from('propiedades').select('direccion, barrio_id, habitaciones').eq('id', propiedadId).single()
-    expect(conDatos!.direccion).toBe('Calle 72 # 45-10')
+      .from('propiedades').select('barrio_id, habitaciones').eq('id', propiedadId).single()
+    const { data: ubicacionConDatos } = await clienteAdmin()
+      .from('propiedades_ubicacion').select('direccion').eq('propiedad_id', propiedadId).single()
+    expect(ubicacionConDatos!.direccion).toBe('Calle 72 # 45-10')
     expect(conDatos!.barrio_id).toBe(barrio!.id)
     expect(conDatos!.habitaciones).toBe(3)
 
@@ -170,11 +179,13 @@ describe('actualizarPropiedad: vaciar un campo opcional debe vaciarlo de verdad'
     expect(rVaciar).toEqual({})
 
     const { data: sinDatos } = await clienteAdmin()
-      .from('propiedades').select('direccion, barrio_id, habitaciones').eq('id', propiedadId).single()
+      .from('propiedades').select('barrio_id, habitaciones').eq('id', propiedadId).single()
+    const { data: ubicacionSinDatos } = await clienteAdmin()
+      .from('propiedades_ubicacion').select('direccion').eq('propiedad_id', propiedadId).single()
 
     // Hoy sobreviven: sin el arreglo, estos tres siguen con el valor del
     // paso 1 porque el UPDATE nunca incluyo la clave.
-    expect(sinDatos!.direccion).toBeNull()
+    expect(ubicacionSinDatos!.direccion).toBeNull()
     expect(sinDatos!.barrio_id).toBeNull()
     expect(sinDatos!.habitaciones).toBeNull()
   })

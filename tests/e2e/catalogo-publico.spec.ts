@@ -15,9 +15,13 @@ test.beforeAll(async () => {
   const { data: barrios, error: eBarrio } = await admin.from('barrios').select('id,nombre,slug').eq('activo', true).limit(1)
   if (eBarrio || !barrios?.length) throw new Error('Falta barrio de prueba')
   barrio = barrios[0]
-  const { data: p, error } = await admin.from('propiedades').insert({ vendedor_id: usuario, barrio_id: barrio.id, slug: `catalogo-e2e-${randomUUID()}`, titulo, descripcion: 'Una casa luminosa para conocer el catálogo público.', precio: 98765432.12, operacion: 'venta', tipo_inmueble: 'casa', direccion: 'DIRECCION SECRETA E2E' }).select('id').single()
+  const { data: p, error } = await admin.from('propiedades').insert({ vendedor_id: usuario, barrio_id: barrio.id, slug: `catalogo-e2e-${randomUUID()}`, titulo, descripcion: 'Una casa luminosa para conocer el catálogo público.', precio: 98765432.12, operacion: 'venta', tipo_inmueble: 'casa' }).select('id').single()
   if (error) throw error
   propiedad = p.id
+  // direccion vive en propiedades_ubicacion desde 20260914000100, no como
+  // columna de `propiedades`.
+  const { error: eUbicacion } = await admin.from('propiedades_ubicacion').insert({ propiedad_id: propiedad, direccion: 'DIRECCION SECRETA E2E' })
+  if (eUbicacion) throw eUbicacion
   ruta = `${usuario}/${propiedad}/foto.webp`
   const bytes = await sharp({ create: { width: 80, height: 60, channels: 3, background: '#427166' } }).webp().toBuffer()
   const { error: eSubida } = await admin.storage.from('propiedades').upload(ruta, bytes, { contentType: 'image/webp' })

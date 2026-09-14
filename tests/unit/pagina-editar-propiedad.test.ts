@@ -185,11 +185,28 @@ function clientePropiedad({
   const barriosBuilder = { eq: barriosEqMock, order: barriosOrderMock }
   barriosEqMock.mockReturnValue(barriosBuilder)
 
+  // direccion vive en propiedades_ubicacion desde 20260914000100: la pagina
+  // la pide aparte con `.eq('propiedad_id', id).maybeSingle()`, sin filtrar
+  // por vendedor (RLS por fila hace ese trabajo en produccion -- aqui, para
+  // el unit test, basta con que el id coincida; la seguridad de verdad la
+  // cubren las pruebas de RLS, no esta).
+  let filtroPropiedadId: string | undefined
+  const ubicacionMaybeSingleMock = vi.fn(async () => {
+    if (!filaPropiedad || filtroPropiedadId !== filaPropiedad.id) return { data: null, error: null }
+    return { data: { direccion: filaPropiedad.direccion }, error: null }
+  })
+  const ubicacionEqMock = vi.fn((columna: string, valor: string) => {
+    if (columna === 'propiedad_id') filtroPropiedadId = valor
+    return ubicacionBuilder
+  })
+  const ubicacionBuilder = { eq: ubicacionEqMock, maybeSingle: ubicacionMaybeSingleMock }
+
   return {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: uidActual } } }) },
     from: vi.fn((tabla: string) => {
       if (tabla === 'propiedades') return { select: vi.fn().mockReturnValue(propiedadesBuilder) }
       if (tabla === 'barrios') return { select: vi.fn().mockReturnValue(barriosBuilder) }
+      if (tabla === 'propiedades_ubicacion') return { select: vi.fn().mockReturnValue(ubicacionBuilder) }
       throw new Error(`tabla inesperada en el mock: ${tabla}`)
     }),
     _eqPropiedadMock: eqPropiedadMock,
