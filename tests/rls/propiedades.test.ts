@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { describe, it, expect, beforeAll } from 'vitest'
 import { clienteAnonimo, clienteAdmin, clienteComo, crearUsuarioDePrueba } from './ayudantes'
 
@@ -150,6 +151,49 @@ describe('RLS de propiedades', () => {
     const cliente = await clienteComo(A.correo, A.password)
     const { data: comoDueno, error: errorDueno } = await cliente
       .from('propiedades').select('direccion, latitud, longitud').eq('id', idPublicada)
+    expect(errorDueno).toBeNull()
+    expect(comoDueno).toHaveLength(1)
+    expect(comoDueno![0].direccion).toBe('Calle 1 #2-3')
+  })
+
+  /**
+   * PASO 1 del arreglo de la fuga de la direccion exacta. La prueba de arriba
+   * ("el anonimo NO puede leer...") solo cubre DOS de los tres casos: anonimo
+   * y dueno. Le falta el tercero -- un AUTENTICADO AJENO -- y es justo el que
+   * demuestra la fuga: 20260831000300 le revoca a `anon` el SELECT de tabla y
+   * se lo deja solo sobre las columnas publicas, pero A `authenticated` NO SE
+   * LE QUITA NADA (el comentario de esa migracion lo dice explicito). RLS
+   * filtra FILAS, no columnas: propiedades_lectura_publica deja ver la
+   * propiedad publicada entera a CUALQUIER authenticated, y el GRANT SELECT
+   * de tabla completa de 20260827000600 nunca se le toco a ese rol. Con el
+   * registro abierto (limite de 3 altas por hora por IP), basta crearse una
+   * cuenta para recoger la direccion de todo el catalogo.
+   *
+   * Cuenta EFIMERA con randomUUID() en el correo, un comprador cualquiera sin
+   * ninguna relacion con la propiedad -- no la cuenta fija del seed.
+   */
+  it('un autenticado AJENO NO puede leer direccion, latitud ni longitud de una propiedad publicada de otro', async () => {
+    const correoAjeno = `comprador-ajeno-${randomUUID()}@prueba.test`
+    const passwordAjeno = 'CompradorAjeno2026*'
+    await crearUsuarioDePrueba({ correo: correoAjeno, password: passwordAjeno, rol: 'comprador' })
+    const ajeno = await clienteComo(correoAjeno, passwordAjeno)
+
+    const { data, error } = await ajeno
+      .from('propiedades')
+      .select('direccion, latitud, longitud')
+      .eq('id', idPublicada)
+
+    expect(error?.code, 'un ajeno autenticado debe recibir 42501, no la fila').toBe('42501')
+    expect(data ?? []).toHaveLength(0)
+
+    // Caso positivo, en la MISMA prueba: el dueno SI la recibe. Sin este
+    // control, la prueba pasaria en verde igual si la propiedad no existiera
+    // o si `idPublicada` estuviera mal.
+    const dueno = await clienteComo(A.correo, A.password)
+    const { data: comoDueno, error: errorDueno } = await dueno
+      .from('propiedades')
+      .select('direccion, latitud, longitud')
+      .eq('id', idPublicada)
     expect(errorDueno).toBeNull()
     expect(comoDueno).toHaveLength(1)
     expect(comoDueno![0].direccion).toBe('Calle 1 #2-3')
