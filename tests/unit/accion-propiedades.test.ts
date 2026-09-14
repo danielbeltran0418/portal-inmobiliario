@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { faltantesParaPublicar } from '@/lib/propiedades/completitud'
+import { MENSAJE_UBICACION_NO_GUARDADA } from '@/lib/errores/mapear'
 
 const getUser = vi.fn()
 const insertMock = vi.fn()
@@ -7,6 +8,7 @@ const singleMock = vi.fn()
 const updateMock = vi.fn()
 const eqMock = vi.fn()
 const selectUpdateMock = vi.fn()
+const upsertMock = vi.fn()
 const eqSelectMock = vi.fn()
 const maybeSingleMock = vi.fn()
 const deleteMock = vi.fn()
@@ -49,6 +51,11 @@ function clienteFalso() {
           },
         }
       },
+      // Cadena de actualizarPropiedad() sobre propiedades_ubicacion:
+      // .from('propiedades_ubicacion').upsert({...}, { onConflict: ... })
+      // Se resuelve directo, sin encadenado -- igual que el codigo real, que
+      // no le pide .select() a este upsert.
+      upsert: (payload: unknown, opciones?: unknown) => upsertMock(payload, opciones),
       // Cadena de faltaParaPublicar() en cambiarEstado():
       // .select('precio, imagenes_propiedad(id)').eq('id', id).maybeSingle()
       select: (columnas: string) => ({
@@ -227,6 +234,7 @@ describe('actualizarPropiedad', () => {
     updateMock.mockReset()
     eqMock.mockReset()
     selectUpdateMock.mockReset().mockResolvedValue({ data: [{ id: 'prop-1' }], error: null })
+    upsertMock.mockReset().mockResolvedValue({ data: null, error: null })
     crearClienteServidor.mockReset().mockResolvedValue(clienteFalso())
     revalidatePath.mockReset()
   })
@@ -305,13 +313,72 @@ describe('actualizarPropiedad', () => {
     expect(payload.banos).toBeNull()
     expect(payload.area_m2).toBeNull()
     expect(payload.barrio_id).toBeNull()
-    expect(payload.direccion).toBeNull()
-    // Y las seis claves estan de verdad PRESENTES en el objeto -- lo que
-    // JSON.stringify preservaria -- no solo `undefined` en un objeto que las
-    // omitiria al serializar.
-    for (const campo of ['precio', 'habitaciones', 'banos', 'area_m2', 'barrio_id', 'direccion']) {
+    // direccion ya NO viaja en el UPDATE de `propiedades`: se separo en
+    // acciones.ts (`const { direccion, ...datosPropiedad } = analisis.data`)
+    // y se escribe aparte en propiedades_ubicacion. Que payload NO la tenga
+    // es la prueba de que paraElUpdate() de verdad recibe el tipo sin ella.
+    expect(payload).not.toHaveProperty('direccion')
+    // Y las cinco claves que quedan estan de verdad PRESENTES en el objeto --
+    // lo que JSON.stringify preservaria -- no solo `undefined` en un objeto
+    // que las omitiria al serializar.
+    for (const campo of ['precio', 'habitaciones', 'banos', 'area_m2', 'barrio_id']) {
       expect(Object.prototype.hasOwnProperty.call(payload, campo)).toBe(true)
     }
+
+    // El mismo vaciado-a-null explicito se replica para propiedades_ubicacion:
+    // el upsert recibe `direccion: null`, no una clave ausente.
+    expect(upsertMock).toHaveBeenCalledTimes(1)
+    const payloadUbicacion = upsertMock.mock.calls[0]![0] as Record<string, unknown>
+    const opcionesUbicacion = upsertMock.mock.calls[0]![1] as Record<string, unknown>
+    expect(payloadUbicacion).toEqual({ propiedad_id: datosValidos.id, direccion: null })
+    expect(opcionesUbicacion).toEqual({ onConflict: 'propiedad_id' })
+  })
+
+  it('el upsert de propiedades_ubicacion recibe la direccion real cuando si viene informada', async () => {
+    const r = await actualizarPropiedad({}, formulario({
+      ...datosValidos,
+      direccion: 'Calle 72 # 45-10',
+    }))
+
+    expect(r).toEqual({})
+    const payload = updateMock.mock.calls[0]![0] as Record<string, unknown>
+    expect(payload).not.toHaveProperty('direccion')
+
+    expect(upsertMock).toHaveBeenCalledTimes(1)
+    const payloadUbicacion = upsertMock.mock.calls[0]![0] as Record<string, unknown>
+    expect(payloadUbicacion).toEqual({ propiedad_id: datosValidos.id, direccion: 'Calle 72 # 45-10' })
+  })
+
+  // Hallazgo Importante de la revision final de rama: cuando el UPDATE de
+  // propiedades tiene exito pero el upsert de propiedades_ubicacion falla, el
+  // vendedor debe enterarse de la VERDAD -- se guardaron los demas campos,
+  // no la direccion -- y la cache de Next debe quedar consistente con lo que
+  // de verdad cambio en la base (el UPDATE si se aplico). Antes de este
+  // arreglo se devolvia MENSAJE_GENERICO y se salia ANTES de revalidatePath,
+  // como si nada se hubiera guardado.
+  it('si el upsert de propiedades_ubicacion falla, guarda lo demas, avisa con el mensaje honesto y revalida igual', async () => {
+    upsertMock.mockResolvedValueOnce({ data: null, error: { code: '23505', message: 'boom' } })
+
+    const r = await actualizarPropiedad({}, formulario(datosValidos))
+
+    // (a) el mensaje es el especifico de fallo parcial, no el generico.
+    expect(r.error).toBe(MENSAJE_UBICACION_NO_GUARDADA)
+    // (b) el UPDATE de propiedades SI se llamo (y con exito, via selectUpdateMock
+    // configurado en el beforeEach): los demas campos quedaron guardados.
+    expect(updateMock).toHaveBeenCalledTimes(1)
+    // (c) revalidatePath se llamo con las MISMAS rutas del camino de exito:
+    // la cache de Next no debe quedar desincronizada de lo que si se guardo.
+    expect(revalidatePath).toHaveBeenCalledWith(`/panel/propiedades/${datosValidos.id}`)
+    expect(revalidatePath).toHaveBeenCalledWith('/panel')
+  })
+
+  it('si RLS filtra el UPDATE de propiedades (no es el dueno), ni siquiera intenta el upsert de ubicacion', async () => {
+    selectUpdateMock.mockResolvedValue({ data: [], error: null })
+
+    const r = await actualizarPropiedad({}, formulario(datosValidos))
+
+    expect(r.error).toBeTruthy()
+    expect(upsertMock).not.toHaveBeenCalled()
   })
 
   it('guarda un borrador sin precio: no es error de campo, y SI llega a llamar al UPDATE', async () => {

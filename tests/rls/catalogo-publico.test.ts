@@ -17,10 +17,15 @@ beforeAll(async () => {
     const { data, error } = await admin.from('propiedades').insert({
       vendedor_id: usuario, barrio_id: barrio, slug: `catalogo-${randomUUID()}`, titulo: 'Casa de prueba del catalogo',
       descripcion: 'Descripción pública de prueba', operacion: 'venta', tipo_inmueble: 'casa', precio: 12345678.91,
-      direccion: 'DIRECCION PRIVADA DE PRUEBA', latitud: 10.999, longitud: -74.999,
     }).select('id').single()
     if (error) throw error
     ids.push(data.id)
+    // direccion/latitud/longitud viven en propiedades_ubicacion desde
+    // 20260914000100, no como columnas de `propiedades`.
+    const { error: ubicacionError } = await admin.from('propiedades_ubicacion').insert({
+      propiedad_id: data.id, direccion: 'DIRECCION PRIVADA DE PRUEBA', latitud: 10.999, longitud: -74.999,
+    })
+    if (ubicacionError) throw ubicacionError
     const { error: imagenError } = await admin.from('imagenes_propiedad').insert({ propiedad_id: data.id, ruta_storage: `${usuario}/${data.id}/prueba.webp`, alt_text: 'Casa de prueba', orden: 0 })
     if (imagenError) throw imagenError
     if (i !== 1) {

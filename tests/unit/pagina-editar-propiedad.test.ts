@@ -153,10 +153,16 @@ function clientePropiedad({
   filaPropiedad,
   uidActual = ID_USUARIO,
   barrios = [{ id: 'b1', nombre: 'El Prado' }],
+  sinFilaUbicacion = false,
 }: {
   filaPropiedad: FilaPropiedadFalsa | null
   uidActual?: string
   barrios?: { id: string; nombre: string }[]
+  // Una propiedad puede no tener fila TODAVIA en propiedades_ubicacion (nace
+  // sin ella; ver el comentario de actualizarPropiedad en acciones.ts). Esto
+  // simula esa ausencia -- maybeSingle() sin fila -- para distinguirla del
+  // caso "hay fila pero su columna direccion es null".
+  sinFilaUbicacion?: boolean
 }) {
   const eqPropiedadMock = vi.fn()
   let filtros: Record<string, unknown> = {}
@@ -185,14 +191,33 @@ function clientePropiedad({
   const barriosBuilder = { eq: barriosEqMock, order: barriosOrderMock }
   barriosEqMock.mockReturnValue(barriosBuilder)
 
+  // direccion vive en propiedades_ubicacion desde 20260914000100: la pagina
+  // la pide aparte con `.eq('propiedad_id', id).maybeSingle()`, sin filtrar
+  // por vendedor (RLS por fila hace ese trabajo en produccion -- aqui, para
+  // el unit test, basta con que el id coincida; la seguridad de verdad la
+  // cubren las pruebas de RLS, no esta).
+  let filtroPropiedadId: string | undefined
+  const ubicacionMaybeSingleMock = vi.fn(async () => {
+    if (!filaPropiedad || filtroPropiedadId !== filaPropiedad.id) return { data: null, error: null }
+    if (sinFilaUbicacion) return { data: null, error: null }
+    return { data: { direccion: filaPropiedad.direccion }, error: null }
+  })
+  const ubicacionEqMock = vi.fn((columna: string, valor: string) => {
+    if (columna === 'propiedad_id') filtroPropiedadId = valor
+    return ubicacionBuilder
+  })
+  const ubicacionBuilder = { eq: ubicacionEqMock, maybeSingle: ubicacionMaybeSingleMock }
+
   return {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: uidActual } } }) },
     from: vi.fn((tabla: string) => {
       if (tabla === 'propiedades') return { select: vi.fn().mockReturnValue(propiedadesBuilder) }
       if (tabla === 'barrios') return { select: vi.fn().mockReturnValue(barriosBuilder) }
+      if (tabla === 'propiedades_ubicacion') return { select: vi.fn().mockReturnValue(ubicacionBuilder) }
       throw new Error(`tabla inesperada en el mock: ${tabla}`)
     }),
     _eqPropiedadMock: eqPropiedadMock,
+    _ubicacionEqMock: ubicacionEqMock,
   }
 }
 
@@ -412,6 +437,44 @@ describe('precio anulable: un borrador recien creado no tiene', () => {
 
   it('valorInicialNumerico conserva un numero real tal cual', () => {
     expect(valorInicialNumerico(250000000)).toBe(250000000)
+  })
+})
+
+/**
+ * Hallazgo Menor de la revision final de rama: ninguna prueba unitaria
+ * comprobaba de extremo a extremo que la `direccion` que devuelve la
+ * consulta a `propiedades_ubicacion` (Task de 20260914000100) es la misma
+ * que de verdad recibe FormularioDatos como prop. `clientePropiedad` ya
+ * simulaba esa consulta desde que se escribio (ver su comentario de
+ * cabecera) para que las pruebas de arriba no reventaran, pero nada
+ * afirmaba el valor -- una regresion en page.tsx que rompiera el mapeo
+ * (por ejemplo, un `null` a secas en vez de `ubicacion?.direccion ?? null`)
+ * habria pasado desapercibida.
+ */
+describe('direccion: propiedades_ubicacion de extremo a extremo', () => {
+  it('FormularioDatos recibe la direccion que devuelve la consulta a propiedades_ubicacion', async () => {
+    const cliente = clientePropiedad({ filaPropiedad: BASE_PROPIA })
+    crearClienteServidor.mockResolvedValue(cliente)
+
+    const elemento = await PaginaEditarPropiedad({ params: Promise.resolve({ id: BASE_PROPIA.id }) })
+    const nodoFormulario = buscarNodo(elemento, (el) => el.type === FormularioDatos)
+
+    expect(nodoFormulario).not.toBeNull()
+    const propiedadProp = nodoFormulario!.props!.propiedad as { direccion: string | null }
+    expect(propiedadProp.direccion).toBe(BASE_PROPIA.direccion)
+    expect(cliente._ubicacionEqMock).toHaveBeenCalledWith('propiedad_id', BASE_PROPIA.id)
+  })
+
+  it('con ubicacion null (la propiedad todavia no tiene fila en propiedades_ubicacion), direccion llega como null', async () => {
+    const cliente = clientePropiedad({ filaPropiedad: BASE_PROPIA, sinFilaUbicacion: true })
+    crearClienteServidor.mockResolvedValue(cliente)
+
+    const elemento = await PaginaEditarPropiedad({ params: Promise.resolve({ id: BASE_PROPIA.id }) })
+    const nodoFormulario = buscarNodo(elemento, (el) => el.type === FormularioDatos)
+
+    expect(nodoFormulario).not.toBeNull()
+    const propiedadProp = nodoFormulario!.props!.propiedad as { direccion: string | null }
+    expect(propiedadProp.direccion).toBeNull()
   })
 })
 

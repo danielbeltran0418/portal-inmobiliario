@@ -11,6 +11,7 @@ import {
   MENSAJE_GENERICO,
   MENSAJE_SIN_FOTOS,
   MENSAJE_SIN_PRECIO,
+  MENSAJE_UBICACION_NO_GUARDADA,
 } from '@/lib/errores/mapear'
 import { generarSlug } from '@/lib/propiedades/slug'
 import { BUCKET_PROPIEDADES } from '@/lib/imagenes/firmar'
@@ -75,16 +76,23 @@ export async function crearBorrador(
   redirect(`/panel/propiedades/${id}`)
 }
 
-// Los SEIS campos opcionales de esquemaPropiedad (precio se unio al grupo en
-// la correccion del hallazgo "un borrador no se puede guardar sin precio"):
-// vacio ('', ' ' o null) se normaliza a `undefined` en la VALIDACION -- eso
-// no cambia, sigue significando "sin dato" -- pero enviar la clave con
-// `undefined` al UPDATE de PostgREST equivale a NO enviarla: JSON.stringify
-// omite las claves `undefined`, asi que PostgREST deja esa columna
-// INTACTA en vez de vaciarla. Ver paraElUpdate() mas abajo, que es donde se
-// corrige -- aqui solo se declara la lista de campos a los que aplica.
-const CAMPOS_OPCIONALES_ANULABLES: readonly (keyof DatosPropiedad)[] = [
-  'precio', 'habitaciones', 'banos', 'area_m2', 'barrio_id', 'direccion',
+// Los CINCO campos opcionales de esquemaPropiedad que siguen viviendo en
+// `propiedades` (precio se unio al grupo en la correccion del hallazgo "un
+// borrador no se puede guardar sin precio"): vacio ('', ' ' o null) se
+// normaliza a `undefined` en la VALIDACION -- eso no cambia, sigue
+// significando "sin dato" -- pero enviar la clave con `undefined` al UPDATE
+// de PostgREST equivale a NO enviarla: JSON.stringify omite las claves
+// `undefined`, asi que PostgREST deja esa columna INTACTA en vez de
+// vaciarla. Ver paraElUpdate() mas abajo, que es donde se corrige -- aqui
+// solo se declara la lista de campos a los que aplica.
+//
+// `direccion` YA NO esta aqui: desde 20260914000100 vive en
+// propiedades_ubicacion, no en propiedades, y se escribe aparte con un
+// upsert (ver actualizarPropiedad). El mismo vaciado-a-NULL explicito que
+// corrige este arreglo para los cinco de abajo se replica ahi con
+// `direccion ?? null`.
+const CAMPOS_OPCIONALES_ANULABLES: readonly (keyof Omit<DatosPropiedad, 'direccion'>)[] = [
+  'precio', 'habitaciones', 'banos', 'area_m2', 'barrio_id',
 ]
 
 /**
@@ -106,7 +114,7 @@ const CAMPOS_OPCIONALES_ANULABLES: readonly (keyof DatosPropiedad)[] = [
  * opcionales por un `null` EXPLICITO, que SI viaja en el JSON y SI le dice a
  * PostgREST "pon esta columna a NULL".
  */
-function paraElUpdate(datos: DatosPropiedad): Record<string, unknown> {
+function paraElUpdate(datos: Omit<DatosPropiedad, 'direccion'>): Record<string, unknown> {
   const payload: Record<string, unknown> = { ...datos }
   for (const campo of CAMPOS_OPCIONALES_ANULABLES) {
     if (payload[campo] === undefined) payload[campo] = null
@@ -149,6 +157,11 @@ export async function actualizarPropiedad(
 
   const supabase = await crearClienteServidor()
 
+  // direccion se separa del resto: desde 20260914000100 vive en
+  // propiedades_ubicacion, no en propiedades (cierre de la fuga que dejaba
+  // leer la direccion exacta a cualquier autenticado -- ver la migracion).
+  const { direccion, ...datosPropiedad } = analisis.data
+
   // El slug NO se actualiza nunca, aunque cambie el titulo: un slug que muta
   // rompe los enlaces ya publicados. analisis.data sale de esquemaPropiedad,
   // que no tiene un campo `slug`, asi que no hay forma de que se cuele aqui.
@@ -156,12 +169,49 @@ export async function actualizarPropiedad(
   // explicito -- ver su comentario arriba -- sin anadir ninguna clave nueva
   // que esquemaPropiedad no tuviera ya.
   const { data, error } = await supabase
-    .from('propiedades').update(paraElUpdate(analisis.data)).eq('id', id).select('id')
+    .from('propiedades').update(paraElUpdate(datosPropiedad)).eq('id', id).select('id')
 
   if (error) { mapearError(error); return { error: MENSAJE_GENERICO } }
 
   // RLS deniega filtrando filas: cero filas significa "no es tuya".
   if (!data || data.length === 0) return { error: MENSAJE_GENERICO }
+
+  // Upsert por propiedad_id: una propiedad puede no tener fila todavia en
+  // propiedades_ubicacion (nace sin ella; la primera vez que el vendedor
+  // guarda una direccion es un INSERT, no un UPDATE). `direccion ?? null`
+  // conserva el mismo comportamiento documentado que corrigio paraElUpdate:
+  // borrar la direccion y guardar tiene que dejarla en NULL de verdad, no
+  // dejar la columna intacta -- ver el hallazgo de mas arriba sobre
+  // JSON.stringify omitiendo las claves `undefined`.
+  //
+  // NO es la misma transaccion que el UPDATE de arriba: supabase-js no
+  // ofrece una API de transaccion multi-tabla para un server action (eso
+  // exigiria una funcion de base de datos, que este arreglo no crea -- ver
+  // el reporte). Si este upsert falla DESPUES de que el UPDATE de
+  // propiedades ya tuvo exito, el vendedor se queda con los demas campos
+  // guardados pero la direccion sin actualizar -- nunca en NULL a medias ni
+  // corrupta, porque ninguna columna se comparte entre las dos escrituras.
+  //
+  // Hallazgo Importante de la revision final de rama: la rama de error de
+  // abajo devolvia MENSAJE_GENERICO y salia ANTES de revalidatePath, como si
+  // nada se hubiera guardado. Era doblemente falso -- precio/habitaciones/etc
+  // SI quedaron en la base (el UPDATE de arriba ya tuvo exito) y la cache de
+  // Next quedaba desincronizada de la base porque ninguna de las dos rutas
+  // se revalidaba. Ahora esta rama revalida los MISMOS paths que el camino
+  // feliz -- lo que cambio realmente si debe reflejarse -- y devuelve
+  // MENSAJE_UBICACION_NO_GUARDADA, que le dice al vendedor la verdad exacta:
+  // se guardo el resto, no la direccion. Reintentar sigue siendo seguro,
+  // las dos escrituras son idempotentes.
+  const { error: errorUbicacion } = await supabase
+    .from('propiedades_ubicacion')
+    .upsert({ propiedad_id: id, direccion: direccion ?? null }, { onConflict: 'propiedad_id' })
+
+  if (errorUbicacion) {
+    mapearError(errorUbicacion)
+    revalidatePath(`/panel/propiedades/${id}`)
+    revalidatePath('/panel')
+    return { error: MENSAJE_UBICACION_NO_GUARDADA }
+  }
 
   revalidatePath(`/panel/propiedades/${id}`)
   revalidatePath('/panel')

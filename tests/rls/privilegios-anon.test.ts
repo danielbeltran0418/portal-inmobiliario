@@ -127,9 +127,13 @@ describe('privilegios de tabla del rol anon', () => {
 
   it('anon sigue sin poder leer direccion, latitud ni longitud', async () => {
     // La otra mitad del caso positivo: el REVOKE de escritura no debe haber
-    // aflojado la restriccion de columnas que ya existia.
-    const { error } = await clienteAnonimo().from('propiedades').select('direccion').limit(1)
+    // aflojado la restriccion de acceso a la ubicacion. Desde 20260914000100
+    // esa restriccion ya no es un privilegio de columna sobre `propiedades`:
+    // direccion/latitud/longitud viven en su propia tabla, y anon no tiene
+    // NINGUN privilegio sobre ella (REVOKE ALL de esa migracion).
+    const { data, error } = await clienteAnonimo().from('propiedades_ubicacion').select('direccion').limit(1)
     expect(error).not.toBeNull()
     expect(error!.code).toBe('42501')
+    expect(data ?? []).toHaveLength(0)
   })
 })
