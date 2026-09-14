@@ -77,7 +77,7 @@ estado de SP1 y SP2 en este documento queda pendiente de una revisión aparte.
 
 ## Base de datos
 
-**33 migraciones.** Nunca se edita una ya aplicada: toda corrección va en una nueva.
+**35 migraciones.** Nunca se edita una ya aplicada: toda corrección va en una nueva.
 
 Tablas: `perfiles`, `barrios`, `propiedades`, `imagenes_propiedad`, `registro_auditoria`,
 `intentos_accion` (antes `intentos_login`: SP4 la generalizó para cubrir también el límite de
@@ -180,7 +180,7 @@ cd portal-inmobiliario
 npm install
 npx supabase start          # tarda unos minutos la primera vez
 npx supabase status -o env  # copia estas variables a .env.local
-npx supabase db reset       # aplica las 33 migraciones y el seed
+npx supabase db reset       # aplica las 35 migraciones y el seed
 npm run dev                 # http://localhost:3000
 ```
 
