@@ -5,8 +5,9 @@ import { redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { esquemaLogin } from '@/lib/validacion/esquemas'
 import { mapearError, MENSAJE_CAPTCHA, MENSAJE_CREDENCIALES } from '@/lib/errores/mapear'
-import { loginBloqueado, registrarIntentoLogin } from '@/lib/auth/limite-intentos'
+import { accionBloqueada, registrarIntentoAccion } from '@/lib/auth/limite-intentos'
 import { rolDesdeToken, rutaDePanel } from '@/lib/auth/roles'
+import { rutaDeRetorno } from '@/lib/navegacion/volver'
 import { ipDeConfianza } from '@/lib/http/ip-cliente'
 import { CAMPO_TURNSTILE, verificarTurnstile } from '@/lib/seguridad/turnstile'
 
@@ -35,7 +36,7 @@ export async function iniciarSesion(
   // 20260831000500.
   const ip = ipDeConfianza(await headers())
 
-  if (await loginBloqueado(correo, ip)) {
+  if (await accionBloqueada('login', correo, ip)) {
     return { error: MENSAJE_BLOQUEADO }
   }
 
@@ -64,7 +65,7 @@ export async function iniciarSesion(
   const { data, error } = await supabase.auth.signInWithPassword({ email: correo, password })
 
   if (error || !data.session) {
-    const quedoRegistrado = await registrarIntentoLogin(correo, ip, false)
+    const quedoRegistrado = await registrarIntentoAccion('login', correo, ip, false)
 
     // Si el fallo NO se pudo contabilizar, el limitador esta ciego: los
     // intentos no se acumulan y el sexto no se rechazaria nunca. Se degrada
@@ -87,6 +88,11 @@ export async function iniciarSesion(
   // conservador, y es el lado correcto en el que fallar. Denegar a quien acaba
   // de demostrar su contrasena seria una negacion de servicio autoinfligida sin
   // ninguna ganancia de seguridad. El error ya queda en el log del servidor.
-  await registrarIntentoLogin(correo, ip, true)
-  redirect(rutaDePanel(rolDesdeToken(data.session.access_token)))
+  await registrarIntentoAccion('login', correo, ip, true)
+
+  // `volver` viaja en un campo del formulario, leido de la URL con la que se
+  // llego al login -- lo controla quien mando el enlace. Sin pasar por
+  // rutaDeRetorno seria un redirect abierto justo tras escribir la contrasena.
+  const volver = rutaDeRetorno(formData.get('volver') as string | null)
+  redirect(volver !== '/' ? volver : rutaDePanel(rolDesdeToken(data.session.access_token)))
 }

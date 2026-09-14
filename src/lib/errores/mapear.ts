@@ -15,6 +15,19 @@ export const MENSAJE_CREDENCIALES = 'Correo o contrasena incorrectos.'
 export const MENSAJE_CAPTCHA =
   'No pudimos verificar que eres una persona. Vuelve a intentarlo.'
 
+export const MENSAJE_REGISTRO_BLOQUEADO =
+  'Se han creado demasiadas cuentas desde esta conexion. Intenta de nuevo en una hora.'
+
+/**
+ * Sin IP de confianza el registro se rechaza, y el mensaje dice que es de
+ * configuracion y no del usuario: quien lo lea no puede hacer nada por su
+ * cuenta, y quien opere el despliegue tiene que enterarse. La alternativa era
+ * dejar pasar el alta sin limite, que es el agujero silencioso que
+ * src/lib/http/ip-cliente.ts existe para evitar.
+ */
+export const MENSAJE_SIN_IP_CONFIABLE =
+  'El registro no esta disponible en este momento por un problema de configuracion del servidor.'
+
 export const MENSAJE_SIN_FOTOS =
   'Para publicar necesitas subir al menos una foto de la propiedad.'
 
@@ -40,6 +53,16 @@ export const MENSAJE_SIN_PRECIO =
  */
 export const MENSAJE_REQUISITOS_PUBLICACION =
   'Para publicar, la propiedad necesita al menos una foto y un precio.'
+
+// Las cuatro causas de crear_lead() se distinguen ANTES de llegar a
+// mapearError(): el RPC levanta mensajes distintos a proposito y el server
+// action los traduce (Task 7). No se añade ninguna rama nueva aqui: la regla
+// del modulo -- el mensaje nunca se construye a partir del error original --
+// sigue intacta.
+export const MENSAJE_LEAD_DUPLICADO = 'Ya contactaste sobre esta propiedad.'
+export const MENSAJE_LEAD_NO_PUBLICADA = 'Esta propiedad ya no esta disponible.'
+export const MENSAJE_LEAD_PROPIA = 'No puedes contactar sobre tu propia propiedad.'
+export const MENSAJE_LEAD_YA_RESPONDIDO = 'Este lead ya fue respondido.'
 
 const CODIGOS_DE_CREDENCIALES = new Set([
   'invalid_credentials',

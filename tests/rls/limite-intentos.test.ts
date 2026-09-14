@@ -6,35 +6,42 @@ const IP = '203.0.113.5'
 
 describe('limite de intentos de login', () => {
   beforeEach(async () => {
-    await clienteAdmin().from('intentos_login').delete().eq('correo', CORREO)
+    await clienteAdmin().from('intentos_accion').delete().eq('clave', CORREO)
   })
 
   it('no bloquea sin intentos previos', async () => {
-    const { data } = await clienteAdmin().rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+    const { data } = await clienteAdmin()
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: IP })
     expect(data).toBe(false)
   })
 
   it('no bloquea con 4 fallos', async () => {
     for (let i = 0; i < 4; i++) {
-      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+      await clienteAdmin()
+        .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: IP, p_exitoso: false })
     }
-    const { data } = await clienteAdmin().rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+    const { data } = await clienteAdmin()
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: IP })
     expect(data).toBe(false)
   })
 
   it('bloquea al quinto fallo', async () => {
     for (let i = 0; i < 5; i++) {
-      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+      await clienteAdmin()
+        .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: IP, p_exitoso: false })
     }
-    const { data } = await clienteAdmin().rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+    const { data } = await clienteAdmin()
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: IP })
     expect(data).toBe(true)
   })
 
   it('no bloquea la misma cuenta desde otra IP', async () => {
     for (let i = 0; i < 5; i++) {
-      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+      await clienteAdmin()
+        .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: IP, p_exitoso: false })
     }
-    const { data } = await clienteAdmin().rpc('login_bloqueado', { p_correo: CORREO, p_ip: '198.51.100.9' })
+    const { data } = await clienteAdmin()
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: '198.51.100.9' })
     expect(data).toBe(false)
   })
 
@@ -42,33 +49,39 @@ describe('limite de intentos de login', () => {
   // las demas pruebas varian la IP pero nunca el correo. La combinacion es el diseno.
   it('no bloquea otra cuenta desde la misma IP', async () => {
     const otroCorreo = 'otro-usuario@prueba.test'
-    await clienteAdmin().from('intentos_login').delete().eq('correo', otroCorreo)
+    await clienteAdmin().from('intentos_accion').delete().eq('clave', otroCorreo)
 
     for (let i = 0; i < 5; i++) {
-      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+      await clienteAdmin()
+        .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: IP, p_exitoso: false })
     }
 
     const { data: bloqueadoOriginal } = await clienteAdmin()
-      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: IP })
     expect(bloqueadoOriginal).toBe(true)
 
     const { data: bloqueadoOtro } = await clienteAdmin()
-      .rpc('login_bloqueado', { p_correo: otroCorreo, p_ip: IP })
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: otroCorreo, p_ip: IP })
     expect(bloqueadoOtro).toBe(false)
   })
 
-  // La rama IF p_exitoso THEN DELETE de registrar_intento_login no tenia cobertura:
-  // todas las demas pruebas registran fallos. Un borrado de esa rama pasaria inadvertido.
+  // La rama IF p_exitoso AND p_accion = 'login' THEN DELETE de
+  // registrar_intento_accion no tenia cobertura: todas las demas pruebas
+  // registran fallos. Un borrado de esa rama pasaria inadvertido.
   it('un login exitoso limpia los fallos previos de esa combinacion', async () => {
     for (let i = 0; i < 5; i++) {
-      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+      await clienteAdmin()
+        .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: IP, p_exitoso: false })
     }
-    const { data: antes } = await clienteAdmin().rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+    const { data: antes } = await clienteAdmin()
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: IP })
     expect(antes).toBe(true)
 
-    await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: true })
+    await clienteAdmin()
+      .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: IP, p_exitoso: true })
 
-    const { data: despues } = await clienteAdmin().rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+    const { data: despues } = await clienteAdmin()
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: IP })
     expect(despues).toBe(false)
   })
 
@@ -81,25 +94,25 @@ describe('limite de intentos de login', () => {
   // Cada prueba lleva su caso positivo con service_role EN EL MISMO test: sin
   // el, un 42501 se veria igual si la funcion hubiera desaparecido o cambiado
   // de firma, y la prueba pasaria sin demostrar nada sobre los privilegios.
-  it('el cliente anonimo NO puede ejecutar registrar_intento_login por RPC', async () => {
-    const argumentos = { p_correo: CORREO, p_ip: IP, p_exitoso: false }
+  it('el cliente anonimo NO puede ejecutar registrar_intento_accion por RPC', async () => {
+    const argumentos = { p_accion: 'login', p_clave: CORREO, p_ip: IP, p_exitoso: false }
 
-    const { error } = await clienteAnonimo().rpc('registrar_intento_login', argumentos)
+    const { error } = await clienteAnonimo().rpc('registrar_intento_accion', argumentos)
     expect(error).not.toBeNull()
     expect(error!.code).toBe('42501')
 
-    const { error: errorAdmin } = await clienteAdmin().rpc('registrar_intento_login', argumentos)
+    const { error: errorAdmin } = await clienteAdmin().rpc('registrar_intento_accion', argumentos)
     expect(errorAdmin).toBeNull()
   })
 
-  it('el cliente anonimo NO puede ejecutar login_bloqueado por RPC', async () => {
-    const argumentos = { p_correo: CORREO, p_ip: IP }
+  it('el cliente anonimo NO puede ejecutar accion_bloqueada por RPC', async () => {
+    const argumentos = { p_accion: 'login', p_clave: CORREO, p_ip: IP }
 
-    const { error } = await clienteAnonimo().rpc('login_bloqueado', argumentos)
+    const { error } = await clienteAnonimo().rpc('accion_bloqueada', argumentos)
     expect(error).not.toBeNull()
     expect(error!.code).toBe('42501')
 
-    const { data, error: errorAdmin } = await clienteAdmin().rpc('login_bloqueado', argumentos)
+    const { data, error: errorAdmin } = await clienteAdmin().rpc('accion_bloqueada', argumentos)
     expect(errorAdmin).toBeNull()
     expect(data).toBe(false)
   })
@@ -114,15 +127,15 @@ describe('limite de intentos de login', () => {
     const cliente = await clienteComo(cuenta.correo, cuenta.password)
 
     const { error: errorRegistrar } = await cliente
-      .rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+      .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: IP, p_exitoso: false })
     expect(errorRegistrar?.code).toBe('42501')
 
     const { error: errorConsulta } = await cliente
-      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: IP })
     expect(errorConsulta?.code).toBe('42501')
 
     const { error: errorAdmin } = await clienteAdmin()
-      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: IP })
     expect(errorAdmin).toBeNull()
   })
 
@@ -139,29 +152,31 @@ describe('limite de intentos de login', () => {
     // Cinco fallos repartidos entre dos IPs distintas: con la ventana normal
     // ninguna de las dos combinaciones llega al limite.
     for (let i = 0; i < 3; i++) {
-      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+      await clienteAdmin()
+        .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: IP, p_exitoso: false })
     }
     for (let i = 0; i < 2; i++) {
-      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: '198.51.100.9', p_exitoso: false })
+      await clienteAdmin()
+        .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: '198.51.100.9', p_exitoso: false })
     }
 
     // Control: por separado, ninguna de las dos IPs esta bloqueada.
     const { data: porIpUno } = await clienteAdmin()
-      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: IP })
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: IP })
     const { data: porIpDos } = await clienteAdmin()
-      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: '198.51.100.9' })
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: '198.51.100.9' })
     expect(porIpUno).toBe(false)
     expect(porIpDos).toBe(false)
 
     // Sin IP de confianza, los cinco cuentan juntos y la cuenta queda cerrada.
     const { data: sinIp, error } = await clienteAdmin()
-      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: null })
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: null })
     expect(error).toBeNull()
     expect(sinIp).toBe(true)
 
     // Y sigue siendo por correo: otra cuenta no se ve arrastrada.
     const { data: otroCorreo } = await clienteAdmin()
-      .rpc('login_bloqueado', { p_correo: 'ajeno@prueba.test', p_ip: null })
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: 'ajeno@prueba.test', p_ip: null })
     expect(otroCorreo).toBe(false)
   })
 
@@ -171,21 +186,23 @@ describe('limite de intentos de login', () => {
   // permanente. Es un fallo que no se ve hasta que le pasa a alguien.
   it('un login exitoso sin IP limpia la ventana por correo', async () => {
     for (let i = 0; i < 3; i++) {
-      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+      await clienteAdmin()
+        .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: IP, p_exitoso: false })
     }
     for (let i = 0; i < 2; i++) {
-      await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: null, p_exitoso: false })
+      await clienteAdmin()
+        .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: null, p_exitoso: false })
     }
     const { data: antes } = await clienteAdmin()
-      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: null })
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: null })
     expect(antes).toBe(true)
 
     const { error } = await clienteAdmin()
-      .rpc('registrar_intento_login', { p_correo: CORREO, p_ip: null, p_exitoso: true })
+      .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: null, p_exitoso: true })
     expect(error).toBeNull()
 
     const { data: despues } = await clienteAdmin()
-      .rpc('login_bloqueado', { p_correo: CORREO, p_ip: null })
+      .rpc('accion_bloqueada', { p_accion: 'login', p_clave: CORREO, p_ip: null })
     expect(despues).toBe(false)
   })
 
@@ -194,16 +211,17 @@ describe('limite de intentos de login', () => {
     // (service_role, que ignora RLS) SI lo ve. Sin este paso, la aserción
     // de longitud 0 de mas abajo seria identica si la tabla estuviera
     // simplemente vacia, y no probaria nada sobre el ocultamiento por RLS.
-    await clienteAdmin().rpc('registrar_intento_login', { p_correo: CORREO, p_ip: IP, p_exitoso: false })
+    await clienteAdmin()
+      .rpc('registrar_intento_accion', { p_accion: 'login', p_clave: CORREO, p_ip: IP, p_exitoso: false })
     const { data: comoAdmin, error: errorAdmin } = await clienteAdmin()
-      .from('intentos_login').select('id').eq('correo', CORREO)
+      .from('intentos_accion').select('id').eq('clave', CORREO)
     expect(errorAdmin).toBeNull()
     expect(comoAdmin).toHaveLength(1)
 
     const cuenta = { correo: 'curioso@prueba.test', password: 'ClaveDePrueba123!' }
     await crearUsuarioDePrueba({ ...cuenta, rol: 'comprador' })
     const cliente = await clienteComo(cuenta.correo, cuenta.password)
-    const { data, error } = await cliente.from('intentos_login').select('id')
+    const { data, error } = await cliente.from('intentos_accion').select('id')
     // RLS esta activa y no hay ninguna politica de SELECT: un SELECT no
     // tiene WITH CHECK que violar, asi que no hay error (verificado contra
     // la base real) -- simplemente no se devuelve ninguna fila. El control
@@ -211,5 +229,71 @@ describe('limite de intentos de login', () => {
     // y no una tabla vacia.
     expect(error).toBeNull()
     expect(data ?? []).toHaveLength(0)
+  })
+})
+
+// La regla de 'registro' NO es la de 'login'. El login cuenta FALLOS sobre un
+// correo; el spam de altas son registros EXITOSOS, cada uno con un correo
+// distinto, asi que un limitador que contara fallos no bloquearia nada aqui.
+describe('limite de registro', () => {
+  it('el limite de registro cuenta EXITOS por ip, no fallos', async () => {
+    const admin = clienteAdmin()
+    const ip = '203.0.113.77'
+    await admin.from('intentos_accion').delete().eq('ip', ip)
+
+    // Tres altas exitosas desde la misma IP: la tercera todavia pasa.
+    for (let i = 0; i < 3; i++) {
+      const { error } = await admin.rpc('registrar_intento_accion', {
+        p_accion: 'registro', p_clave: `alta-${i}@prueba.test`, p_ip: ip, p_exitoso: true,
+      })
+      expect(error).toBeNull()
+    }
+
+    const { data: bloqueado, error } = await admin.rpc('accion_bloqueada', {
+      p_accion: 'registro', p_clave: 'alta-4@prueba.test', p_ip: ip,
+    })
+    expect(error).toBeNull()
+    expect(bloqueado).toBe(true)
+
+    // Caso positivo: otra IP no esta bloqueada. Sin esto, la asercion de arriba
+    // pasaria aunque la funcion devolviera true para todo.
+    const { data: otra } = await admin.rpc('accion_bloqueada', {
+      p_accion: 'registro', p_clave: 'alta-4@prueba.test', p_ip: '203.0.113.78',
+    })
+    expect(otra).toBe(false)
+
+    await admin.from('intentos_accion').delete().eq('ip', ip)
+  })
+
+  it('los registros FALLIDOS no cuentan para el limite', async () => {
+    const admin = clienteAdmin()
+    const ip = '203.0.113.79'
+    await admin.from('intentos_accion').delete().eq('ip', ip)
+
+    // Diez fallos no bloquean: la regla de registro mira exitos. Un limitador
+    // que contara fallos de registro no pararia el alta masiva, que es toda exitosa.
+    for (let i = 0; i < 10; i++) {
+      await admin.rpc('registrar_intento_accion', {
+        p_accion: 'registro', p_clave: `fallo-${i}@prueba.test`, p_ip: ip, p_exitoso: false,
+      })
+    }
+
+    const { data: bloqueado } = await admin.rpc('accion_bloqueada', {
+      p_accion: 'registro', p_clave: 'otro@prueba.test', p_ip: ip,
+    })
+    expect(bloqueado).toBe(false)
+
+    await admin.from('intentos_accion').delete().eq('ip', ip)
+  })
+
+  it('sin ip de confianza, el registro se bloquea en la base', async () => {
+    // Para el login, p_ip nula degrada a contar por correo, que es MAS estricto.
+    // Para el registro esa degradacion no existe -- cada alta usa otro correo --
+    // asi que degradaria a SIN LIMITE. La base falla cerrado.
+    const { data: bloqueado, error } = await clienteAdmin().rpc('accion_bloqueada', {
+      p_accion: 'registro', p_clave: 'cualquiera@prueba.test', p_ip: null,
+    })
+    expect(error).toBeNull()
+    expect(bloqueado).toBe(true)
   })
 })

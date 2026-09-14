@@ -10,9 +10,18 @@ export interface Sesion {
   readonly hayUsuario: boolean
   /** El access token, del que sale el rol. null si no hay sesion. */
   readonly accessToken: string | null
+  /**
+   * El id del usuario, ya validado por getUser(). null si no hay sesion.
+   *
+   * Se resuelve UNA sola vez, aqui: quien necesite comparar identidad (por
+   * ejemplo, si el visitante de una ficha es su propio vendedor) lee este
+   * campo en vez de decodificar el token por su cuenta. Derivar el id en dos
+   * sitios distintos es como acaban comportandose distinto.
+   */
+  readonly idUsuario: string | null
 }
 
-export const SIN_SESION: Sesion = { hayUsuario: false, accessToken: null }
+export const SIN_SESION: Sesion = { hayUsuario: false, accessToken: null, idUsuario: null }
 
 /**
  * Unica lectura de la sesion del lado del servidor. La usan la cabecera y la
@@ -34,5 +43,5 @@ export async function sesionActual(): Promise<Sesion> {
   if (!user) return SIN_SESION
 
   const { data: { session } } = await supabase.auth.getSession()
-  return { hayUsuario: true, accessToken: session?.access_token ?? null }
+  return { hayUsuario: true, accessToken: session?.access_token ?? null, idUsuario: user.id }
 }

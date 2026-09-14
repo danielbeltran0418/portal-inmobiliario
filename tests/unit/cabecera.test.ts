@@ -17,10 +17,10 @@ function tokenConRol(rol: string): string {
 }
 
 function conSesion(rol: string): Sesion {
-  return { hayUsuario: true, accessToken: tokenConRol(rol) }
+  return { hayUsuario: true, accessToken: tokenConRol(rol), idUsuario: 'usuario-de-prueba' }
 }
 
-const SIN_SESION: Sesion = { hayUsuario: false, accessToken: null }
+const SIN_SESION: Sesion = { hayUsuario: false, accessToken: null, idUsuario: null }
 
 const destinos = (enlaces: readonly { destino: string }[]) => enlaces.map((e) => e.destino)
 
@@ -66,16 +66,22 @@ describe('enlaceDePanel', () => {
    * cabecera anunciara el panel del super admin.
    */
   it('un token en la cookie sin usuario validado NO abre panel', () => {
-    const soloCookie: Sesion = { hayUsuario: false, accessToken: tokenConRol('super_admin') }
+    const soloCookie: Sesion = {
+      hayUsuario: false, accessToken: tokenConRol('super_admin'), idUsuario: null,
+    }
     expect(enlaceDePanel(soloCookie)).toBeNull()
   })
 
   it('cae en el rol de menos privilegio si el token es ilegible', () => {
-    expect(enlaceDePanel({ hayUsuario: true, accessToken: 'no-es-un-token' })).toEqual({
+    expect(enlaceDePanel({
+      hayUsuario: true, accessToken: 'no-es-un-token', idUsuario: 'usuario-de-prueba',
+    })).toEqual({
       etiqueta: 'Mi cuenta',
       destino: '/mi-cuenta',
     })
-    expect(enlaceDePanel({ hayUsuario: true, accessToken: null })).toEqual({
+    expect(enlaceDePanel({
+      hayUsuario: true, accessToken: null, idUsuario: 'usuario-de-prueba',
+    })).toEqual({
       etiqueta: 'Mi cuenta',
       destino: '/mi-cuenta',
     })

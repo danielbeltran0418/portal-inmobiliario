@@ -82,3 +82,18 @@ export const esquemaPropiedad = z.object({
 
 export type DatosPropiedadNueva = z.infer<typeof esquemaPropiedadNueva>
 export type DatosPropiedad = z.infer<typeof esquemaPropiedad>
+
+export const esquemaLead = z.object({
+  // El limite alto coincide con el CHECK de la tabla: si divergen, el usuario
+  // recibiria un error de base de datos en vez de uno del formulario.
+  mensaje: z.string().trim()
+    .min(10, 'Cuentale al vendedor que te interesa, con al menos 10 caracteres.')
+    .max(1000, 'El mensaje no puede pasar de 1000 caracteres.'),
+  // Obligatorio aunque `perfiles.telefono` sea nullable: un lead sin telefono
+  // no le sirve de nada al vendedor.
+  telefono: z.string().trim()
+    .min(7, 'Escribe un telefono de contacto.')
+    .max(20, 'Ese telefono es demasiado largo.'),
+})
+
+export type DatosLead = z.infer<typeof esquemaLead>
