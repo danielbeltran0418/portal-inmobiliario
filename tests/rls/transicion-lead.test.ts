@@ -97,7 +97,64 @@ describe('transicion de estado de un lead', () => {
 
     const segundo = await vendedor.from('leads')
       .update({ estado: 'aceptado' }).eq('id', leadId).select('id')
+    // Codigo propio LD004 (Hallazgo M2 de la revision final de SP4), no el
+    // generico P0001 de antes: ver 20260912000100_corregir_transicion_lead.sql.
+    expect(segundo.error?.code).toBe('LD004')
     expect(segundo.error?.message).toMatch(/ya fue respondido/i)
+  })
+
+  /**
+   * Hallazgo I1 de la revision final de SP4
+   * (.superpowers/sdd/2026-09-11-sp4-leads/revision-final.md): reenviar el
+   * MISMO estado terminal ("aceptar" dos veces el mismo lead) tenia EXITO EN
+   * SILENCIO antes de 20260912000100_corregir_transicion_lead.sql, porque el
+   * atajo de no-op (NEW.estado IS NOT DISTINCT FROM OLD.estado) se evaluaba
+   * ANTES de comprobar si el lead ya estaba respondido. Viola el criterio de
+   * aceptacion 6 del spec de SP4 ("un lead ya respondido no cambia, y no se
+   * reporta como exito").
+   */
+  it('reconfirmar el mismo estado terminal (aceptar dos veces) se rechaza, no tiene exito en silencio', async () => {
+    const { vendedorCorreo, password, leadId } = await fixturaConLead()
+    const vendedor = await clienteComo(vendedorCorreo, password)
+
+    const primero = await vendedor.from('leads')
+      .update({ estado: 'aceptado' }).eq('id', leadId).select('id')
+    expect(primero.error).toBeNull()
+    expect(primero.data?.length).toBe(1)
+
+    const segundo = await vendedor.from('leads')
+      .update({ estado: 'aceptado' }).eq('id', leadId).select('id')
+    expect(segundo.error?.code).toBe('LD004')
+    expect(segundo.error?.message).toMatch(/ya fue respondido/i)
+    expect(segundo.data).toBeNull()
+
+    // Contra la base, con service_role: el segundo intento no dejo rastro --
+    // ni cambio el estado (ya lo tenia) ni volvio a fijar respondido_en.
+    const admin = clienteAdmin()
+    const { data: leadTrasSegundo } = await admin.from('leads')
+      .select('estado').eq('id', leadId).single()
+    expect(leadTrasSegundo?.estado).toBe('aceptado')
+  })
+
+  it('reconfirmar el mismo estado terminal (descartar dos veces) tambien se rechaza', async () => {
+    const { vendedorCorreo, password, leadId } = await fixturaConLead()
+    const vendedor = await clienteComo(vendedorCorreo, password)
+
+    const primero = await vendedor.from('leads')
+      .update({ estado: 'descartado' }).eq('id', leadId).select('id')
+    expect(primero.error).toBeNull()
+    expect(primero.data?.length).toBe(1)
+
+    const segundo = await vendedor.from('leads')
+      .update({ estado: 'descartado' }).eq('id', leadId).select('id')
+    expect(segundo.error?.code).toBe('LD004')
+    expect(segundo.error?.message).toMatch(/ya fue respondido/i)
+    expect(segundo.data).toBeNull()
+
+    const admin = clienteAdmin()
+    const { data: leadTrasSegundo } = await admin.from('leads')
+      .select('estado').eq('id', leadId).single()
+    expect(leadTrasSegundo?.estado).toBe('descartado')
   })
 
   it('un vendedor ajeno no ve el lead ni su contacto en ningun estado', async () => {
