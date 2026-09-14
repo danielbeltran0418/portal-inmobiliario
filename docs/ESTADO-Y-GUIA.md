@@ -77,13 +77,13 @@ estado de SP1 y SP2 en este documento queda pendiente de una revisión aparte.
 
 ## Base de datos
 
-**35 migraciones.** Nunca se edita una ya aplicada: toda corrección va en una nueva.
+**36 migraciones.** Nunca se edita una ya aplicada: toda corrección va en una nueva.
 
 Tablas: `perfiles`, `barrios`, `propiedades`, `imagenes_propiedad`, `registro_auditoria`,
 `intentos_accion` (antes `intentos_login`: SP4 la generalizó para cubrir también el límite de
 registro), `limpieza_almacenamiento`, `leads`, `leads_contacto` (SP4).
 
-**Cinco invariantes viven en la base, no en el formulario**, porque PostgREST está expuesto y un
+**Seis invariantes viven en la base, no en el formulario**, porque PostgREST está expuesto y un
 `PATCH` directo se saltaría cualquier validación de la aplicación:
 
 1. Una propiedad publicada necesita **al menos una imagen**.
@@ -91,6 +91,11 @@ registro), `limpieza_almacenamiento`, `leads`, `leads_contacto` (SP4).
 3. Un vendedor solo ve y toca **lo suyo** (RLS).
 4. Nadie puede cambiarse el **rol** a sí mismo (tres capas: privilegio de columna, política y trigger).
 5. Dos imágenes de una propiedad **no pueden compartir orden** (`UNIQUE` diferido).
+6. La dirección exacta y las coordenadas de una propiedad viven en `propiedades_ubicacion`
+   (20260914000100), no en `propiedades`, y solo son visibles para el dueño y el
+   `super_admin` (RLS por fila). `authenticated` conserva el SELECT de tabla completa sobre
+   `propiedades` (ver la trampa 1 más abajo): ninguna columna privada nueva puede añadirse ahí,
+   tiene que ir en una tabla aparte con su propia RLS, el mismo patrón que `leads_contacto`.
 
 ## `lead_capturado`, para quien construya SP6
 
@@ -107,8 +112,9 @@ administrativa.
 
 ## Pruebas
 
-**376 unitarias · 147 de RLS · 16 E2E.** Todas verdes (medido en `sp4-leads` tras SP4, con
-`npx supabase db reset` antes de cada corrida).
+**381 unitarias · 155 de RLS · 16 E2E.** Todas verdes (medido en `fix/ubicacion-privada` tras
+cerrar los hallazgos de su ronda de corrección, con `npx supabase db reset` antes de cada
+corrida).
 
 La suite E2E completa (`npm run test:e2e`) se corrió tres veces seguidas para esta medición
 —una corrida verde no descarta una carrera— y las tres dieron 16/16. La causa de fondo de por qué
@@ -180,7 +186,7 @@ cd portal-inmobiliario
 npm install
 npx supabase start          # tarda unos minutos la primera vez
 npx supabase status -o env  # copia estas variables a .env.local
-npx supabase db reset       # aplica las 35 migraciones y el seed
+npx supabase db reset       # aplica las 36 migraciones y el seed
 npm run dev                 # http://localhost:3000
 ```
 
@@ -193,8 +199,8 @@ Credenciales de desarrollo (solo local, nunca en producción): `admin@portal.com
 ## Comandos
 
 ```bash
-npm run test:unit         # 376 pruebas
-npm run test:rls          # 147 pruebas, necesita la pila de Supabase arriba
+npm run test:unit         # 381 pruebas
+npm run test:rls          # 155 pruebas, necesita la pila de Supabase arriba
 npm run test:e2e          # 16 pruebas de navegador
 npm run build             # compila
 npm run verificar:render  # guard: falla si alguna página queda prerenderizada
