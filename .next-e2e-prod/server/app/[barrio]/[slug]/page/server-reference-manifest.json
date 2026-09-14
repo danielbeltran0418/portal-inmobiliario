@@ -1,0 +1,16 @@
+{
+  "node": {
+    "00c691e966fe318a148bf4acd70fdfddaf8fd57dff": {
+      "workers": {
+        "app/[barrio]/[slug]/page": {
+          "moduleId": 24083,
+          "async": false,
+          "codeHash": null
+        }
+      },
+      "exportedName": "cerrarSesion",
+      "filename": "src/componentes/acciones-sesion.ts"
+    }
+  },
+  "edge": {}
+}

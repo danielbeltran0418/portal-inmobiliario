@@ -1,0 +1,27 @@
+{
+  "node": {
+    "00c691e966fe318a148bf4acd70fdfddaf8fd57dff": {
+      "workers": {
+        "app/(auth)/login/page": {
+          "moduleId": 61182,
+          "async": false,
+          "codeHash": null
+        }
+      },
+      "exportedName": "cerrarSesion",
+      "filename": "src/componentes/acciones-sesion.ts"
+    },
+    "6076fff40c43155ec745116bd34b8e3a00cd0de7dd": {
+      "workers": {
+        "app/(auth)/login/page": {
+          "moduleId": 61182,
+          "async": false,
+          "codeHash": null
+        }
+      },
+      "exportedName": "iniciarSesion",
+      "filename": "src/app/(auth)/login/acciones.ts"
+    }
+  },
+  "edge": {}
+}

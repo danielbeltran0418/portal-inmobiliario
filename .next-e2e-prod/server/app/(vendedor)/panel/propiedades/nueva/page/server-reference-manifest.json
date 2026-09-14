@@ -1,0 +1,27 @@
+{
+  "node": {
+    "00c691e966fe318a148bf4acd70fdfddaf8fd57dff": {
+      "workers": {
+        "app/(vendedor)/panel/propiedades/nueva/page": {
+          "moduleId": 25620,
+          "async": false,
+          "codeHash": null
+        }
+      },
+      "exportedName": "cerrarSesion",
+      "filename": "src/componentes/acciones-sesion.ts"
+    },
+    "6013b6e355b22f536e9c38b87c2b6306fa63d58468": {
+      "workers": {
+        "app/(vendedor)/panel/propiedades/nueva/page": {
+          "moduleId": 25620,
+          "async": false,
+          "codeHash": null
+        }
+      },
+      "exportedName": "crearBorrador",
+      "filename": "src/app/(vendedor)/panel/propiedades/acciones.ts"
+    }
+  },
+  "edge": {}
+}

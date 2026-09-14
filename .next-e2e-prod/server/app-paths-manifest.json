@@ -1,0 +1,20 @@
+{
+  "/(admin)/control/page": "app/(admin)/control/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(auth)/registro/page": "app/(auth)/registro/page.js",
+  "/(auth)/verificar-correo/page": "app/(auth)/verificar-correo/page.js",
+  "/(comprador)/mi-cuenta/page": "app/(comprador)/mi-cuenta/page.js",
+  "/(vendedor)/panel/page": "app/(vendedor)/panel/page.js",
+  "/(vendedor)/panel/propiedades/[id]/page": "app/(vendedor)/panel/propiedades/[id]/page.js",
+  "/(vendedor)/panel/propiedades/nueva/page": "app/(vendedor)/panel/propiedades/nueva/page.js",
+  "/[barrio]/[slug]/page": "app/[barrio]/[slug]/page.js",
+  "/[barrio]/page": "app/[barrio]/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/confirmar/route": "app/confirmar/route.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/imagen/[id]/route": "app/imagen/[id]/route.js",
+  "/page": "app/page.js",
+  "/robots.txt/route": "app/robots.txt/route.js",
+  "/sitemap.xml/route": "app/sitemap.xml/route.js"
+}

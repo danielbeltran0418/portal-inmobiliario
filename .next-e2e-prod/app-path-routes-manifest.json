@@ -1,0 +1,20 @@
+{
+  "/(admin)/control/page": "/control",
+  "/(auth)/login/page": "/login",
+  "/(auth)/registro/page": "/registro",
+  "/(auth)/verificar-correo/page": "/verificar-correo",
+  "/(comprador)/mi-cuenta/page": "/mi-cuenta",
+  "/(vendedor)/panel/page": "/panel",
+  "/(vendedor)/panel/propiedades/[id]/page": "/panel/propiedades/[id]",
+  "/(vendedor)/panel/propiedades/nueva/page": "/panel/propiedades/nueva",
+  "/[barrio]/[slug]/page": "/[barrio]/[slug]",
+  "/[barrio]/page": "/[barrio]",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/confirmar/route": "/confirmar",
+  "/favicon.ico/route": "/favicon.ico",
+  "/imagen/[id]/route": "/imagen/[id]",
+  "/page": "/",
+  "/robots.txt/route": "/robots.txt",
+  "/sitemap.xml/route": "/sitemap.xml"
+}

@@ -1,0 +1,27 @@
+{
+  "node": {
+    "00c691e966fe318a148bf4acd70fdfddaf8fd57dff": {
+      "workers": {
+        "app/(auth)/registro/page": {
+          "moduleId": 25245,
+          "async": false,
+          "codeHash": null
+        }
+      },
+      "exportedName": "cerrarSesion",
+      "filename": "src/componentes/acciones-sesion.ts"
+    },
+    "6063ee4b8b76c2649b273fc4af1a10faf758192712": {
+      "workers": {
+        "app/(auth)/registro/page": {
+          "moduleId": 25245,
+          "async": false,
+          "codeHash": null
+        }
+      },
+      "exportedName": "registrarUsuario",
+      "filename": "src/app/(auth)/registro/acciones.ts"
+    }
+  },
+  "edge": {}
+}

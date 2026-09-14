@@ -1,0 +1,3 @@
+module.exports=[25620,a=>{"use strict";var b=a.i(21105),c=a.i(28420);a.s([],83742),a.i(83742),a.s(["00c691e966fe318a148bf4acd70fdfddaf8fd57dff",()=>b.cerrarSesion,"6013b6e355b22f536e9c38b87c2b6306fa63d58468",()=>c.crearBorrador],25620)},92931,a=>{"use strict";var b=a.i(45618);a.s(["crearClienteAdmin",0,function(){return(0,b.createClient)("http://127.0.0.1:54321",process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:!1,autoRefreshToken:!1}})}])}];
+
+//# sourceMappingURL=_0k78lfo._.js.map

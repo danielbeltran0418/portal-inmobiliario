@@ -1,0 +1,187 @@
+{
+  "node": {
+    "00c691e966fe318a148bf4acd70fdfddaf8fd57dff": {
+      "workers": {
+        "app/(admin)/control/page": {
+          "moduleId": 74453,
+          "async": false,
+          "codeHash": null
+        },
+        "app/(auth)/login/page": {
+          "moduleId": 61182,
+          "async": false,
+          "codeHash": null
+        },
+        "app/(auth)/registro/page": {
+          "moduleId": 25245,
+          "async": false,
+          "codeHash": null
+        },
+        "app/(auth)/verificar-correo/page": {
+          "moduleId": 85601,
+          "async": false,
+          "codeHash": null
+        },
+        "app/(comprador)/mi-cuenta/page": {
+          "moduleId": 32061,
+          "async": false,
+          "codeHash": null
+        },
+        "app/(vendedor)/panel/page": {
+          "moduleId": 10014,
+          "async": false,
+          "codeHash": null
+        },
+        "app/(vendedor)/panel/propiedades/[id]/page": {
+          "moduleId": 29408,
+          "async": true,
+          "codeHash": null
+        },
+        "app/(vendedor)/panel/propiedades/nueva/page": {
+          "moduleId": 25620,
+          "async": false,
+          "codeHash": null
+        },
+        "app/[barrio]/[slug]/page": {
+          "moduleId": 24083,
+          "async": false,
+          "codeHash": null
+        },
+        "app/[barrio]/page": {
+          "moduleId": 33463,
+          "async": false,
+          "codeHash": null
+        },
+        "app/_not-found/page": {
+          "moduleId": 40147,
+          "async": false,
+          "codeHash": null
+        },
+        "app/page": {
+          "moduleId": 20265,
+          "async": false,
+          "codeHash": null
+        }
+      },
+      "filename": "src/componentes/acciones-sesion.ts",
+      "exportedName": "cerrarSesion"
+    },
+    "6076fff40c43155ec745116bd34b8e3a00cd0de7dd": {
+      "workers": {
+        "app/(auth)/login/page": {
+          "moduleId": 61182,
+          "async": false,
+          "codeHash": null
+        }
+      },
+      "filename": "src/app/(auth)/login/acciones.ts",
+      "exportedName": "iniciarSesion"
+    },
+    "6063ee4b8b76c2649b273fc4af1a10faf758192712": {
+      "workers": {
+        "app/(auth)/registro/page": {
+          "moduleId": 25245,
+          "async": false,
+          "codeHash": null
+        }
+      },
+      "filename": "src/app/(auth)/registro/acciones.ts",
+      "exportedName": "registrarUsuario"
+    },
+    "6013d89271d410584f53eefe76fdf743b87941053b": {
+      "workers": {
+        "app/(vendedor)/panel/propiedades/[id]/page": {
+          "moduleId": 29408,
+          "async": true,
+          "codeHash": null
+        }
+      },
+      "filename": "src/app/(vendedor)/panel/propiedades/[id]/page.tsx",
+      "exportedName": "$$RSC_SERVER_ACTION_0"
+    },
+    "40a4178e64bb59053ef94428c16a1c56a5ffa78da7": {
+      "workers": {
+        "app/(vendedor)/panel/propiedades/[id]/page": {
+          "moduleId": 29408,
+          "async": true,
+          "codeHash": null
+        }
+      },
+      "filename": "src/app/(vendedor)/panel/propiedades/acciones.ts",
+      "exportedName": "eliminarPropiedad"
+    },
+    "6013b6e355b22f536e9c38b87c2b6306fa63d58468": {
+      "workers": {
+        "app/(vendedor)/panel/propiedades/[id]/page": {
+          "moduleId": 29408,
+          "async": true,
+          "codeHash": null
+        },
+        "app/(vendedor)/panel/propiedades/nueva/page": {
+          "moduleId": 25620,
+          "async": false,
+          "codeHash": null
+        }
+      },
+      "filename": "src/app/(vendedor)/panel/propiedades/acciones.ts",
+      "exportedName": "crearBorrador"
+    },
+    "60276cd13558a5b82c99ea2dd51dc39ca581dc4872": {
+      "workers": {
+        "app/(vendedor)/panel/propiedades/[id]/page": {
+          "moduleId": 29408,
+          "async": true,
+          "codeHash": null
+        }
+      },
+      "filename": "src/app/(vendedor)/panel/propiedades/acciones.ts",
+      "exportedName": "actualizarPropiedad"
+    },
+    "604b9ce28676826c0e02db7df0e1791d61edcfb634": {
+      "workers": {
+        "app/(vendedor)/panel/propiedades/[id]/page": {
+          "moduleId": 29408,
+          "async": true,
+          "codeHash": null
+        }
+      },
+      "filename": "src/app/(vendedor)/panel/propiedades/acciones.ts",
+      "exportedName": "cambiarEstado"
+    },
+    "60fb107a6799b6c629a2a34f6adcf43f42599630da": {
+      "workers": {
+        "app/(vendedor)/panel/propiedades/[id]/page": {
+          "moduleId": 29408,
+          "async": true,
+          "codeHash": null
+        }
+      },
+      "filename": "src/app/(vendedor)/panel/propiedades/[id]/acciones-imagenes.ts",
+      "exportedName": "subirImagen"
+    },
+    "6000d435ca8ee459142a33d45384c0e8c8785a5aa1": {
+      "workers": {
+        "app/(vendedor)/panel/propiedades/[id]/page": {
+          "moduleId": 29408,
+          "async": true,
+          "codeHash": null
+        }
+      },
+      "filename": "src/app/(vendedor)/panel/propiedades/[id]/acciones-imagenes.ts",
+      "exportedName": "eliminarImagen"
+    },
+    "70b308376eed64a848b0c80497149c360d48f614fd": {
+      "workers": {
+        "app/(vendedor)/panel/propiedades/[id]/page": {
+          "moduleId": 29408,
+          "async": true,
+          "codeHash": null
+        }
+      },
+      "filename": "src/app/(vendedor)/panel/propiedades/[id]/acciones-imagenes.ts",
+      "exportedName": "reordenarImagen"
+    }
+  },
+  "edge": {},
+  "encryptionKey": "f0wAbT77ELSjO50kPiI1VecXkcxHmKmgwSotxzinw3k="
+}

@@ -1,0 +1,11 @@
+{
+  "pages": {},
+  "app": {
+    "[project]/src/app/(auth)/verificar-correo/page": [
+      "static/media/03bda585a99c6450-s.p.32sris142tqlb.woff2",
+      "static/media/680aa1e827d679d2-s.p.42ymt1gosxo71.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pagesUsingSizeAdjust": false
+}
