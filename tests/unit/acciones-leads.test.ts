@@ -102,15 +102,28 @@ describe('aceptarLead', () => {
     expect(revalidatePath).toHaveBeenCalledWith('/panel')
   })
 
-  it('UPDATE que falla con "ya fue respondido" en el mensaje traduce al mensaje propio', async () => {
-    resultadoMock.mockResolvedValue({ data: null, error: { message: 'Este lead ya fue respondido' } })
+  /**
+   * Codigo LD004 (Hallazgo M2 de la revision final de SP4): validar_transicion_lead()
+   * distingue por SQLSTATE, no por el texto del mensaje. Antes de ese arreglo
+   * esta rama miraba /ya fue respondido/i.test(error.message); un mensaje es
+   * texto de interfaz, cambia y se traduce, y una rama atada a el se rompe
+   * por un motivo que no es el comportamiento.
+   */
+  it('UPDATE que falla con el codigo LD004 traduce al mensaje propio', async () => {
+    resultadoMock.mockResolvedValue({
+      data: null,
+      error: { code: 'LD004', message: 'Este lead ya fue respondido' },
+    })
     const r = await aceptarLead(formularioConId('lead-1'))
     expect(r).toEqual({ error: MENSAJE_LEAD_YA_RESPONDIDO })
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 
-  it('UPDATE que falla con cualquier otro error responde el mensaje generico, sin filtrar el detalle', async () => {
-    resultadoMock.mockResolvedValue({ data: null, error: { message: 'detalle interno de postgres' } })
+  it('UPDATE que falla con cualquier otro codigo responde el mensaje generico, sin filtrar el detalle', async () => {
+    resultadoMock.mockResolvedValue({
+      data: null,
+      error: { code: '23514', message: 'detalle interno de postgres' },
+    })
     const r = await aceptarLead(formularioConId('lead-1'))
     expect(r).toEqual({ error: MENSAJE_GENERICO })
     expect(revalidatePath).not.toHaveBeenCalled()

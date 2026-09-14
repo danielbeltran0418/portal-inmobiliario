@@ -28,7 +28,7 @@ npx supabase db push
 ```
 
 `db push` aplica **solo las migraciones**. No toca `seed.sql`, que únicamente corre en
-`db reset` local. Comprueba al terminar que aplicó las 28.
+`db reset` local. Comprueba al terminar que aplicó las 33.
 
 ### 3 · Las cinco variables en Vercel
 
