@@ -28,6 +28,18 @@ export const MENSAJE_REGISTRO_BLOQUEADO =
 export const MENSAJE_SIN_IP_CONFIABLE =
   'El registro no esta disponible en este momento por un problema de configuracion del servidor.'
 
+/**
+ * Fallo parcial de actualizarPropiedad() (acciones.ts): el UPDATE de
+ * `propiedades` ya tuvo exito (precio, habitaciones, etc. quedaron
+ * guardados) y es el upsert POSTERIOR sobre `propiedades_ubicacion` el que
+ * fallo. MENSAJE_GENERICO habria sido deshonesto aqui -- decia "no pudimos
+ * completar la operacion" cuando en realidad la mayor parte SI se guardo --
+ * y el vendedor no tenia forma de saber que debia reintentar solo la
+ * direccion, no todo el formulario.
+ */
+export const MENSAJE_UBICACION_NO_GUARDADA =
+  'Guardamos los demas datos, pero no la direccion. Vuelve a intentarlo.'
+
 export const MENSAJE_SIN_FOTOS =
   'Para publicar necesitas subir al menos una foto de la propiedad.'
 

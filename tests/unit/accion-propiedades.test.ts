@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { faltantesParaPublicar } from '@/lib/propiedades/completitud'
+import { MENSAJE_UBICACION_NO_GUARDADA } from '@/lib/errores/mapear'
 
 const getUser = vi.fn()
 const insertMock = vi.fn()
@@ -348,12 +349,27 @@ describe('actualizarPropiedad', () => {
     expect(payloadUbicacion).toEqual({ propiedad_id: datosValidos.id, direccion: 'Calle 72 # 45-10' })
   })
 
-  it('si el upsert de propiedades_ubicacion falla, responde el error generico', async () => {
+  // Hallazgo Importante de la revision final de rama: cuando el UPDATE de
+  // propiedades tiene exito pero el upsert de propiedades_ubicacion falla, el
+  // vendedor debe enterarse de la VERDAD -- se guardaron los demas campos,
+  // no la direccion -- y la cache de Next debe quedar consistente con lo que
+  // de verdad cambio en la base (el UPDATE si se aplico). Antes de este
+  // arreglo se devolvia MENSAJE_GENERICO y se salia ANTES de revalidatePath,
+  // como si nada se hubiera guardado.
+  it('si el upsert de propiedades_ubicacion falla, guarda lo demas, avisa con el mensaje honesto y revalida igual', async () => {
     upsertMock.mockResolvedValueOnce({ data: null, error: { code: '23505', message: 'boom' } })
 
     const r = await actualizarPropiedad({}, formulario(datosValidos))
 
-    expect(r.error).toBeTruthy()
+    // (a) el mensaje es el especifico de fallo parcial, no el generico.
+    expect(r.error).toBe(MENSAJE_UBICACION_NO_GUARDADA)
+    // (b) el UPDATE de propiedades SI se llamo (y con exito, via selectUpdateMock
+    // configurado en el beforeEach): los demas campos quedaron guardados.
+    expect(updateMock).toHaveBeenCalledTimes(1)
+    // (c) revalidatePath se llamo con las MISMAS rutas del camino de exito:
+    // la cache de Next no debe quedar desincronizada de lo que si se guardo.
+    expect(revalidatePath).toHaveBeenCalledWith(`/panel/propiedades/${datosValidos.id}`)
+    expect(revalidatePath).toHaveBeenCalledWith('/panel')
   })
 
   it('si RLS filtra el UPDATE de propiedades (no es el dueno), ni siquiera intenta el upsert de ubicacion', async () => {

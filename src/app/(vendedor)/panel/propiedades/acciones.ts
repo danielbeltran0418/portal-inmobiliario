@@ -11,6 +11,7 @@ import {
   MENSAJE_GENERICO,
   MENSAJE_SIN_FOTOS,
   MENSAJE_SIN_PRECIO,
+  MENSAJE_UBICACION_NO_GUARDADA,
 } from '@/lib/errores/mapear'
 import { generarSlug } from '@/lib/propiedades/slug'
 import { BUCKET_PROPIEDADES } from '@/lib/imagenes/firmar'
@@ -190,13 +191,27 @@ export async function actualizarPropiedad(
   // propiedades ya tuvo exito, el vendedor se queda con los demas campos
   // guardados pero la direccion sin actualizar -- nunca en NULL a medias ni
   // corrupta, porque ninguna columna se comparte entre las dos escrituras.
-  // Se devuelve error para que el vendedor vea que algo fallo y reintente:
-  // reintentar es seguro, las dos escrituras son idempotentes.
+  //
+  // Hallazgo Importante de la revision final de rama: la rama de error de
+  // abajo devolvia MENSAJE_GENERICO y salia ANTES de revalidatePath, como si
+  // nada se hubiera guardado. Era doblemente falso -- precio/habitaciones/etc
+  // SI quedaron en la base (el UPDATE de arriba ya tuvo exito) y la cache de
+  // Next quedaba desincronizada de la base porque ninguna de las dos rutas
+  // se revalidaba. Ahora esta rama revalida los MISMOS paths que el camino
+  // feliz -- lo que cambio realmente si debe reflejarse -- y devuelve
+  // MENSAJE_UBICACION_NO_GUARDADA, que le dice al vendedor la verdad exacta:
+  // se guardo el resto, no la direccion. Reintentar sigue siendo seguro,
+  // las dos escrituras son idempotentes.
   const { error: errorUbicacion } = await supabase
     .from('propiedades_ubicacion')
     .upsert({ propiedad_id: id, direccion: direccion ?? null }, { onConflict: 'propiedad_id' })
 
-  if (errorUbicacion) { mapearError(errorUbicacion); return { error: MENSAJE_GENERICO } }
+  if (errorUbicacion) {
+    mapearError(errorUbicacion)
+    revalidatePath(`/panel/propiedades/${id}`)
+    revalidatePath('/panel')
+    return { error: MENSAJE_UBICACION_NO_GUARDADA }
+  }
 
   revalidatePath(`/panel/propiedades/${id}`)
   revalidatePath('/panel')
