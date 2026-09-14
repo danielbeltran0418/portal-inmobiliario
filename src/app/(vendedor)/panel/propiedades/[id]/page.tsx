@@ -35,7 +35,6 @@ interface PropiedadCruda {
   banos: number | null
   area_m2: number | null
   barrio_id: string | null
-  direccion: string | null
   estado: string
   imagenes_propiedad: readonly ImagenCruda[] | null
 }
@@ -91,12 +90,19 @@ export default async function PaginaEditarPropiedad({
   const { data: usuario } = await supabase.auth.getUser()
   if (!usuario.user) redirect('/login')
 
-  const [{ data: propiedad }, { data: barrios }] = await Promise.all([
+  // direccion vive en propiedades_ubicacion desde 20260914000100 (cierre de
+  // la fuga: authenticated conservaba el SELECT de tabla completa sobre
+  // propiedades, asi que un autenticado ajeno podia leer la direccion de
+  // cualquier propiedad publicada). RLS por fila (ubicacion_lectura_dueno)
+  // hace el mismo trabajo que el `.eq('vendedor_id', ...)` de abajo: si la
+  // propiedad no es del vendedor autenticado, la consulta a
+  // propiedades_ubicacion devuelve null igual que la de propiedades.
+  const [{ data: propiedad }, { data: barrios }, { data: ubicacion }] = await Promise.all([
     supabase
       .from('propiedades')
       .select(
         'id, titulo, descripcion, operacion, tipo_inmueble, precio, habitaciones, banos, ' +
-        'area_m2, barrio_id, direccion, estado, imagenes_propiedad(id, ruta_storage, alt_text, orden)',
+        'area_m2, barrio_id, estado, imagenes_propiedad(id, ruta_storage, alt_text, orden)',
       )
       .eq('id', id)
       .eq('vendedor_id', usuario.user.id)
@@ -104,6 +110,7 @@ export default async function PaginaEditarPropiedad({
     // barrios_lectura_publica ya exige activo = true; se repite aqui para no
     // depender solo de RLS en un desplegable que el vendedor va a usar.
     supabase.from('barrios').select('id, nombre').eq('activo', true).order('nombre'),
+    supabase.from('propiedades_ubicacion').select('direccion').eq('propiedad_id', id).maybeSingle(),
   ])
 
   if (!propiedad) notFound()
@@ -148,7 +155,7 @@ export default async function PaginaEditarPropiedad({
     banos: p.banos,
     area_m2: p.area_m2,
     barrio_id: p.barrio_id,
-    direccion: p.direccion,
+    direccion: ubicacion?.direccion ?? null,
   }
 
   return (
