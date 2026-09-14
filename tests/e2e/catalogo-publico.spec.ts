@@ -85,6 +85,7 @@ test('visitante explora barrio, filtra, abre ficha y ve la foto sin dirección e
   expect(await mapa.text()).toContain(fichaUrl)
   const reglas = await page.request.get('/robots.txt')
   expect(await reglas.text()).toContain('Disallow: /panel')
+
   const { data: otroBarrio, error: eBarrio } = await admin.from('barrios').select('id,slug').eq('activo', true).neq('id', barrio.id).limit(1).single()
   if (eBarrio) throw eBarrio
   const { error: eMover } = await admin.from('propiedades').update({ barrio_id: otroBarrio.id }).eq('id', propiedad)

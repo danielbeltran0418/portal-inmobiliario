@@ -144,8 +144,19 @@ export async function middleware(peticion: NextRequest) {
         }))
       }
     } catch {
-      // Un fallo del servicio no demuestra que una publicación haya desaparecido.
-      return aplicarCabeceras(new NextResponse('Servicio temporalmente no disponible', { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '60' } }))
+      // Degradar no garantiza servir la pagina. Si la base esta caida de
+      // verdad, la pagina tambien consultara y fallara con un 500. Lo que se
+      // gana es que el fallo deja de ser COLECTIVO: un parpadeo en el middleware
+      // antes devolvia 503 a TODAS las fichas a la vez; degradando, cada peticion
+      // falla o no por su cuenta, y un parpadeo que solo afecte a una consulta se
+      // puede recuperar en el siguiente viaje (el de la pagina).
+      //
+      // Coste asumido con los ojos abiertos: durante un parpadeo transitorio, una
+      // propiedad que cambio de barrio sirve 200 en la URL vieja en vez de 301
+      // (la pagina carga por slug unico), y una ruta retirada da 404 en vez de
+      // 410 (la pagina no encuentra la propiedad activa). Ambas anomalias son
+      // transitorias y preferibles a tumbar el catalogo publico entero con un 503.
+      return aplicarCabeceras(respuesta)
     }
   }
 

@@ -236,6 +236,15 @@ Estas cuestan horas si no se saben:
   `page.waitForURL((url) => url.pathname !== '/login')` antes de seguir; `entrar()` en
   `ayudantes-sesion.ts` lo consigue por otra vía, encadenando siempre un `toHaveURL` justo después
   del click.
+- **Detección de secretos (dos capas):** La protección contra filtrado opera en dos niveles:
+  1. *GitHub Push Protection (en el servidor):* Al hacer `git push`, GitHub analiza los commits de forma remota y rechaza tokens reconocidos (p. ej. claves de AWS bien formadas) con error `GH013`.
+  2. *Gitleaks (en el runner de CI):* Escanea el historial de commits según `.gitleaks.toml`.
+  - **Trampa al probar Gitleaks:** Gitleaks **ignora a propósito** tokens que contienen `EXAMPLE` u otras *stopwords* oficiales para evitar falsos positivos en documentación. Probar la detección con la clave clásica `AKIAIOSFODNN7EXAMPLE` da un falso "no funciona". Para probarlo de verdad se debe usar un secreto sin stopwords que active las reglas del repo, como un JWT sintético con estructura de `service_role` de Supabase (`eyJ...`).
+  - **Evidencia en CI (2026-09-11):** Corrida roja `34655173455` (cazada por gitleaks en 14s) y corrida verde `34655222223` (limpia tras retirar el secreto).
+- **Repetición de E2E en CI y sus límites estadísticos:** Para cazar carreras en specs con cuenta compartida (`cabecera-y-sesion.spec.ts` y `panel-vendedor.spec.ts`), CI ejecuta un paso adicional con `--repeat-each=6`.
+  - **Eficacia según frecuencia:** Para una intermitencia frecuente (p=1/3), N=6 reduce la probabilidad de escape al 8.8% (~9%, (2/3)^6 = 0.0877).
+  - **Límites reales:** Las intermitencias reales suelen ser mucho más raras: con p=1/20 (5%), N=6 deja escapar el **74%** (0.95^6 = 0.735). La repetición caza bien lo frecuente y mal lo raro, y además solo cubre los dos specs con estado compartido, no el resto de la suite. Un guardia cuyos límites nadie conoce acaba dando una confianza que no merece.
+  - **Evidencia de falsificación en CI (2026-09-11):** Inyección de fallo probabilístico (p=1/3, PR #14, corrida `34665755360`): el paso base sin repetición pasó verde (dejó escapar el fallo), y el paso repetido lo cazó en rojo en `repeat4`.
 
 ---
 
@@ -329,6 +338,30 @@ sin que nadie tenga que repetirlo. **`authenticated` no tiene ese seguro
 global** —se dejó así a propósito, porque sus privilegios reales varían tabla
 por tabla— así que cada tabla nueva necesita su propio `REVOKE` explícito, a
 mano, en su propia migración. Falta uno y esa tabla nace abierta.
+
+### 8. El middleware es el único punto que puede emitir 301 y 410
+
+Next.js `permanentRedirect()` emite 308 (no 301) y `notFound()` emite 404 (no 410). Un
+Server Component **no puede** devolver ninguno de los dos códigos que el spec del catálogo
+exige. Solo el middleware tiene acceso a `NextResponse` con status arbitrario antes de que
+la página se renderice.
+
+**Estrategia de degradación y sus costes:**
+
+Si `resolverRutaPublica` falla (base de datos caída o parpadeo transitorio), el catch del
+middleware degrada a servir la página normalmente (200) en vez de devolver un 503 colectivo.
+Esto evita que un parpadeo tumbe todo el catálogo público a la vez, pero tiene dos anomalías
+transitorias aceptadas:
+
+- Una propiedad que cambió de barrio sirve 200 en la URL vieja en vez de 301 (la página
+  carga por slug único, así que el contenido llega; el rastreador ve la URL vieja como válida
+  hasta que la base se recupere).
+- Una ruta retirada da 404 en vez de 410 (la página no encuentra la propiedad activa y llama
+  a `notFound()`).
+
+Ambas son transitorias y preferibles al 503. La degradación está cubierta por un test unitario
+(`tests/unit/middleware-degradacion.test.ts`) que usa `vi.mock` para simular el fallo de la
+base, sin puerta trasera en el código de producción.
 
 ---
 
