@@ -333,6 +333,30 @@ global** —se dejó así a propósito, porque sus privilegios reales varían ta
 por tabla— así que cada tabla nueva necesita su propio `REVOKE` explícito, a
 mano, en su propia migración. Falta uno y esa tabla nace abierta.
 
+### 8. El middleware es el único punto que puede emitir 301 y 410
+
+Next.js `permanentRedirect()` emite 308 (no 301) y `notFound()` emite 404 (no 410). Un
+Server Component **no puede** devolver ninguno de los dos códigos que el spec del catálogo
+exige. Solo el middleware tiene acceso a `NextResponse` con status arbitrario antes de que
+la página se renderice.
+
+**Estrategia de degradación y sus costes:**
+
+Si `resolverRutaPublica` falla (base de datos caída o parpadeo transitorio), el catch del
+middleware degrada a servir la página normalmente (200) en vez de devolver un 503 colectivo.
+Esto evita que un parpadeo tumbe todo el catálogo público a la vez, pero tiene dos anomalías
+transitorias aceptadas:
+
+- Una propiedad que cambió de barrio sirve 200 en la URL vieja en vez de 301 (la página
+  carga por slug único, así que el contenido llega; el rastreador ve la URL vieja como válida
+  hasta que la base se recupere).
+- Una ruta retirada da 404 en vez de 410 (la página no encuentra la propiedad activa y llama
+  a `notFound()`).
+
+Ambas son transitorias y preferibles al 503. La degradación está cubierta por un test unitario
+(`tests/unit/middleware-degradacion.test.ts`) que usa `vi.mock` para simular el fallo de la
+base, sin puerta trasera en el código de producción.
+
 ---
 
 # Parte 6 · Cómo se trabaja aquí

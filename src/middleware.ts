@@ -129,9 +129,6 @@ export async function middleware(peticion: NextRequest) {
 
   if ((peticion.method === 'GET' || peticion.method === 'HEAD') && esRutaFicha(ruta)) {
     try {
-      if (process.env.NODE_ENV !== 'production' && peticion.headers.get('x-simular-fallo-middleware') === '1') {
-        throw new Error('Fallo simulado de base de datos en middleware para verificar degradacion')
-      }
       const decision = await resolverRutaPublica(crearClientePublico(), ruta)
       if (decision.estado === 301) {
         const salto = NextResponse.redirect(new URL(decision.destino, origenReal(peticion)), 301)

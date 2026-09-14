@@ -82,15 +82,6 @@ test('visitante explora barrio, filtra, abre ficha y ve la foto sin dirección e
   const reglas = await page.request.get('/robots.txt')
   expect(await reglas.text()).toContain('Disallow: /panel')
 
-  // Prueba de degradación: un fallo transitorio de la base en el middleware
-  // no debe tumbar el catálogo con 503, sino degradar a servir la página (200).
-  const respuestaFallo = await page.request.get(fichaUrl, {
-    headers: { 'x-simular-fallo-middleware': '1' },
-    maxRedirects: 0,
-  })
-  expect(respuestaFallo.status()).not.toBe(503)
-  expect(respuestaFallo.status()).toBe(200)
-
   const { data: otroBarrio, error: eBarrio } = await admin.from('barrios').select('id,slug').eq('activo', true).neq('id', barrio.id).limit(1).single()
   if (eBarrio) throw eBarrio
   const { error: eMover } = await admin.from('propiedades').update({ barrio_id: otroBarrio.id }).eq('id', propiedad)
