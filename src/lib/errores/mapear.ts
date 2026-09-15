@@ -114,3 +114,51 @@ export function mapearError(error: unknown): ErrorPresentable {
 
   return { mensaje: MENSAJE_GENERICO, idCorrelacion }
 }
+
+// SP5, visitas. Un mensaje por SQLSTATE propio de las funciones de citas
+// (supabase/migrations/20260915000400 a 000600). Se traducen por error.code,
+// nunca por error.message: el mensaje de Postgres es texto interno y cambia.
+export const MENSAJE_VISITA_SOLICITUD_INEXISTENTE = 'No encontramos esa solicitud.'
+export const MENSAJE_VISITA_NO_PARTICIPA = 'No puedes gestionar esta visita.'
+export const MENSAJE_VISITA_LEAD_NO_ACEPTADO =
+  'Solo puedes reservar cuando el vendedor haya aceptado tu solicitud.'
+// VS004 agrupa varias causas a proposito (franja fuera de horario, bloqueada,
+// fuera de horizonte, ocupada): a quien tantea como saltarse las reglas no le
+// conviene saber cual.
+export const MENSAJE_VISITA_FRANJA_NO_DISPONIBLE = 'Esa franja ya no est\u00e1 disponible. Elige otra.'
+export const MENSAJE_VISITA_YA_RESERVADA = 'Ya tienes una visita reservada para esta propiedad.'
+export const MENSAJE_VISITA_INEXISTENTE = 'No encontramos esa visita.'
+export const MENSAJE_VISITA_YA_CANCELADA = 'Esta visita ya estaba cancelada.'
+export const MENSAJE_VISITA_YA_EMPEZO = 'No se puede cambiar una visita que ya empez\u00f3.'
+
+// Borrar una fila de disponibilidad que devuelve CERO filas: no existe o no es
+// del vendedor. PostgREST no da error en ese caso; la accion lo detecta
+// contando filas y no lo reporta como exito.
+export const MENSAJE_HORARIO_NO_ENCONTRADO = 'Esa franja del horario ya no existe.'
+export const MENSAJE_BLOQUEO_NO_ENCONTRADO = 'Esa fecha bloqueada ya no existe.'
+
+// Map y no un objeto literal: con un objeto, un code 'constructor' o
+// 'toString' encontraria una propiedad heredada del prototipo.
+const MENSAJES_DE_CITA: ReadonlyMap<string, string> = new Map([
+  ['VS001', MENSAJE_VISITA_SOLICITUD_INEXISTENTE],
+  ['VS002', MENSAJE_VISITA_NO_PARTICIPA],
+  ['VS003', MENSAJE_VISITA_LEAD_NO_ACEPTADO],
+  ['VS004', MENSAJE_VISITA_FRANJA_NO_DISPONIBLE],
+  ['VS005', MENSAJE_VISITA_YA_RESERVADA],
+  ['VS006', MENSAJE_VISITA_INEXISTENTE],
+  ['VS007', MENSAJE_VISITA_YA_CANCELADA],
+  ['VS008', MENSAJE_VISITA_YA_EMPEZO],
+])
+
+/**
+ * Traduce el error de un RPC de citas a un mensaje para el usuario. Mira SOLO
+ * `code`; cualquier otro error, incluido un 42501 o un 23P01 sin traducir, cae
+ * en el generico sin dejar ver el detalle.
+ */
+export function mensajeDeErrorCita(error: unknown): string {
+  const codigo =
+    typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code: unknown }).code)
+      : ''
+  return MENSAJES_DE_CITA.get(codigo) ?? MENSAJE_GENERICO
+}
