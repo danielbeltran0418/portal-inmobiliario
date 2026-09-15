@@ -36,6 +36,11 @@ const PAGINAS: readonly Pagina[] = [
   },
   { ruta: '/mi-cuenta', modulo: '../../src/app/(comprador)/mi-cuenta/page', privada: true },
   { ruta: '/panel', modulo: '../../src/app/(vendedor)/panel/page', privada: true },
+    {
+      ruta: '/panel/disponibilidad',
+      modulo: '../../src/app/(vendedor)/panel/disponibilidad/page',
+      privada: true,
+    },
   { ruta: '/control', modulo: '../../src/app/(admin)/control/page', privada: true },
 ]
 
