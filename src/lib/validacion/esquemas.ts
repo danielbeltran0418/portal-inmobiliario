@@ -97,3 +97,18 @@ export const esquemaLead = z.object({
 })
 
 export type DatosLead = z.infer<typeof esquemaLead>
+
+// ---------------------------------------------------------------------------
+// SP5: visitas.
+//
+// El instante llega del value de un boton que pinto la propia pagina con lo
+// que devolvio franjas_libres ("2026-09-17T20:00:00+00:00"). Se exige zona
+// explicita: un instante sin zona lo interpretaria la base con su TimeZone, y
+// eso es justo lo que SP5 prohibe. La validez de la franja la decide la base.
+const instanteConZona = z.string().trim().pipe(z.iso.datetime({ offset: true }))
+const identificador = z.string().trim().uuid()
+
+export const esquemaReserva = z.object({ lead_id: identificador, inicio: instanteConZona })
+export const esquemaMoverCita = z.object({ cita_id: identificador, inicio: instanteConZona })
+export const esquemaCancelarCita = z.object({ cita_id: identificador })
+export const esquemaIdentificador = z.object({ id: identificador })
