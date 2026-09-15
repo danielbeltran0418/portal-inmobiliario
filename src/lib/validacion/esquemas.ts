@@ -112,3 +112,35 @@ export const esquemaReserva = z.object({ lead_id: identificador, inicio: instant
 export const esquemaMoverCita = z.object({ cita_id: identificador, inicio: instanteConZona })
 export const esquemaCancelarCita = z.object({ cita_id: identificador })
 export const esquemaIdentificador = z.object({ id: identificador })
+
+// SP5: disponibilidad del vendedor.
+//
+// Un campo ausente llega como null, y uno manipulado como File: los dos se
+// tratan como texto vacio para que el mensaje sea el del formulario y no el
+// generico de zod en ingles. Las comparaciones de abajo son de TEXTO
+// ("09:00" < "10:00", "2026-12-24" <= "2026-12-26"), validas porque el formato
+// esta fijado con cero a la izquierda. La regla que manda es el CHECK de la
+// tabla (20260915000200); esto solo adelanta el mensaje.
+const comoTexto = (valor: unknown) => (typeof valor === 'string' ? valor : '')
+const HORA_EN_PUNTO = /^([01]\d|2[0-4]):00$/
+const horaEnPunto = z.preprocess(comoTexto, z.string().trim().regex(HORA_EN_PUNTO, 'Elige una hora en punto'))
+const fechaDeCalendario = z.preprocess(
+  comoTexto, z.string().trim().pipe(z.iso.date({ message: 'Elige una fecha' })),
+)
+
+export const esquemaFranjaSemanal = z.object({
+  dia_semana: z.coerce.number().int().min(1, 'Elige un dia').max(7, 'Elige un dia'),
+  hora_inicio: horaEnPunto,
+  hora_fin: horaEnPunto,
+}).refine((franja) => franja.hora_fin > franja.hora_inicio, {
+  message: 'La hora de fin tiene que ser posterior a la de inicio',
+  path: ['hora_fin'],
+})
+
+export const esquemaBloqueo = z.object({
+  desde: fechaDeCalendario,
+  hasta: fechaDeCalendario,
+}).refine((bloqueo) => bloqueo.hasta >= bloqueo.desde, {
+  message: 'La fecha final no puede ser anterior a la inicial',
+  path: ['hasta'],
+})
