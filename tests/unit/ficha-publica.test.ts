@@ -1,3 +1,4 @@
+vi.mock('server-only', () => ({}))
 import { expect, it, vi, beforeEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 
