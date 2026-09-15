@@ -54,6 +54,12 @@ export default async function PaginaPanelVendedor() {
           <Link href="/panel/leads" className="text-marca hover:underline">
             Mensajes recibidos{nuevos > 0 ? ` (${nuevos})` : ''}
           </Link>
+          <Link href="/panel/citas" className="text-marca hover:underline">
+            Visitas
+          </Link>
+          <Link href="/panel/disponibilidad" className="text-marca hover:underline">
+            Disponibilidad
+          </Link>
           <Link href="/panel/propiedades/nueva" className={CLASE_BOTON_PRIMARIO}>
             Publicar una propiedad
           </Link>

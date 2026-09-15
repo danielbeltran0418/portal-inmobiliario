@@ -35,7 +35,32 @@ const PAGINAS: readonly Pagina[] = [
     privada: false,
   },
   { ruta: '/mi-cuenta', modulo: '../../src/app/(comprador)/mi-cuenta/page', privada: true },
+    {
+      ruta: '/mi-cuenta/reservar/[leadId]',
+      modulo: '../../src/app/(comprador)/mi-cuenta/reservar/[leadId]/page',
+      privada: true,
+    },
+    {
+      ruta: '/mi-cuenta/visitas/[id]/mover',
+      modulo: '../../src/app/(comprador)/mi-cuenta/visitas/[id]/mover/page',
+      privada: true,
+    },
   { ruta: '/panel', modulo: '../../src/app/(vendedor)/panel/page', privada: true },
+    {
+      ruta: '/panel/disponibilidad',
+      modulo: '../../src/app/(vendedor)/panel/disponibilidad/page',
+      privada: true,
+    },
+    {
+      ruta: '/panel/citas',
+      modulo: '../../src/app/(vendedor)/panel/citas/page',
+      privada: true,
+    },
+    {
+      ruta: '/panel/citas/[id]/mover',
+      modulo: '../../src/app/(vendedor)/panel/citas/[id]/mover/page',
+      privada: true,
+    },
   { ruta: '/control', modulo: '../../src/app/(admin)/control/page', privada: true },
 ]
 
