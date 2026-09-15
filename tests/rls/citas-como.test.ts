@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { clienteAdmin, clienteAnonimo } from './ayudantes'
 import {
   comoUsuario, consultar, crearCompradorConLead, crearVendedorConPropiedad,
-  escenarioConCita, escenarioReserva, inicioDeCita,
+  escenarioConCita, escenarioReserva, inicioDeCita, insertarCitaDirecta, rangoDesde,
 } from './ayudantes-citas'
 
 const ms = (iso: string) => new Date(iso).getTime()
@@ -103,5 +103,56 @@ describe('privilegios de ejecucion de SP5', () => {
     expect((await clienteAdmin().rpc('cancelar_cita_como', argumentos)).error).toBeNull()
     const despues = await clienteAdmin().from('citas').select('estado,cancelada_por').eq('id', citaId).single()
     expect(despues.data).toEqual({ estado: 'cancelada', cancelada_por: victima.id })
+  })
+  it('un authenticated normal recibe 42501 al intentar insert, update y delete directo en citas', async () => {
+    const { vendedor, comprador, franjas } = await escenarioReserva()
+    const cliente = await comoUsuario(comprador.correo)
+
+    // 1. Intento de INSERT directo por PostgREST sin pasar por reservar_cita
+    const intentoInsert = await cliente.from('citas').insert({
+      propiedad_id: vendedor.propiedadId,
+      vendedor_id: vendedor.id,
+      comprador_id: comprador.id,
+      lead_id: comprador.leadId,
+      rango: rangoDesde(new Date(franjas[0])),
+      estado: 'confirmada',
+    })
+    expect(intentoInsert.error?.code).toBe('42501')
+
+    // Insertamos una cita real con admin para probar UPDATE y DELETE con ids validos
+    const citaId = await insertarCitaDirecta({
+      leadId: comprador.leadId,
+      propiedadId: vendedor.propiedadId,
+      compradorId: comprador.id,
+      vendedorId: vendedor.id,
+      inicio: new Date(franjas[0]),
+      estado: 'confirmada',
+    })
+
+    // 2. Intento de UPDATE directo: cuenta filas devueltas con .select() ademas de comprobar error 42501
+    const intentoUpdate = await cliente
+      .from('citas')
+      .update({ estado: 'cancelada' })
+      .eq('id', citaId)
+      .select()
+
+    expect(intentoUpdate.error?.code).toBe('42501')
+    expect(intentoUpdate.data).toBeNull()
+
+    // 3. Intento de DELETE directo
+    const intentoDelete = await cliente
+      .from('citas')
+      .delete()
+      .eq('id', citaId)
+
+    expect(intentoDelete.error?.code).toBe('42501')
+
+    // Comprobamos que la cita sigue confirmada e intacta
+    const { data: citaActual } = await clienteAdmin()
+      .from('citas')
+      .select('estado')
+      .eq('id', citaId)
+      .single()
+    expect(citaActual?.estado).toBe('confirmada')
   })
 })
