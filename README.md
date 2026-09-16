@@ -143,8 +143,15 @@ npx playwright install --with-deps chromium
 `test:e2e` arranca `npm run dev` por su cuenta y reutiliza el servidor si ya lo
 tienes corriendo.
 
-Las pruebas de RLS y las e2e escriben en la base local. Si una queda a medias,
-`npx supabase db reset` la deja limpia.
+Las pruebas de RLS y las e2e escriben en la base local. Para purgar rápidamente
+los usuarios efímeros acumulados de pruebas anteriores (@prueba.test):
+```bash
+npm run limpiar:usuarios
+```
+Si una prueba queda a medias o se desea reiniciar el estado a cero:
+```bash
+npx supabase db reset    # recrea la base, aplica migraciones y seed
+```
 
 ## 8. Credenciales de prueba
 

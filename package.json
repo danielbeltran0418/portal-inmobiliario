@@ -10,7 +10,8 @@
     "test:unit": "vitest run tests/unit",
     "test:rls": "vitest run tests/rls",
     "test:e2e": "playwright test",
-    "verificar:render": "node scripts/verificar-render-dinamico.mjs"
+    "verificar:render": "node scripts/verificar-render-dinamico.mjs",
+    "limpiar:usuarios": "npx tsx tests/rls/limpiar-usuarios.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
