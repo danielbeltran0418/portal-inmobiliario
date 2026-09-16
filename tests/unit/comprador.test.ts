@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 const esquemaGuardarBusqueda = z.object({
   nombre: z.string().trim().min(1, 'El nombre es obligatorio').max(100, 'Máximo 100 caracteres'),
-  filtros: z.record(z.unknown()).default({}),
+  filtros: z.record(z.string(), z.unknown()).default({}),
   notificaciones: z.boolean().default(false),
 });
 

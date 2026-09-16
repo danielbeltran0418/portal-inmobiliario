@@ -16,7 +16,10 @@ export default async function PaginaDatos() {
   if (!sesion.idUsuario) redirect('/login');
 
   const supabase = await crearClienteServidor();
-  const perfil = await obtenerPerfilComprador(supabase, sesion.idUsuario);
+  const [perfil, { data: authData }] = await Promise.all([
+    obtenerPerfilComprador(supabase, sesion.idUsuario),
+    supabase.auth.getUser(),
+  ]);
 
   return (
     <div>
@@ -30,7 +33,7 @@ export default async function PaginaDatos() {
       <FormularioDatosComprador
         nombreInicial={perfil?.nombre_completo ?? ''}
         telefonoInicial={perfil?.telefono ?? ''}
-        correo={sesion.correo ?? ''}
+        correo={authData?.user?.email ?? ''}
       />
     </div>
   );
