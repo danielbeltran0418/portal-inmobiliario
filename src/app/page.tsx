@@ -83,21 +83,17 @@ export default async function PaginaInicio() {
           comisiones ocultas.
         </p>
 
-        {/* Explorador rápido de barrios populares */}
-        {barrios.length > 0 && (
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-2 text-xs">
-            <span className="text-tinta-tenue font-medium">Barrios destacados:</span>
-            {barrios.slice(0, 6).map((b) => (
-              <Link
-                key={b.slug}
-                href={`/${b.slug}`}
-                className="rounded-full border border-linea bg-superficie px-3 py-1 font-medium text-tinta-suave transition-all hover:border-marca hover:bg-superficie-alt hover:text-marca"
-              >
-                {b.nombre}
-              </Link>
-            ))}
-          </div>
-        )}
+        <div className="mt-6 flex items-center justify-center gap-2 text-xs font-medium text-tinta-tenue">
+          <span>✨ El Prado</span>
+          <span>·</span>
+          <span>Alto Prado</span>
+          <span>·</span>
+          <span>Riomar</span>
+          <span>·</span>
+          <span>Villa Carolina</span>
+          <span>·</span>
+          <span>Boston</span>
+        </div>
       </section>
 
       {/* ─── PUERTAS DE ACCESO O SESIÓN ABIERTA ─── */}
@@ -294,20 +290,7 @@ export default async function PaginaInicio() {
                   href={`/${barrio.slug}`}
                   className="tarjeta-interactiva group flex items-center justify-between rounded-lg border border-linea bg-superficie px-5 py-4 text-tinta shadow-2xs transition-all hover:border-marca hover:bg-superficie-alt/60"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-marca-suave/80 text-sm text-marca group-hover:bg-marca group-hover:text-marca-contraste transition-colors">
-                      📍
-                    </span>
-                    <span className="font-semibold transition-colors group-hover:text-marca">
-                      {barrio.nombre}
-                    </span>
-                  </div>
-                  <span
-                    className="text-tinta-tenue transition-transform group-hover:translate-x-1 group-hover:text-marca"
-                    aria-hidden="true"
-                  >
-                    →
-                  </span>
+                  {barrio.nombre}
                 </Link>
               </li>
             ))}
