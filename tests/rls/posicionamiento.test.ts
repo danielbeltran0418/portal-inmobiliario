@@ -11,7 +11,6 @@ describe('RLS y Vigencia de Pagos de Posicionamiento (SP7)', () => {
   let clienteComprador: SupabaseClient
   let clienteSuperAdmin: SupabaseClient
   let vendedorAId: string
-  let vendedorBId: string
   let compradorId: string
   let superAdminId: string
   let propiedadAId: string
@@ -20,9 +19,7 @@ describe('RLS y Vigencia de Pagos de Posicionamiento (SP7)', () => {
     clienteVendedorA = await sesionVendedor()
     clienteVendedorB = await sesionVendedor()
     const { data: uA } = await clienteVendedorA.auth.getUser()
-    const { data: uB } = await clienteVendedorB.auth.getUser()
     vendedorAId = uA.user!.id
-    vendedorBId = uB.user!.id
 
     compradorId = await crearUsuarioDePrueba({ ...COMPRADOR, rol: 'comprador' })
     superAdminId = await crearUsuarioDePrueba({ ...SUPER_ADMIN, rol: 'super_admin' })
