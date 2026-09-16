@@ -41,7 +41,7 @@ export async function obtenerPerfilComprador(
 ) {
   const { data, error } = await supabase
     .from('perfiles')
-    .select('id, rol, nombre_completo, telefono, creado_en, suprimido_en')
+    .select('id, rol, nombre, telefono, creado_en, suprimido_en')
     .eq('id', usuarioId)
     .single();
 

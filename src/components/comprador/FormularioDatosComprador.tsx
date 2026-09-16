@@ -37,7 +37,7 @@ export function FormularioDatosComprador({
 
     startTransitionPerfil(async () => {
       const res = await actualizarPerfilCompradorAction({
-        nombre_completo: nombre,
+        nombre: nombre,
         telefono: telefono.trim() || null,
       });
 

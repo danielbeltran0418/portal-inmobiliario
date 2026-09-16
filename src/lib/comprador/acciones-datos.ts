@@ -6,7 +6,7 @@ import { crearClienteServidor } from '@/lib/supabase/cliente-servidor';
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin';
 
 const esquemaPerfil = z.object({
-  nombre_completo: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres').max(100),
+  nombre: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres').max(100),
   telefono: z.string().trim().max(20).optional().nullable(),
 });
 
@@ -16,7 +16,7 @@ export interface ResultadoAccionDatos {
 }
 
 export async function actualizarPerfilCompradorAction(
-  datos: { nombre_completo: string; telefono?: string | null }
+  datos: { nombre: string; telefono?: string | null }
 ): Promise<ResultadoAccionDatos> {
   const parsed = esquemaPerfil.safeParse(datos);
   if (!parsed.success) {
@@ -33,7 +33,7 @@ export async function actualizarPerfilCompradorAction(
   const { error } = await supabase
     .from('perfiles')
     .update({
-      nombre_completo: parsed.data.nombre_completo,
+      nombre: parsed.data.nombre,
       telefono: parsed.data.telefono ?? null,
     })
     .eq('id', authData.user.id);
@@ -111,7 +111,7 @@ export async function suprimirCuentaCompradorAction(
     await admin
       .from('perfiles')
       .update({
-        nombre_completo: 'Usuario dado de baja',
+        nombre: 'Usuario dado de baja',
         telefono: null,
         suprimido_en: new Date().toISOString(),
       })

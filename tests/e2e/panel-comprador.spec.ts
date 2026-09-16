@@ -64,7 +64,7 @@ test.describe('E2E — Panel del Comprador (SP2)', () => {
     await expect(page.getByRole('heading', { name: /Guardar criterios de búsqueda/i })).toBeVisible();
     const nombreBusqueda = `Prueba E2E ${Date.now()}`;
     await page.getByPlaceholder(/Ej. Casas en Chapinero/i).fill(nombreBusqueda);
-    await page.getByRole('button', { name: /^Guardar búsqueda$/i }).click();
+    await page.getByTestId('boton-modal-guardar-busqueda').click();
 
     // Esperar mensaje de éxito
     await expect(page.getByText(/¡Búsqueda guardada con éxito!/i)).toBeVisible();

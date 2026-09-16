@@ -125,10 +125,11 @@ export function BotonGuardarBusqueda({
                   </button>
                   <button
                     type="submit"
+                    data-testid="boton-modal-guardar-busqueda"
                     disabled={isPending}
                     className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg transition-colors"
                   >
-                    {isPending ? 'Guardando...' : 'Guardar búsqueda'}
+                    {isPending ? 'Guardando...' : 'Confirmar y guardar'}
                   </button>
                 </div>
               </form>
