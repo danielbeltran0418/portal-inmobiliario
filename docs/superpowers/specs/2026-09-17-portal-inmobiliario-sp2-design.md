@@ -23,15 +23,15 @@ SP2 proporciona una experiencia integral para compradores particulares e inversi
 ## 2. Decisiones de Arquitectura y Negocio
 
 ### 2.1. Favoritos de Propiedades
-- **Modelo:** Tabla `favoritos` con clave primaria compuesta `(comprador_id, propiedad_id)`.
-- **Relaciones:** Claves foráneas con `ON DELETE CASCADE` hacia `perfiles(id)` y `propiedades(id)`. Si una propiedad se elimina de la plataforma, desaparece de los favoritos automáticamente.
-- **Acceso:** Un comprador autenticado solo puede consultar, insertar y eliminar sus propios favoritos. Un usuario no puede alterar los favoritos de otro.
-- **UI:** Botón interactivo (`BotonFavorito`) en la ficha pública del inmueble (`/[barrio]/[slug]`) y sección dedicada en `/mi-cuenta/favoritos` (o pestaña de favoritos) con tarjetas informativas y descarte rápido.
+- **Modelo:** Tabla `favoritos` con PK propia `id` (UUID) y restricción `unique (usuario_id, propiedad_id)` que impide duplicados.
+- **Relaciones:** `usuario_id` referencia `auth.users(id) ON DELETE CASCADE` (no `perfiles`, para no depender del trigger de creación de perfil); `propiedad_id` referencia `propiedades(id) ON DELETE CASCADE`. Si una propiedad se elimina de la plataforma, desaparece de los favoritos automáticamente.
+- **Acceso:** Un comprador autenticado solo puede consultar, insertar y eliminar sus propios favoritos (`auth.uid() = usuario_id`). Un usuario no puede alterar los favoritos de otro.
+- **UI:** Botón interactivo (`BotonFavorito`) en la ficha pública del inmueble (`/[barrio]/[slug]`) y sección dedicada en `/mi-cuenta/favoritos` con tarjetas informativas y descarte rápido.
 
 ### 2.2. Búsquedas Guardadas
-- **Modelo:** Tabla `busquedas_guardadas` con identificador UUID, `comprador_id`, `nombre` personalizado por el usuario, `criterios` (`JSONB` con los parámetros canónicos de filtro: `barrio`, `operacion`, `tipo`, `precio_min`, `precio_max`, etc.) y `notificar_email` (`BOOLEAN`).
-- **Navegación:** Cada búsqueda guardada genera una URL canónica del catálogo con los query params correspondientes para que el comprador pueda relanzar su consulta en un clic.
-- **Alcance de Alertas:** En este hito se implementa la persistencia de filtros, la ejecución instantánea y el flag de suscripción. El motor periódico de envío de emails queda desacoplado utilizando la misma infraestructura cron establecida en SP6.
+- **Modelo:** Tabla `busquedas_guardadas` con identificador UUID, `usuario_id` (referencia `auth.users(id)`), `nombre` personalizado por el usuario (`check` de 1 a 100 caracteres), `filtros` (`JSONB` con los parámetros canónicos de filtro: `barrio`, `operacion`, `tipo`, `precio_min`, `precio_max`, etc.) y `notificaciones_activas` (`BOOLEAN`).
+- **Navegación:** Cada búsqueda guardada genera una URL canónica del catálogo (`construirQueryStringBusqueda`) con los query params correspondientes para que el comprador pueda relanzar su consulta en un clic.
+- **Alcance de Alertas:** En este hito se implementa la persistencia de filtros, la ejecución instantánea y el flag de suscripción (`notificaciones_activas`). El motor periódico de envío de emails queda desacoplado utilizando la misma infraestructura cron establecida en SP6.
 
 ### 2.3. Organización de la UI en `/mi-cuenta`
 - La interfaz de `/mi-cuenta` evoluciona de una página monolítica a una vista con navegación estructurada por pestañas o subpáginas:
@@ -43,23 +43,20 @@ SP2 proporciona una experiencia integral para compradores particulares e inversi
 ### 2.4. Política de Supresión de Datos Personales (Habeas Data)
 La supresión no puede ser un simple `DELETE CASCADE` sobre `auth.users` porque destruiría el historial contable, comercial y de auditoría de los vendedores con quienes el comprador interactuó (leads recibidos, visitas atendidas). Tampoco puede retener datos personales contra la voluntad del usuario.
 
-**Estrategia de Anonimización y Desvinculación Total:**
-1. **Purga de Preferencias Privadas:** Se eliminan físicamente todas las filas en `favoritos` y `busquedas_guardadas` asociadas al usuario.
-2. **Anonimización del Perfil:**
+**Estrategia de Anonimización y Desvinculación Total** (implementada en `suprimirCuentaCompradorAction`, `src/lib/comprador/acciones-datos.ts`), en este orden y dentro de un único flujo con manejo de errores:
+1. **Purga de Preferencias Privadas:** Se eliminan físicamente todas las filas en `favoritos` y `busquedas_guardadas` asociadas al usuario (`usuario_id`).
+2. **Cierre de Conversaciones IA:** Se cierran todas las conversaciones abiertas en `conversaciones_ia` (`estado_conversacion = 'cerrada'`) donde el comprador figura como `comprador_id`.
+3. **Gestión de Citas:** Citas en estado `confirmada` asociadas a los leads del comprador se marcan `cancelada` con nota `"Cancelada automáticamente por supresión de cuenta de usuario."`.
+4. **Anonimización de Leads de Contacto:** En `leads_contacto`, para todos los leads del comprador, se sobreescribe `nombre = 'Usuario Anónimo'`, `telefono = NULL`, `email = 'anonimo@baja.portal.test'`. El vendedor conserva la métrica del lead pero pierde el acceso a la PII. (El campo `mensaje` original no se sobreescribe: no contiene PII estructurada y se conserva como contexto comercial del vendedor.)
+5. **Anonimización del Perfil:**
    - `perfiles.nombre` se establece en `"Usuario dado de baja"`.
    - `perfiles.telefono` se establece en `NULL`.
-   - Se marca un timestamp `suprimido_en = now()`.
-3. **Anonimización de Leads de Contacto:**
-   - En `leads_contacto`, para todos los leads originados por el comprador, se sobreescribe `nombre = 'Titular Anónimo'`, `correo = 'suprimido@anonimo.local'`, `telefono = '0000000000'`, `mensaje = '[Datos personales suprimidos a solicitud del titular]'`. El vendedor conserva la métrica del lead pero pierde el acceso a la PII.
-4. **Gestión de Citas:**
-   - Citas en estado `confirmada` con fecha futura (`inicio > now()`) se cancelan automáticamente con motivo `"Visita cancelada: cuenta de comprador suprimida"`.
-   - Citas pasadas se conservan para el registro histórico del vendedor, pero vinculadas al perfil anonimizado.
-5. **Cierre de Conversaciones IA:**
-   - Se cierran todas las conversaciones abiertas en `conversaciones_ia` (`estado_conversacion = 'cerrada'`).
-6. **Eliminación de Credenciales de Autenticación:**
-   - Se elimina la cuenta en `auth.users` mediante `admin.auth.admin.deleteUser(id)`, cerrando inmediatamente las sesiones activas en todos los dispositivos e impidiendo cualquier inicio de sesión futuro.
-7. **Auditoría:**
-   - Se registra el evento en `registro_auditoria` con acción `comprador_cuenta_suprimida`, registrando únicamente el identificador anónimo y la fecha, sin retener datos personales.
+   - Se marca `suprimido_en = now()`.
+6. **Auditoría:** Se registra el evento vía `registrar_evento_auditoria` con acción `cuenta_suprimida`, entidad `perfiles` y metadato `{ motivo: "Habeas Data / Derecho al Olvido ejercido por el titular" }`, sin retener datos personales.
+7. **Eliminación de Credenciales de Autenticación:** Se elimina la cuenta en `auth.users` mediante `admin.auth.admin.deleteUser(id)`, cerrando inmediatamente las sesiones activas en todos los dispositivos e impidiendo cualquier inicio de sesión futuro.
+8. **Cierre de Sesión:** Se invoca `supabase.auth.signOut()` en el cliente que originó la solicitud.
+
+**Confirmación explícita:** la acción exige que el comprador escriba literalmente `"ELIMINAR MI CUENTA"` antes de ejecutar el flujo, como salvaguarda contra la supresión accidental.
 
 ---
 
@@ -68,68 +65,79 @@ La supresión no puede ser un simple `DELETE CASCADE` sobre `auth.users` porque 
 Migración: `supabase/migrations/20260918000100_sp2_panel_comprador.sql`
 
 ```sql
--- 1. Tabla de Favoritos
-CREATE TABLE IF NOT EXISTS public.favoritos (
-  comprador_id UUID NOT NULL REFERENCES public.perfiles(id) ON DELETE CASCADE,
-  propiedad_id UUID NOT NULL REFERENCES public.propiedades(id) ON DELETE CASCADE,
-  creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (comprador_id, propiedad_id)
+-- 1. Soporte para fecha de supresión de cuenta (Habeas Data / Derecho al Olvido) en perfiles
+alter table public.perfiles
+  add column if not exists suprimido_en timestamptz default null;
+
+-- 2. Tabla de favoritos
+create table if not exists public.favoritos (
+  id uuid primary key default gen_random_uuid(),
+  usuario_id uuid not null references auth.users(id) on delete cascade,
+  propiedad_id uuid not null references public.propiedades(id) on delete cascade,
+  creado_en timestamptz not null default now(),
+  constraint favoritos_usuario_propiedad_unique unique (usuario_id, propiedad_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_favoritos_comprador ON public.favoritos(comprador_id);
-CREATE INDEX IF NOT EXISTS idx_favoritos_propiedad ON public.favoritos(propiedad_id);
+create index if not exists idx_favoritos_usuario on public.favoritos(usuario_id);
+create index if not exists idx_favoritos_propiedad on public.favoritos(propiedad_id);
 
--- 2. Tabla de Búsquedas Guardadas
-CREATE TABLE IF NOT EXISTS public.busquedas_guardadas (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  comprador_id UUID NOT NULL REFERENCES public.perfiles(id) ON DELETE CASCADE,
-  nombre TEXT NOT NULL,
-  criterios JSONB NOT NULL DEFAULT '{}'::jsonb,
-  notificar_email BOOLEAN NOT NULL DEFAULT false,
-  creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
-  actualizado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+alter table public.favoritos enable row level security;
+
+create policy "Comprador puede ver sus propios favoritos"
+  on public.favoritos for select
+  to authenticated
+  using (auth.uid() = usuario_id);
+
+create policy "Comprador puede marcar favoritos"
+  on public.favoritos for insert
+  to authenticated
+  with check (auth.uid() = usuario_id);
+
+create policy "Comprador puede eliminar sus propios favoritos"
+  on public.favoritos for delete
+  to authenticated
+  using (auth.uid() = usuario_id);
+
+-- 3. Tabla de búsquedas guardadas
+create table if not exists public.busquedas_guardadas (
+  id uuid primary key default gen_random_uuid(),
+  usuario_id uuid not null references auth.users(id) on delete cascade,
+  nombre text not null check (char_length(trim(nombre)) between 1 and 100),
+  filtros jsonb not null default '{}'::jsonb,
+  notificaciones_activas boolean not null default false,
+  creado_en timestamptz not null default now(),
+  actualizado_en timestamptz not null default now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_busquedas_guardadas_comprador ON public.busquedas_guardadas(comprador_id);
+create index if not exists idx_busquedas_usuario on public.busquedas_guardadas(usuario_id);
 
--- 3. Campo suprimido_en en perfiles
-ALTER TABLE public.perfiles ADD COLUMN IF NOT EXISTS suprimido_en TIMESTAMPTZ;
+alter table public.busquedas_guardadas enable row level security;
 
--- 4. Habilitar RLS
-ALTER TABLE public.favoritos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.busquedas_guardadas ENABLE ROW LEVEL SECURITY;
+create policy "Comprador puede ver sus propias busquedas"
+  on public.busquedas_guardadas for select
+  to authenticated
+  using (auth.uid() = usuario_id);
 
--- 5. Políticas RLS para Favoritos
-CREATE POLICY favoritos_select_propio ON public.favoritos
-  FOR SELECT TO authenticated
-  USING (comprador_id = auth.uid());
+create policy "Comprador puede crear busquedas guardadas"
+  on public.busquedas_guardadas for insert
+  to authenticated
+  with check (auth.uid() = usuario_id);
 
-CREATE POLICY favoritos_insert_propio ON public.favoritos
-  FOR INSERT TO authenticated
-  WITH CHECK (comprador_id = auth.uid());
+create policy "Comprador puede actualizar sus busquedas guardadas"
+  on public.busquedas_guardadas for update
+  to authenticated
+  using (auth.uid() = usuario_id)
+  with check (auth.uid() = usuario_id);
 
-CREATE POLICY favoritos_delete_propio ON public.favoritos
-  FOR DELETE TO authenticated
-  USING (comprador_id = auth.uid());
-
--- 6. Políticas RLS para Búsquedas Guardadas
-CREATE POLICY busquedas_select_propio ON public.busquedas_guardadas
-  FOR SELECT TO authenticated
-  USING (comprador_id = auth.uid());
-
-CREATE POLICY busquedas_insert_propio ON public.busquedas_guardadas
-  FOR INSERT TO authenticated
-  WITH CHECK (comprador_id = auth.uid());
-
-CREATE POLICY busquedas_update_propio ON public.busquedas_guardadas
-  FOR UPDATE TO authenticated
-  USING (comprador_id = auth.uid())
-  WITH CHECK (comprador_id = auth.uid());
-
-CREATE POLICY busquedas_delete_propio ON public.busquedas_guardadas
-  FOR DELETE TO authenticated
-  USING (comprador_id = auth.uid());
+create policy "Comprador puede eliminar sus busquedas guardadas"
+  on public.busquedas_guardadas for delete
+  to authenticated
+  using (auth.uid() = usuario_id);
 ```
+
+Nota: `usuario_id` referencia `auth.users(id)` directamente (no `perfiles(id)`) para no depender del
+trigger de creación de perfil; ambas tablas usan PK propia `id` con una restricción `unique`
+adicional en `favoritos`, no PK compuesta.
 
 ---
 
@@ -145,16 +153,25 @@ Se crearán pruebas de autorización en `tests/rls/comprador.test.ts` cubriendo:
 
 ## 5. Servicios y Server Actions
 
-- `src/lib/comprador/favoritos.ts`:
-  - `alternarFavorito(propiedadId)`: añade o quita una propiedad de favoritos según su estado actual.
-  - `consultarFavoritosComprador(supabase, compradorId)`: lista los inmuebles marcados con sus datos principales y fotos firmadas.
-- `src/lib/comprador/busquedas.ts`:
-  - `guardarBusqueda(nombre, criterios, notificarEmail)`: persiste la búsqueda.
-  - `eliminarBusqueda(id)`: borra la búsqueda guardada.
-  - `listarBusquedasGuardadas(supabase, compradorId)`: consulta las búsquedas del usuario.
-- `src/lib/comprador/datos-personales.ts`:
-  - `actualizarDatosContacto(nombre, telefono)`: valida y actualiza los campos permitidos del perfil.
-  - `suprimirCuentaComprador()`: ejecuta el flujo integral de anonimización, cancelación de citas futuras y borrado en auth.
+Separación entre lectura (Server Components) y mutación (Server Actions con `'use server'`):
+
+- `src/lib/comprador/favoritos.ts` (lectura):
+  - `obtenerFavoritosUsuario(supabase, usuarioId)`: lista los inmuebles marcados con sus datos principales y fotos.
+  - `esFavorito(supabase, usuarioId, propiedadId)`: consulta si una propiedad puntual ya está marcada.
+- `src/lib/comprador/acciones-favoritos.ts` (mutación):
+  - `conmutarFavoritoAction(propiedadId)`: añade o quita una propiedad de favoritos según su estado actual; revalida `/mi-cuenta/favoritos` y la ficha de la propiedad.
+- `src/lib/comprador/busquedas.ts` (lectura):
+  - `obtenerBusquedasGuardadas(supabase, usuarioId)`: consulta las búsquedas del usuario.
+  - `construirQueryStringBusqueda(filtros)`: genera la URL canónica del catálogo a partir de los filtros guardados.
+- `src/lib/comprador/acciones-busquedas.ts` (mutación):
+  - `guardarBusquedaAction(nombre, filtros, notificaciones)`: valida con Zod y persiste la búsqueda.
+  - `eliminarBusquedaAction(busquedaId)`: borra la búsqueda guardada del propio usuario.
+- `src/lib/comprador/datos-personales.ts` (lectura):
+  - `obtenerPerfilComprador(supabase, usuarioId)`: datos de perfil, incluido `suprimido_en`.
+  - `obtenerHistorialComprador(supabase, usuarioId)`: leads y citas asociados, para la vista de historial.
+- `src/lib/comprador/acciones-datos.ts` (mutación):
+  - `actualizarPerfilCompradorAction(datos)`: valida con Zod y actualiza `nombre`/`telefono` del perfil propio.
+  - `suprimirCuentaCompradorAction(confirmacion)`: exige la frase literal `"ELIMINAR MI CUENTA"` y ejecuta el flujo integral de anonimización, cancelación de citas, cierre de conversaciones IA y borrado en `auth.users` descrito en §2.4.
 
 ---
 
