@@ -4,11 +4,41 @@ import { sesionActual } from '@/lib/auth/sesion'
 import { enlaceDePanel } from '@/lib/navegacion/enlaces'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
 
+const urlBase = (process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000').replace(/\/+$/, '')
+const fallbackImg = `${urlBase}/og-fallback.jpg`
+const tituloLanding = 'Portal Inmobiliario de Barranquilla'
+const descripcionLanding =
+  'Portal inmobiliario de Barranquilla: crea tu cuenta para buscar vivienda en la ciudad ' +
+  'o para publicar las propiedades que tienes en venta y en arriendo.'
+
 export const metadata: Metadata = {
-  title: 'Portal Inmobiliario de Barranquilla',
-  description:
-    'Portal inmobiliario de Barranquilla: crea tu cuenta para buscar vivienda en la ciudad ' +
-    'o para publicar las propiedades que tienes en venta y en arriendo.',
+  title: tituloLanding,
+  description: descripcionLanding,
+  alternates: {
+    canonical: urlBase,
+  },
+  openGraph: {
+    title: tituloLanding,
+    description: descripcionLanding,
+    url: urlBase,
+    siteName: 'Portal Inmobiliario',
+    locale: 'es_CO',
+    type: 'website',
+    images: [
+      {
+        url: fallbackImg,
+        width: 1200,
+        height: 630,
+        alt: tituloLanding,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: tituloLanding,
+    description: descripcionLanding,
+    images: [fallbackImg],
+  },
 }
 
 const CLASE_BOTON_PRIMARIO =
