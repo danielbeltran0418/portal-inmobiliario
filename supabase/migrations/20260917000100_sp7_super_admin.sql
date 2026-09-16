@@ -15,7 +15,7 @@ CREATE TABLE public.pagos_posicionamiento (
   fecha_inicio TIMESTAMPTZ NOT NULL,
   fecha_fin TIMESTAMPTZ NOT NULL,
   estado public.estado_pago_posicionamiento NOT NULL DEFAULT 'activo',
-  registrado_por UUID NOT NULL REFERENCES public.perfiles(id),
+  registrado_por UUID REFERENCES public.perfiles(id) ON DELETE SET NULL,
   notas TEXT,
   referencia_externa VARCHAR(100),
   creado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -32,8 +32,10 @@ ALTER TABLE public.pagos_posicionamiento ENABLE ROW LEVEL SECURITY;
 -- Disciplina pg_default_acl: revocar privilegios heredados a anon y authenticated
 REVOKE ALL ON public.pagos_posicionamiento FROM anon, authenticated, public;
 
--- Super admin puede leer y escribir
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.pagos_posicionamiento TO authenticated;
+-- Super admin y authenticated tienen SELECT
+GRANT SELECT ON public.pagos_posicionamiento TO authenticated;
+-- Super admin puede insertar, actualizar y borrar acuerdos
+GRANT INSERT, UPDATE, DELETE ON public.pagos_posicionamiento TO authenticated;
 
 CREATE POLICY super_admin_gestion_posicionamiento ON public.pagos_posicionamiento
   FOR ALL TO authenticated
@@ -50,20 +52,23 @@ CREATE POLICY propiedades_borrado_super_admin ON public.propiedades
   FOR DELETE TO authenticated
   USING (public.es_super_admin());
 
--- 5. Función para actualizar vigencia de destacadas y sincronizar propiedades
-CREATE OR REPLACE FUNCTION public.actualizar_vigencia_destacadas()
-RETURNS void
+-- 5. Función trigger para sincronizar estado de destacadas en propiedades
+-- NOTA CRÍTICA: Este trigger se ejecuta AFTER en pagos_posicionamiento.
+-- NO debe hacer UPDATE sobre pagos_posicionamiento porque los triggers de sentencia
+-- se disparan siempre (incluso con 0 filas afectadas) causando recursión infinita.
+CREATE OR REPLACE FUNCTION public.sincronizar_destacadas_trigger()
+RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 BEGIN
-  -- 1. Marcar como expirados los pagos activos cuya fecha_fin ya pasó
-  UPDATE public.pagos_posicionamiento
-  SET estado = 'expirado'
-  WHERE estado = 'activo' AND now() > fecha_fin;
+  -- Salvaguarda contra recursión en cascadas profundas
+  IF pg_trigger_depth() > 1 THEN
+    RETURN NULL;
+  END IF;
 
-  -- 2. Marcar como destacadas las propiedades publicadas con pago activo vigente
+  -- 1. Marcar como destacadas las propiedades publicadas con pago activo vigente
   UPDATE public.propiedades p
   SET destacada = true
   WHERE p.estado = 'publicada'
@@ -76,7 +81,7 @@ BEGIN
         AND now() <= pp.fecha_fin
     );
 
-  -- 3. Desmarcar destacada en propiedades que ya no tienen ningún pago activo vigente
+  -- 2. Desmarcar destacada en propiedades que ya no tienen ningún pago activo vigente
   UPDATE public.propiedades p
   SET destacada = false
   WHERE p.destacada = true
@@ -87,25 +92,31 @@ BEGIN
         AND now() >= pp.fecha_inicio
         AND now() <= pp.fecha_fin
     );
-END;
-$$;
 
-REVOKE EXECUTE ON FUNCTION public.actualizar_vigencia_destacadas() FROM anon, authenticated, public;
-GRANT EXECUTE ON FUNCTION public.actualizar_vigencia_destacadas() TO authenticated, service_role;
-
--- 6. Trigger en pagos_posicionamiento para sincronizar destacadas inmediatamente
-CREATE OR REPLACE FUNCTION public.sincronizar_destacadas_trigger()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-  PERFORM public.actualizar_vigencia_destacadas();
-  RETURN NEW;
+  RETURN NULL;
 END;
 $$;
 
 CREATE TRIGGER trigger_sincronizar_destacadas
   AFTER INSERT OR UPDATE OR DELETE ON public.pagos_posicionamiento
   FOR EACH STATEMENT EXECUTE FUNCTION public.sincronizar_destacadas_trigger();
+
+-- 6. Función para mantenimiento / cron de expiración de pagos
+CREATE OR REPLACE FUNCTION public.actualizar_vigencia_destacadas()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  -- Marcar como expirados los pagos activos cuya fecha_fin ya pasó.
+  -- El trigger trigger_sincronizar_destacadas se disparará una única vez
+  -- tras este UPDATE y actualizará las propiedades destacadas correspondientes.
+  UPDATE public.pagos_posicionamiento
+  SET estado = 'expirado'
+  WHERE estado = 'activo' AND now() > fecha_fin;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.actualizar_vigencia_destacadas() FROM anon, authenticated, public;
+GRANT EXECUTE ON FUNCTION public.actualizar_vigencia_destacadas() TO authenticated, service_role;
