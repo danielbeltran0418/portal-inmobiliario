@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Karla } from "next/font/google";
 import { Cabecera } from "@/componentes/cabecera";
+import { PieDePagina } from "@/componentes/pie-de-pagina";
 import "./globals.css";
 
 /**
@@ -54,7 +55,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <Cabecera />
-        {children}
+        <div className="flex-1 flex flex-col">{children}</div>
+        <PieDePagina />
       </body>
     </html>
   );

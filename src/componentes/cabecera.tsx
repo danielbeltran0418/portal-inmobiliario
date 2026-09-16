@@ -22,24 +22,40 @@ export async function Cabecera() {
   const { autenticado, enlaces } = estadoDeCabecera(await sesionActual())
 
   return (
-    <header className="border-b border-linea bg-superficie">
+    <header className="sticky top-0 z-50 border-b border-linea/80 bg-superficie/90 backdrop-blur-md">
       <nav
         aria-label="Principal"
-        className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4"
+        className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-3.5"
       >
         <Link
           href="/"
-          className="font-titulo text-xl font-semibold tracking-tight text-tinta hover:text-marca"
+          className="group flex items-center gap-2.5 font-titulo text-xl font-semibold tracking-tight text-tinta transition-colors hover:text-marca"
         >
-          {NOMBRE_DEL_SITIO}
+          {/* Isotipo arquitectónico representativo del portal */}
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-marca/10 text-marca transition-transform group-hover:scale-105">
+            <svg
+              className="h-4.5 w-4.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" />
+              <polyline points="9 21 9 12 15 12 15 21" />
+            </svg>
+          </span>
+          <span>{NOMBRE_DEL_SITIO}</span>
         </Link>
 
-        <div className="flex flex-wrap items-center gap-5 text-sm">
+        <div className="flex flex-wrap items-center gap-4 text-sm sm:gap-5">
           {enlaces.map((enlace) => (
             <Link
               key={enlace.destino}
               href={enlace.destino}
-              className="text-tinta-suave hover:text-marca hover:underline"
+              className="font-medium text-tinta-suave transition-colors hover:text-marca"
             >
               {enlace.etiqueta}
             </Link>
@@ -53,7 +69,7 @@ export async function Cabecera() {
             <form action={cerrarSesion}>
               <button
                 type="submit"
-                className="cursor-pointer rounded-sm border border-linea px-3 py-1.5 text-tinta-suave hover:border-marca hover:text-marca"
+                className="cursor-pointer rounded-sm border border-linea/90 bg-superficie px-3 py-1.5 text-xs font-medium text-tinta-suave shadow-xs transition-colors hover:border-marca hover:bg-superficie-alt hover:text-marca"
               >
                 Cerrar sesión
               </button>
