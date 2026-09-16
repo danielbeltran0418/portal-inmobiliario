@@ -1,51 +1,56 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { sesionActual } from '@/lib/auth/sesion'
-import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
-import { listarSolicitudesDelComprador } from '@/lib/citas/consultas'
-import { listarConversacionesComprador } from '@/lib/ia/consultas'
-import { formatearFechaHora } from '@/lib/fechas/formato'
-import { AccionesCita } from '@/componentes/citas/acciones-cita'
-import { ChatLeadIA } from '@/components/mi-cuenta/chat-lead-ia'
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { sesionActual } from '@/lib/auth/sesion';
+import { crearClienteServidor } from '@/lib/supabase/cliente-servidor';
+import { listarSolicitudesDelComprador } from '@/lib/citas/consultas';
+import { listarConversacionesComprador } from '@/lib/ia/consultas';
+import { formatearFechaHora } from '@/lib/fechas/formato';
+import { AccionesCita } from '@/componentes/citas/acciones-cita';
+import { ChatLeadIA } from '@/components/mi-cuenta/chat-lead-ia';
 
 export const metadata: Metadata = {
   title: 'Mi cuenta | Portal Inmobiliario',
   description: 'Tu cuenta de comprador en el Portal Inmobiliario de Barranquilla.',
   robots: { index: false, follow: false },
-}
+};
 
 const ETIQUETA_ESTADO = {
   nuevo: 'Pendiente de respuesta',
   aceptado: 'Aceptada',
   descartado: 'Descartada',
-} as const
+} as const;
 
 export default async function PaginaMiCuenta() {
-  const sesion = await sesionActual()
-  if (!sesion.idUsuario) redirect('/login')
+  const sesion = await sesionActual();
+  if (!sesion.idUsuario) redirect('/login');
 
-  const supabase = await crearClienteServidor()
+  const supabase = await crearClienteServidor();
   const [solicitudes, conversaciones] = await Promise.all([
     listarSolicitudesDelComprador(supabase, sesion.idUsuario),
     listarConversacionesComprador(supabase, sesion.idUsuario),
-  ])
+  ]);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-10">
+    <div className="space-y-6">
       <h1 className="text-3xl font-semibold text-tinta">Mi cuenta</h1>
-      <h2 className="mt-8 text-xl font-semibold text-tinta">Tus solicitudes</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-tinta">Tus solicitudes y conversaciones con IA</h2>
+        <span className="text-sm text-tinta-suave">
+          {solicitudes.length} {solicitudes.length === 1 ? 'solicitud' : 'solicitudes'}
+        </span>
+      </div>
 
       {solicitudes.length === 0 ? (
-        <p className="mt-4 rounded-md border border-linea bg-superficie p-8 text-center text-tinta-suave">
+        <div className="rounded-xl border border-linea bg-superficie p-8 text-center text-tinta-suave">
           Todavía no has contactado a ningún vendedor.
-        </p>
+        </div>
       ) : (
-        <ul className="mt-4 space-y-4">
+        <ul className="space-y-4">
           {solicitudes.map((s) => {
-            const conv = conversaciones[s.id]
+            const conv = conversaciones[s.id];
             return (
-              <li key={s.id} className="rounded-md border border-linea bg-superficie p-5">
+              <li key={s.id} className="rounded-xl border border-linea bg-superficie p-5">
                 <p className="font-medium text-tinta">{s.tituloPropiedad ?? 'Propiedad'}</p>
                 <p className="mt-1 text-sm text-tinta-suave">{ETIQUETA_ESTADO[s.estado]}</p>
 
@@ -79,10 +84,10 @@ export default async function PaginaMiCuenta() {
                   />
                 )}
               </li>
-            )
+            );
           })}
         </ul>
       )}
-    </main>
-  )
+    </div>
+  );
 }

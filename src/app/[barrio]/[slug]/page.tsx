@@ -1,3 +1,4 @@
+import { BotonFavorito } from '@/components/comprador/BotonFavorito'
 import { cache } from 'react'
 import { metadatosFicha, datosFicha, serializarJsonLd } from '@/lib/catalogo/seo'
 import Image from 'next/image'
@@ -39,6 +40,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
   let yaContacto = false
   let telefonoPrevio = ''
   let esDelVendedor = false
+  let esFavorito = false
 
   if (sesion.hayUsuario) {
     const db = await crearClienteServidor()
@@ -58,20 +60,28 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
     // `perfiles` tiene una politica de super_admin (perfil_lectura_super_admin)
     // que tampoco restringe por id, asi que sin filtrar por id una cuenta
     // super_admin podria traer un perfil ajeno o fallar por multiples filas.
-    const [{ data: previo }, { data: perfil }] = await Promise.all([
+    const [{ data: previo }, { data: perfil }, { data: fav }] = await Promise.all([
       db.from('leads').select('id')
         .eq('propiedad_id', p.id).eq('comprador_id', sesion.idUsuario).maybeSingle(),
       db.from('perfiles').select('telefono').eq('id', sesion.idUsuario).maybeSingle(),
+      db.from('favoritos').select('id')
+        .eq('usuario_id', sesion.idUsuario).eq('propiedad_id', p.id).maybeSingle(),
     ])
     yaContacto = previo !== null
     telefonoPrevio = perfil?.telefono ?? ''
     esDelVendedor = sesion.idUsuario === p.vendedor_id
+    esFavorito = fav !== null
   }
 
   return <main className="mx-auto w-full max-w-5xl px-6 py-12">
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosFicha(p, barrio)) }} />
     <Link href={`/${barrio.slug}`}>Volver a {barrio.nombre}</Link>
-    <h1 className="mt-6 text-3xl font-semibold">{p.titulo}</h1>
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+      <h1 className="text-3xl font-semibold">{p.titulo}</h1>
+      {sesion.hayUsuario && (
+        <BotonFavorito propiedadId={p.id} inicialEsFavorito={esFavorito} mostrarTexto />
+      )}
+    </div>
     <p className="mt-3 text-xl">{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p.precio)} · {p.operacion}</p>
     <p className="mt-2">{barrio.nombre}, Barranquilla</p>
     <div className="my-8 grid gap-4 sm:grid-cols-2">{fotos.map(f => <Image key={f.id} src={`/imagen/${f.id}`} alt={f.alt_text} width={800} height={600} unoptimized className="aspect-[4/3] w-full rounded object-cover" />)}</div>

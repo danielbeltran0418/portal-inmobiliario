@@ -1,3 +1,4 @@
+import { BotonGuardarBusqueda } from '@/components/comprador/BotonGuardarBusqueda'
 import { metadatosBarrio } from '@/lib/catalogo/seo'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -49,6 +50,10 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
       <button className="cursor-pointer rounded-sm bg-marca px-5 py-2 font-medium text-marca-contraste hover:bg-marca-fuerte">Filtrar</button>
       <Link href={`/${barrio.slug}`} className="py-2 text-sm text-tinta-tenue hover:text-marca hover:underline">Limpiar filtros</Link>
     </form>
+    <div className="mb-6 flex items-center justify-between">
+      <p className="text-sm text-tinta-suave">Guarda estos criterios de búsqueda para consultarlos luego.</p>
+      <BotonGuardarBusqueda filtrosActuales={{ barrio: barrio.slug, operacion: filtros.operacion, tipo: filtros.tipo, precio_min: filtros.precioMin, precio_max: filtros.precioMax }} />
+    </div>
 
     {propiedades.length === 0 ? <p className="rounded-md border border-linea bg-superficie p-8 text-center text-tinta-suave">No hay propiedades que coincidan con estos filtros.</p> : <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{propiedades.map(p => {
       const foto = [...p.imagenes_propiedad].sort((a,b) => a.orden - b.orden)[0]

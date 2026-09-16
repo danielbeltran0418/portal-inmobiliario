@@ -183,10 +183,10 @@ export async function procesarLeadsNuevos(limite = 20): Promise<number> {
 
   const { data: leads, error } = await admin
     .from('leads')
-    .select('id')
+    .select('id, propiedad_id, propiedades!inner(id)')
     .eq('estado', 'nuevo')
-    .order('creado_en', { ascending: true })
-    .limit(100);
+    .order('creado_en', { ascending: false })
+    .limit(300);
 
   if (error || !leads || leads.length === 0) {
     return 0;

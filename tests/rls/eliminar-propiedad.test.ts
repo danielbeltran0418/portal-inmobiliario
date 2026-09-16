@@ -52,6 +52,9 @@ async function objetoExisteEnBucket(ruta: string): Promise<boolean> {
 }
 
 describe('eliminarPropiedad: drena la cola de limpieza de Storage de verdad', () => {
+  beforeAll(async () => {
+    await clienteAdmin().from('limpieza_almacenamiento').delete().neq('id', 0)
+  })
   it('borra la propiedad, y el archivo real deja de existir en el bucket (no solo la fila)', async () => {
     const cliente = await sesionVendedor()
     clienteActual = cliente
