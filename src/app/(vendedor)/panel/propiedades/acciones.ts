@@ -341,7 +341,7 @@ async function drenarLimpieza(): Promise<void> {
   const admin = crearClienteAdmin()
 
   const { data: pendientes } = await admin
-    .from('limpieza_almacenamiento').select('id, ruta').order('id', { ascending: false }).limit(100)
+    .from('limpieza_almacenamiento').select('id, ruta').limit(100)
 
   if (!pendientes || pendientes.length === 0) return
 
