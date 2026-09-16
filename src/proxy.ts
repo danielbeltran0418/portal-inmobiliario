@@ -144,8 +144,10 @@ export async function proxy(peticion: NextRequest) {
         }))
       }
     } catch {
-      // Un fallo del servicio no demuestra que una publicación haya desaparecido.
-      return aplicarCabeceras(new NextResponse('Servicio temporalmente no disponible', { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '60' } }))
+      // Ante un fallo transitorio de la base de datos al resolver rutas,
+      // degradar: entregar la respuesta con las cabeceras de seguridad
+      // para que la pagina intente resolver o manejar el error.
+      return aplicarCabeceras(respuesta)
     }
   }
 

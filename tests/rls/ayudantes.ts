@@ -98,12 +98,21 @@ export async function crearUsuarioDePrueba(opciones: {
   } else {
     // Si falla (por ejemplo, cuenta fija ya existente de una corrida anterior),
     // buscarla y eliminarla para recrearla limpiamente.
-    const db = new Client({ connectionString: URL_BASE_DE_DATOS })
-    await db.connect()
-    try {
-      await db.query('DELETE FROM auth.users WHERE email = $1', [opciones.correo])
-    } finally {
-      await db.end()
+    let pagina = 1
+    const paginasVisitadas = new Set<number>()
+    while (pagina) {
+      if (paginasVisitadas.has(pagina)) break
+      paginasVisitadas.add(pagina)
+      const { data: listData, error: listError } = await admin.auth.admin.listUsers({ page: pagina, perPage: 50 })
+      if (listError) throw listError
+      const existente = listData.users.find((u) => u.email === opciones.correo)
+      if (existente) {
+        const { error: errorBorrado } = await admin.auth.admin.deleteUser(existente.id)
+        if (errorBorrado) throw errorBorrado
+        break
+      }
+      if (!listData.nextPage || listData.nextPage <= pagina || listData.users.length === 0) break
+      pagina = listData.nextPage
     }
 
     const reintento = await admin.auth.admin.createUser({
@@ -112,8 +121,30 @@ export async function crearUsuarioDePrueba(opciones: {
       email_confirm: true,
       user_metadata: { nombre: opciones.nombre ?? 'Usuario Prueba', telefono: '3001234567' },
     })
-    if (reintento.error) throw reintento.error
-    usuarioId = reintento.data.user.id
+
+    if (reintento.error) {
+      if (URL_BASE_DE_DATOS?.startsWith('postgres://') || URL_BASE_DE_DATOS?.startsWith('postgresql://')) {
+        const db = new Client({ connectionString: URL_BASE_DE_DATOS })
+        await db.connect()
+        try {
+          await db.query('DELETE FROM auth.users WHERE email = $1', [opciones.correo])
+        } finally {
+          await db.end()
+        }
+        const fallback = await admin.auth.admin.createUser({
+          email: opciones.correo,
+          password: opciones.password,
+          email_confirm: true,
+          user_metadata: { nombre: opciones.nombre ?? 'Usuario Prueba', telefono: '3001234567' },
+        })
+        if (fallback.error) throw fallback.error
+        usuarioId = fallback.data.user.id
+      } else {
+        throw reintento.error
+      }
+    } else {
+      usuarioId = reintento.data.user.id
+    }
   }
 
   // El rol se fija por SQL directo: la aplicacion nunca lo asigna.
