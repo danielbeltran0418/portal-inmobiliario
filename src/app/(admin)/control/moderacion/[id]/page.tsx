@@ -146,6 +146,7 @@ export default async function PaginaInspeccionPropiedad({ params }: Props) {
                         src={url}
                         alt={img.alt_text || 'Foto inmueble'}
                         fill
+                        unoptimized
                         className="object-cover"
                       />
                     ) : (
