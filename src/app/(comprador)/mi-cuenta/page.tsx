@@ -33,6 +33,7 @@ export default async function PaginaMiCuenta() {
 
   return (
     <div className="space-y-6">
+      <h1 className="text-3xl font-semibold text-tinta">Mi cuenta</h1>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-tinta">Tus solicitudes y conversaciones con IA</h2>
         <span className="text-sm text-tinta-suave">

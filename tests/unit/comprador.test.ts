@@ -9,7 +9,7 @@ const esquemaGuardarBusqueda = z.object({
 });
 
 const esquemaPerfil = z.object({
-  nombre_completo: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres').max(100),
+  nombre: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres').max(100),
   telefono: z.string().trim().max(20).optional().nullable(),
 });
 
@@ -88,7 +88,7 @@ describe('Unitaria: Lógica y validaciones del Panel de Comprador (SP2)', () => 
   describe('Esquema de actualización de perfil y datos personales', () => {
     it('acepta datos de perfil válidos', () => {
       const res = esquemaPerfil.safeParse({
-        nombre_completo: 'Carlos Comprador',
+        nombre: 'Carlos Comprador',
         telefono: '3001234567',
       });
 
@@ -97,7 +97,7 @@ describe('Unitaria: Lógica y validaciones del Panel de Comprador (SP2)', () => 
 
     it('permite teléfono nulo u omitido', () => {
       const res = esquemaPerfil.safeParse({
-        nombre_completo: 'Laura Compradora',
+        nombre: 'Laura Compradora',
         telefono: null,
       });
 
@@ -106,7 +106,7 @@ describe('Unitaria: Lógica y validaciones del Panel de Comprador (SP2)', () => 
 
     it('rechaza nombres con menos de 2 caracteres', () => {
       const res = esquemaPerfil.safeParse({
-        nombre_completo: 'A',
+        nombre: 'A',
         telefono: '3001234567',
       });
 

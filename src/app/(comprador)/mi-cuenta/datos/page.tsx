@@ -31,7 +31,7 @@ export default async function PaginaDatos() {
       </div>
 
       <FormularioDatosComprador
-        nombreInicial={perfil?.nombre_completo ?? ''}
+        nombreInicial={perfil?.nombre ?? ''}
         telefonoInicial={perfil?.telefono ?? ''}
         correo={authData?.user?.email ?? ''}
       />
