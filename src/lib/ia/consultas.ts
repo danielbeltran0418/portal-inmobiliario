@@ -89,3 +89,30 @@ export async function leerAutoConfirmacion(
     .maybeSingle()
   return data?.auto_confirmar_citas === true
 }
+
+export async function listarConversacionesComprador(
+  cliente: SupabaseClient,
+  compradorId: string,
+): Promise<Record<string, ConversacionIAResumen>> {
+  if (typeof cliente?.from !== 'function') return {}
+
+  const { data, error } = await cliente
+    .from('conversaciones_ia')
+    .select('id, lead_id, estado_conversacion, franja_propuesta, mensajes_ia(id, emisor, contenido, creado_en)')
+    .eq('comprador_id', compradorId)
+  if (error || !data) return {}
+
+  const mapa: Record<string, ConversacionIAResumen> = {}
+  for (const row of data as any[]) {
+    mapa[row.lead_id] = {
+      id: row.id,
+      lead_id: row.lead_id,
+      estado_conversacion: row.estado_conversacion,
+      franja_propuesta: row.franja_propuesta,
+      mensajes: ((row.mensajes_ia || []) as any[]).sort(
+        (a, b) => new Date(a.creado_en).getTime() - new Date(b.creado_en).getTime(),
+      ),
+    }
+  }
+  return mapa
+}
