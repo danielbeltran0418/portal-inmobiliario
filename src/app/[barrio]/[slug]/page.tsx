@@ -40,6 +40,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
   let yaContacto = false
   let telefonoPrevio = ''
   let esDelVendedor = false
+  let esFavorito = false
 
   if (sesion.hayUsuario) {
     const db = await crearClienteServidor()
@@ -59,14 +60,17 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
     // `perfiles` tiene una politica de super_admin (perfil_lectura_super_admin)
     // que tampoco restringe por id, asi que sin filtrar por id una cuenta
     // super_admin podria traer un perfil ajeno o fallar por multiples filas.
-    const [{ data: previo }, { data: perfil }] = await Promise.all([
+    const [{ data: previo }, { data: perfil }, { data: fav }] = await Promise.all([
       db.from('leads').select('id')
         .eq('propiedad_id', p.id).eq('comprador_id', sesion.idUsuario).maybeSingle(),
       db.from('perfiles').select('telefono').eq('id', sesion.idUsuario).maybeSingle(),
+      db.from('favoritos').select('id')
+        .eq('usuario_id', sesion.idUsuario).eq('propiedad_id', p.id).maybeSingle(),
     ])
     yaContacto = previo !== null
     telefonoPrevio = perfil?.telefono ?? ''
     esDelVendedor = sesion.idUsuario === p.vendedor_id
+    esFavorito = fav !== null
   }
 
   return <main className="mx-auto w-full max-w-5xl px-6 py-12">
