@@ -1,3 +1,4 @@
+import { BotonFavorito } from '@/components/comprador/BotonFavorito'
 import { cache } from 'react'
 import { metadatosFicha, datosFicha, serializarJsonLd } from '@/lib/catalogo/seo'
 import Image from 'next/image'
@@ -71,7 +72,12 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
   return <main className="mx-auto w-full max-w-5xl px-6 py-12">
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosFicha(p, barrio)) }} />
     <Link href={`/${barrio.slug}`}>Volver a {barrio.nombre}</Link>
-    <h1 className="mt-6 text-3xl font-semibold">{p.titulo}</h1>
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+      <h1 className="text-3xl font-semibold">{p.titulo}</h1>
+      {sesion.hayUsuario && (
+        <BotonFavorito propiedadId={p.id} inicialEsFavorito={esFavorito} mostrarTexto />
+      )}
+    </div>
     <p className="mt-3 text-xl">{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p.precio)} · {p.operacion}</p>
     <p className="mt-2">{barrio.nombre}, Barranquilla</p>
     <div className="my-8 grid gap-4 sm:grid-cols-2">{fotos.map(f => <Image key={f.id} src={`/imagen/${f.id}`} alt={f.alt_text} width={800} height={600} unoptimized className="aspect-[4/3] w-full rounded object-cover" />)}</div>

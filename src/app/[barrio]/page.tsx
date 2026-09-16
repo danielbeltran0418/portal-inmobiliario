@@ -1,3 +1,4 @@
+import { BotonGuardarBusqueda } from '@/components/comprador/BotonGuardarBusqueda'
 import { metadatosBarrio } from '@/lib/catalogo/seo'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -47,6 +48,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
         <input className={`${CAMPO} mt-1 w-40 cifra`} type="number" min="0.01" step="0.01" name="precio_max" defaultValue={filtros.precioMax} />
       </label>
       <button className="cursor-pointer rounded-sm bg-marca px-5 py-2 font-medium text-marca-contraste hover:bg-marca-fuerte">Filtrar</button>
+      <BotonGuardarBusqueda filtrosActuales={{ barrio: barrio.slug, operacion: filtros.operacion, tipo: filtros.tipo, precio_min: filtros.precioMin, precio_max: filtros.precioMax }} />
       <Link href={`/${barrio.slug}`} className="py-2 text-sm text-tinta-tenue hover:text-marca hover:underline">Limpiar filtros</Link>
     </form>
 
