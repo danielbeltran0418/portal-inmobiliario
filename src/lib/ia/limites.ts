@@ -1,10 +1,12 @@
 
-export async function verificarRateLimitPorIP(_ip?: string | null): Promise<void> {
-  // Verificación extensible de rate limit por IP
-}
 import 'server-only';
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin';
 import { ErrorIA } from './tipos';
+
+export async function verificarRateLimitPorIP(ip?: string | null): Promise<void> {
+  if (!ip) return;
+  // Verificación extensible de rate limit por IP
+}
 
 export const MAX_TURNOS_CONVERSACION = 10;
 export const MAX_MENSAJES_POR_MINUTO = 5;

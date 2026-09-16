@@ -8,7 +8,7 @@ import { origenReal } from '@/lib/http/origen-peticion'
 
 const RUTAS_PROTEGIDAS = ['/mi-cuenta', '/panel', '/control']
 
-export async function middleware(peticion: NextRequest) {
+export async function proxy(peticion: NextRequest) {
   const nonce = generarNonce()
   const cabecerasSeguridad = construirCabeceras(nonce)
   const csp = cabecerasSeguridad['Content-Security-Policy']

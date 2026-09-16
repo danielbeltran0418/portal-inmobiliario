@@ -81,38 +81,54 @@ export async function crearUsuarioDePrueba(opciones: {
   nombre?: string
 }): Promise<string> {
   const admin = clienteAdmin()
-  // listUsers devuelve páginas: las cuentas de una base persistente pueden
-  // estar después de la primera. Ignorarlas provoca un falso email duplicado.
-  let pagina = 1
-  while (true) {
-    const { data, error } = await admin.auth.admin.listUsers({ page: pagina, perPage: 50 })
-    if (error) throw error
-    const existente = data.users.find((u) => u.email === opciones.correo)
-    if (existente) {
-      const { error: errorBorrado } = await admin.auth.admin.deleteUser(existente.id)
-      if (errorBorrado) throw errorBorrado
-      break
-    }
-    if (!data.nextPage) break
-    pagina = data.nextPage
-  }
+  let usuarioId: string | undefined
 
+  // Creación optimista directa: para correos efímeros con randomUUID()
+  // evita consultar y paginar cientos de usuarios por petición.
   const { data, error } = await admin.auth.admin.createUser({
     email: opciones.correo,
     password: opciones.password,
     email_confirm: true,
     user_metadata: { nombre: opciones.nombre ?? 'Usuario Prueba', telefono: '3001234567' },
   })
-  if (error) throw error
+
+  if (!error && data?.user?.id) {
+    usuarioId = data.user.id
+  } else {
+    // Si falla (por ejemplo, cuenta fija ya existente de una corrida anterior),
+    // buscarla y eliminarla para recrearla limpiamente.
+    let pagina = 1
+    while (true) {
+      const { data: listData, error: listError } = await admin.auth.admin.listUsers({ page: pagina, perPage: 50 })
+      if (listError) throw listError
+      const existente = listData.users.find((u) => u.email === opciones.correo)
+      if (existente) {
+        const { error: errorBorrado } = await admin.auth.admin.deleteUser(existente.id)
+        if (errorBorrado) throw errorBorrado
+        break
+      }
+      if (!listData.nextPage) break
+      pagina = listData.nextPage
+    }
+
+    const reintento = await admin.auth.admin.createUser({
+      email: opciones.correo,
+      password: opciones.password,
+      email_confirm: true,
+      user_metadata: { nombre: opciones.nombre ?? 'Usuario Prueba', telefono: '3001234567' },
+    })
+    if (reintento.error) throw reintento.error
+    usuarioId = reintento.data.user.id
+  }
 
   // El rol se fija por SQL directo: la aplicacion nunca lo asigna.
   const { error: errorRol } = await admin
     .from('perfiles')
     .update({ rol: opciones.rol })
-    .eq('id', data.user.id)
+    .eq('id', usuarioId)
   if (errorRol) throw errorRol
 
-  return data.user.id
+  return usuarioId
 }
 
 export async function clienteComo(correo: string, password: string): Promise<SupabaseClient> {
