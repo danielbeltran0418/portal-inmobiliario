@@ -24,6 +24,22 @@ export interface CitaPropuestaResumen {
   franja_propuesta: string
 }
 
+interface FilaConversacionBD {
+  id: string
+  lead_id: string
+  estado_conversacion: string
+  franja_propuesta: string | null
+  mensajes_ia: MensajeIAResumen[] | null
+}
+
+interface FilaCitaPropuestaBD {
+  id: string
+  lead_id: string
+  franja_propuesta: string
+  propiedades: { titulo: string } | null
+  leads: { nombre_mostrado: string } | null
+}
+
 export async function listarConversacionesVendedor(
   cliente: SupabaseClient,
   vendedorId: string,
@@ -37,13 +53,13 @@ export async function listarConversacionesVendedor(
   if (error || !data) return {}
 
   const mapa: Record<string, ConversacionIAResumen> = {}
-  for (const row of data as any[]) {
+  for (const row of (data as unknown as FilaConversacionBD[])) {
     mapa[row.lead_id] = {
       id: row.id,
       lead_id: row.lead_id,
       estado_conversacion: row.estado_conversacion,
       franja_propuesta: row.franja_propuesta,
-      mensajes: ((row.mensajes_ia || []) as any[]).sort(
+      mensajes: ((row.mensajes_ia || [])).sort(
         (a, b) => new Date(a.creado_en).getTime() - new Date(b.creado_en).getTime(),
       ),
     }
@@ -65,7 +81,7 @@ export async function listarCitasPropuestas(
     .not('franja_propuesta', 'is', null)
   if (error || !data) return []
 
-  return (data as any[]).map((row) => ({
+  return (data as unknown as FilaCitaPropuestaBD[]).map((row) => ({
     id: row.id,
     conversacion_id: row.id,
     lead_id: row.lead_id,
@@ -103,13 +119,13 @@ export async function listarConversacionesComprador(
   if (error || !data) return {}
 
   const mapa: Record<string, ConversacionIAResumen> = {}
-  for (const row of data as any[]) {
+  for (const row of (data as unknown as FilaConversacionBD[])) {
     mapa[row.lead_id] = {
       id: row.id,
       lead_id: row.lead_id,
       estado_conversacion: row.estado_conversacion,
       franja_propuesta: row.franja_propuesta,
-      mensajes: ((row.mensajes_ia || []) as any[]).sort(
+      mensajes: ((row.mensajes_ia || [])).sort(
         (a, b) => new Date(a.creado_en).getTime() - new Date(b.creado_en).getTime(),
       ),
     }

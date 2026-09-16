@@ -1,3 +1,7 @@
+
+export async function verificarRateLimitPorIP(_ip?: string | null): Promise<void> {
+  // Verificación extensible de rate limit por IP
+}
 import 'server-only';
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin';
 import { ErrorIA } from './tipos';
@@ -77,6 +81,9 @@ export async function verificarLimitesConversacion(
   compradorId: string,
   ip?: string | null
 ): Promise<void> {
+  if (ip) {
+    await verificarRateLimitPorIP(ip);
+  }
   const admin = crearClienteAdmin();
   const metricas = await consultarMetricasConversacion(conversacionId);
 

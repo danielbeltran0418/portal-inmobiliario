@@ -43,8 +43,9 @@ export async function enviarMensajeComprador(
   try {
     const { verificarLimitesConversacion } = await import('@/lib/ia/limites')
     await verificarLimitesConversacion(conversacionId, usuario.id)
-  } catch (err: any) {
-    if (err.status === 429) {
+  } catch (err: unknown) {
+    const errObj = err as { status?: number; codigo?: string; message?: string }
+    if (errObj.status === 429) {
       return {
         ok: false,
         error: 'Por favor espera un momento antes de enviar otro mensaje.',
@@ -52,14 +53,14 @@ export async function enviarMensajeComprador(
         status: 429,
       }
     }
-    if (err.codigo === 'IA_TOPE_TURNOS' || err.message?.includes('10 turnos')) {
+    if (errObj.codigo === 'IA_TOPE_TURNOS' || errObj.message?.includes('10 turnos')) {
       return {
         ok: false,
         error: 'Has alcanzado el límite de turnos para esta conversación.',
         codigo: 'IA_TOPE_TURNOS',
       }
     }
-    return { ok: false, error: err.message ?? 'Límite excedido' }
+    return { ok: false, error: errObj.message ?? 'Límite excedido' }
   }
 
   const { crearClienteAdmin } = await import('@/lib/supabase/cliente-admin')
@@ -101,7 +102,7 @@ export async function enviarMensajeComprador(
       banos: prop?.banos,
       area_m2: prop?.area_m2,
       descripcion: prop?.descripcion,
-      barrio: (prop?.barrio as any)?.nombre,
+      barrio: (prop?.barrio as unknown as { nombre: string } | null)?.nombre,
     }
 
     const systemPrompt = construirSystemPrompt(ficha)
@@ -126,9 +127,9 @@ export async function enviarMensajeComprador(
 
     // Si hubo tool_calls de agendamiento
     for (const tc of respuestaIA.tool_calls) {
-      if (tc.name === 'solicitar_agendamiento') {
+      if (tc.function.name === 'solicitar_agendamiento' || tc.function.name === 'proponer_cita') {
         try {
-          const args = JSON.parse(tc.arguments)
+          const args = JSON.parse(tc.function.arguments)
           const { procesarSolicitudFranja } = await import('@/lib/ia/agendamiento')
           await procesarSolicitudFranja(conversacionId, args.franja_inicio_iso)
         } catch (e) {

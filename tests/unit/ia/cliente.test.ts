@@ -7,8 +7,6 @@ import {
   HERRAMIENTAS_IA,
   ErrorIA,
   EsquemaConsultarDisponibilidad,
-  EsquemaProponerCita,
-  EsquemaCalificarLead,
 } from '@/lib/ia/tipos';
 
 describe('Cliente de inferencia IA', () => {

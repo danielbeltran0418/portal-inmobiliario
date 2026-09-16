@@ -24,7 +24,7 @@ vi.mock('@/lib/supabase/cliente-admin', () => ({
 }))
 
 vi.mock('@/lib/ia/limites', () => ({
-  verificarLimitesConversacion: (...args: any[]) => mockVerificarLimites(...args),
+  verificarLimitesConversacion: (...args: unknown[]) => mockVerificarLimites(...args),
 }))
 
 vi.mock('@/lib/ia/cliente', () => ({
@@ -81,7 +81,7 @@ describe('Chat Interactivo del Comprador IA', () => {
       })
 
       const errTope = new Error('Límite de 10 turnos excedido')
-      ;(errTope as any).codigo = 'IA_TOPE_TURNOS'
+      ;(errTope as { codigo?: string }).codigo = 'IA_TOPE_TURNOS'
       mockVerificarLimites.mockRejectedValue(errTope)
 
       const res = await enviarMensajeComprador('conv-1', '¿Sigue disponible?')
@@ -106,7 +106,7 @@ describe('Chat Interactivo del Comprador IA', () => {
       })
 
       const errRateLimit = new Error('Demasiadas peticiones')
-      ;(errRateLimit as any).status = 429
+      ;(errRateLimit as { status?: number }).status = 429
       mockVerificarLimites.mockRejectedValue(errRateLimit)
 
       const res = await enviarMensajeComprador('conv-1', 'Hola')

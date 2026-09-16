@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('server-only', () => ({}));
 
-import { clienteAdmin } from './ayudantes';
+import {  } from './ayudantes';
 import {
   crearVendedorConPropiedad,
   crearCompradorConLead,

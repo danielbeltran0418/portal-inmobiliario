@@ -20,7 +20,6 @@ interface Props {
 export function ChatLeadIA({
   conversacionId,
   mensajesIniciales,
-  estadoConversacion,
   franjaPropuesta,
 }: Props) {
   const [mensajes, setMensajes] = useState<MensajeChat[]>(mensajesIniciales)
