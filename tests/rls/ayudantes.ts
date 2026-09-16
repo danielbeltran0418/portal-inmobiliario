@@ -1,3 +1,4 @@
+import { Client } from 'pg'
 import { existsSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
@@ -98,7 +99,10 @@ export async function crearUsuarioDePrueba(opciones: {
     // Si falla (por ejemplo, cuenta fija ya existente de una corrida anterior),
     // buscarla y eliminarla para recrearla limpiamente.
     let pagina = 1
-    while (true) {
+    const paginasVisitadas = new Set<number>()
+    while (pagina) {
+      if (paginasVisitadas.has(pagina)) break
+      paginasVisitadas.add(pagina)
       const { data: listData, error: listError } = await admin.auth.admin.listUsers({ page: pagina, perPage: 50 })
       if (listError) throw listError
       const existente = listData.users.find((u) => u.email === opciones.correo)
@@ -107,7 +111,7 @@ export async function crearUsuarioDePrueba(opciones: {
         if (errorBorrado) throw errorBorrado
         break
       }
-      if (!listData.nextPage) break
+      if (!listData.nextPage || listData.nextPage <= pagina || listData.users.length === 0) break
       pagina = listData.nextPage
     }
 
@@ -117,8 +121,30 @@ export async function crearUsuarioDePrueba(opciones: {
       email_confirm: true,
       user_metadata: { nombre: opciones.nombre ?? 'Usuario Prueba', telefono: '3001234567' },
     })
-    if (reintento.error) throw reintento.error
-    usuarioId = reintento.data.user.id
+
+    if (reintento.error) {
+      if (URL_BASE_DE_DATOS?.startsWith('postgres://') || URL_BASE_DE_DATOS?.startsWith('postgresql://')) {
+        const db = new Client({ connectionString: URL_BASE_DE_DATOS })
+        await db.connect()
+        try {
+          await db.query('DELETE FROM auth.users WHERE email = $1', [opciones.correo])
+        } finally {
+          await db.end()
+        }
+        const fallback = await admin.auth.admin.createUser({
+          email: opciones.correo,
+          password: opciones.password,
+          email_confirm: true,
+          user_metadata: { nombre: opciones.nombre ?? 'Usuario Prueba', telefono: '3001234567' },
+        })
+        if (fallback.error) throw fallback.error
+        usuarioId = fallback.data.user.id
+      } else {
+        throw reintento.error
+      }
+    } else {
+      usuarioId = reintento.data.user.id
+    }
   }
 
   // El rol se fija por SQL directo: la aplicacion nunca lo asigna.
@@ -161,11 +187,15 @@ export async function sesionVendedor(): Promise<SupabaseClient> {
 export async function listarUsuariosDePrueba() {
   const users: User[] = []
   let page = 1
-  while (true) {
+  const paginasVisitadas = new Set<number>()
+  while (page) {
+    if (paginasVisitadas.has(page)) break
+    paginasVisitadas.add(page)
     const { data, error } = await clienteAdmin().auth.admin.listUsers({ page, perPage: 50 })
     if (error) throw error
     users.push(...data.users)
-    if (!data.nextPage) return { data: { users }, error: null }
+    if (!data.nextPage || data.nextPage <= page || data.users.length === 0) break
     page = data.nextPage
   }
+  return { data: { users }, error: null }
 }

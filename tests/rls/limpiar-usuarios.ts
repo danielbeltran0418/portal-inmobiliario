@@ -12,6 +12,7 @@ export async function purgarUsuariosDePrueba(): Promise<number> {
   const cliente = new Client({ connectionString: URL_BASE_DE_DATOS })
   await cliente.connect()
   try {
+    await cliente.query('TRUNCATE TABLE public.limpieza_almacenamiento;')
     const res = await cliente.query("DELETE FROM auth.users WHERE email LIKE '%@prueba.test';")
     return res.rowCount ?? 0
   } finally {
