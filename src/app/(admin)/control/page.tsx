@@ -1,3 +1,14 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Control del sistema | Portal Inmobiliario',
+  description: 'Métricas y moderación del Portal Inmobiliario de Barranquilla.',
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
+
 import Link from 'next/link'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { consultarMetricasEmbudo, consultarMetricasIA } from '@/lib/admin/metricas'
@@ -15,7 +26,7 @@ export default async function PaginaControl() {
     <div className="space-y-8">
       <div>
         <h1 className="font-titulo text-3xl font-bold tracking-tight text-tinta">
-          Resumen General del Sistema
+          Control del Sistema
         </h1>
         <p className="mt-1 text-sm text-tinta-suave">
           Control integral de publicaciones, monetización, agentes inteligentes y trazabilidad.

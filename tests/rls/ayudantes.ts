@@ -1,3 +1,4 @@
+import { Client } from 'pg'
 import { existsSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
@@ -97,18 +98,12 @@ export async function crearUsuarioDePrueba(opciones: {
   } else {
     // Si falla (por ejemplo, cuenta fija ya existente de una corrida anterior),
     // buscarla y eliminarla para recrearla limpiamente.
-    let pagina = 1
-    while (true) {
-      const { data: listData, error: listError } = await admin.auth.admin.listUsers({ page: pagina, perPage: 50 })
-      if (listError) throw listError
-      const existente = listData.users.find((u) => u.email === opciones.correo)
-      if (existente) {
-        const { error: errorBorrado } = await admin.auth.admin.deleteUser(existente.id)
-        if (errorBorrado) throw errorBorrado
-        break
-      }
-      if (!listData.nextPage) break
-      pagina = listData.nextPage
+    const db = new Client({ connectionString: URL_BASE_DE_DATOS })
+    await db.connect()
+    try {
+      await db.query('DELETE FROM auth.users WHERE email = $1', [opciones.correo])
+    } finally {
+      await db.end()
     }
 
     const reintento = await admin.auth.admin.createUser({
@@ -161,11 +156,15 @@ export async function sesionVendedor(): Promise<SupabaseClient> {
 export async function listarUsuariosDePrueba() {
   const users: User[] = []
   let page = 1
-  while (true) {
+  const paginasVisitadas = new Set<number>()
+  while (page) {
+    if (paginasVisitadas.has(page)) break
+    paginasVisitadas.add(page)
     const { data, error } = await clienteAdmin().auth.admin.listUsers({ page, perPage: 50 })
     if (error) throw error
     users.push(...data.users)
-    if (!data.nextPage) return { data: { users }, error: null }
+    if (!data.nextPage || data.nextPage <= page || data.users.length === 0) break
     page = data.nextPage
   }
+  return { data: { users }, error: null }
 }

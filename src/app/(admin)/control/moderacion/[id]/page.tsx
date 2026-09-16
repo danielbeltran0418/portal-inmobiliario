@@ -11,11 +11,28 @@ interface Props {
   params: Promise<{ id: string }>
 }
 
+interface PropiedadDetalle {
+  id: string
+  titulo: string
+  descripcion: string
+  slug: string
+  precio: number | null
+  operacion: string
+  tipo_inmueble: string
+  estado: string
+  destacada: boolean
+  creado_en: string
+  actualizado_en: string
+  vendedor: { id: string; nombre: string; telefono: string | null } | null
+  barrios: { nombre: string } | null
+  imagenes: Array<{ id: string; ruta_storage: string; alt_text: string; orden: number }>
+}
+
 export default async function PaginaInspeccionPropiedad({ params }: Props) {
   const { id } = await params
   const supabase = await crearClienteServidor()
 
-  const { data: prop, error } = await supabase
+  const { data: rawProp, error } = await supabase
     .from('propiedades')
     .select(`
       id,
@@ -36,12 +53,14 @@ export default async function PaginaInspeccionPropiedad({ params }: Props) {
     .eq('id', id)
     .single()
 
-  if (error || !prop) {
+  if (error || !rawProp) {
     notFound()
   }
 
+  const prop = rawProp as unknown as PropiedadDetalle
+
   // Firmar URLs de imágenes
-  const rutas = (prop.imagenes || []).map((img: { ruta_storage: string }) => img.ruta_storage)
+  const rutas = (prop.imagenes || []).map((img) => img.ruta_storage)
   const mapaFirmadas = await firmarImagenes(rutas)
 
   return (
@@ -115,7 +134,7 @@ export default async function PaginaInspeccionPropiedad({ params }: Props) {
               Fotografías ({prop.imagenes?.length ?? 0})
             </h2>
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-              {(prop.imagenes || []).map((img: { id: string; ruta_storage: string; alt_text: string }) => {
+              {(prop.imagenes || []).map((img) => {
                 const url = mapaFirmadas.get(img.ruta_storage)
                 return (
                   <div
