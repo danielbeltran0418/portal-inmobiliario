@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Type for filter calls used in tablaPropiedadesConstructor
+type LlamadaFiltro = { method: string; column: string; value: unknown };
+
 vi.mock('server-only', () => ({}));
 
 const { fromMock } = vi.hoisted(() => ({ fromMock: vi.fn() }));
@@ -27,7 +30,7 @@ function tablaBarrios(id: string | null) {
 }
 
 function tablaPropiedadesConstructor(propiedades: unknown[]) {
-  const filterCalls: Array<{ method: string; column: string; value: unknown }> = [];
+  const filterCalls: LlamadaFiltro[] = [];
 
   const query: Record<string, unknown> = {
     select: () => query,
@@ -114,7 +117,7 @@ describe('obtenerBusquedasParaNotificar', () => {
     ]);
 
     // Assert filter calls to Supabase
-    const filterCalls = (propiedadesQuery as Record<string, unknown>)._getFilterCalls?.() as unknown[];
+    const filterCalls = (propiedadesQuery as { _getFilterCalls: () => LlamadaFiltro[] })._getFilterCalls();
     expect(filterCalls).toBeDefined();
     expect(filterCalls).toContainEqual({ method: 'eq', column: 'estado', value: 'publicada' });
     expect(filterCalls).toContainEqual({ method: 'eq', column: 'barrio_id', value: 'barrio-riomar-id' });
