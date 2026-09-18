@@ -8,7 +8,10 @@ export async function GET(req: NextRequest) {
   }
 
   const admin = crearClienteAdmin();
-  await admin.from('busquedas_guardadas').update({ notificaciones_activas: false }).eq('token_baja', token);
+  const { error } = await admin.from('busquedas_guardadas').update({ notificaciones_activas: false }).eq('token_baja', token);
+  if (error) {
+    console.error('[Notificaciones] Error al desactivar busqueda por token_baja:', error);
+  }
 
   return NextResponse.redirect(new URL('/notificaciones/baja/confirmado', req.url));
 }
