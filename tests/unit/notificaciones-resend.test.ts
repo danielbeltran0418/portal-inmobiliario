@@ -6,9 +6,7 @@ const { sendMock } = vi.hoisted(() => ({ sendMock: vi.fn().mockResolvedValue({ d
 
 vi.mock('resend', () => {
   const MockResend = class {
-    constructor() {
-      this.emails = { send: sendMock };
-    }
+    emails = { send: sendMock };
   };
   return { Resend: MockResend };
 });
