@@ -49,10 +49,14 @@ interface FilaPropiedadCoincidente {
 export async function obtenerBusquedasParaNotificar(): Promise<BusquedaConCoincidencias[]> {
   const admin = crearClienteAdmin();
 
-  const { data: busquedas } = await admin
+  const { data: busquedas, error: errorBusquedas } = await admin
     .from('busquedas_guardadas')
     .select('id, usuario_id, nombre, filtros, ultima_notificacion_en, token_baja')
     .eq('notificaciones_activas', true);
+
+  if (errorBusquedas) {
+    console.error('[Notificaciones] Error al consultar busquedas guardadas:', errorBusquedas);
+  }
 
   const resultado: BusquedaConCoincidencias[] = [];
 
@@ -60,11 +64,15 @@ export async function obtenerBusquedasParaNotificar(): Promise<BusquedaConCoinci
     const filtros = fila.filtros;
     if (!filtros?.barrio) continue;
 
-    const { data: barrio } = await admin
+    const { data: barrio, error: errorBarrio } = await admin
       .from('barrios')
       .select('id')
       .eq('slug', filtros.barrio)
       .maybeSingle();
+
+    if (errorBarrio) {
+      console.error('[Notificaciones] Error al consultar barrio:', errorBarrio);
+    }
 
     if (!barrio) continue;
 
@@ -80,7 +88,12 @@ export async function obtenerBusquedasParaNotificar(): Promise<BusquedaConCoinci
     if (filtros.precio_min !== undefined) consulta = consulta.gte('precio', filtros.precio_min);
     if (filtros.precio_max !== undefined) consulta = consulta.lte('precio', filtros.precio_max);
 
-    const { data: propiedades } = await consulta;
+    const { data: propiedades, error: errorPropiedades } = await consulta;
+
+    if (errorPropiedades) {
+      console.error('[Notificaciones] Error al consultar propiedades:', errorPropiedades);
+    }
+
     const filas = (propiedades ?? []) as unknown as FilaPropiedadCoincidente[];
     if (filas.length === 0) continue;
 

@@ -27,14 +27,29 @@ function tablaBarrios(id: string | null) {
 }
 
 function tablaPropiedadesConstructor(propiedades: unknown[]) {
+  const filterCalls: Array<{ method: string; column: string; value: unknown }> = [];
+
   const query: Record<string, unknown> = {
     select: () => query,
-    eq: () => query,
-    gt: () => query,
-    gte: () => query,
-    lte: () => query,
+    eq: (column: string, value: unknown) => {
+      filterCalls.push({ method: 'eq', column, value });
+      return query;
+    },
+    gt: (column: string, value: unknown) => {
+      filterCalls.push({ method: 'gt', column, value });
+      return query;
+    },
+    gte: (column: string, value: unknown) => {
+      filterCalls.push({ method: 'gte', column, value });
+      return query;
+    },
+    lte: (column: string, value: unknown) => {
+      filterCalls.push({ method: 'lte', column, value });
+      return query;
+    },
     then: (resolve: (v: { data: unknown[]; error: null }) => unknown) =>
       resolve({ data: propiedades, error: null }),
+    _getFilterCalls: () => filterCalls,
   };
   return query;
 }
@@ -65,10 +80,15 @@ describe('obtenerBusquedasParaNotificar', () => {
       imagenes_propiedad: [{ id: 'img-1', orden: 0 }],
     };
 
+    let propiedadesQuery: unknown;
+
     fromMock.mockImplementation((tabla: string) => {
       if (tabla === 'busquedas_guardadas') return tablaBusquedas([busquedaFila]);
       if (tabla === 'barrios') return tablaBarrios('barrio-riomar-id');
-      if (tabla === 'propiedades') return tablaPropiedadesConstructor([propiedadFila]);
+      if (tabla === 'propiedades') {
+        propiedadesQuery = tablaPropiedadesConstructor([propiedadFila]);
+        return propiedadesQuery;
+      }
       throw new Error(`tabla no mockeada: ${tabla}`);
     });
 
@@ -92,6 +112,20 @@ describe('obtenerBusquedasParaNotificar', () => {
         imagenId: 'img-1',
       },
     ]);
+
+    // Assert filter calls to Supabase
+    const filterCalls = (propiedadesQuery as Record<string, unknown>)._getFilterCalls?.() as unknown[];
+    expect(filterCalls).toBeDefined();
+    expect(filterCalls).toContainEqual({ method: 'eq', column: 'estado', value: 'publicada' });
+    expect(filterCalls).toContainEqual({ method: 'eq', column: 'barrio_id', value: 'barrio-riomar-id' });
+    expect(filterCalls).toContainEqual({ method: 'gt', column: 'creado_en', value: '2026-09-01T00:00:00Z' });
+    expect(filterCalls).toContainEqual({ method: 'eq', column: 'operacion', value: 'venta' });
+
+    // Verify precio filters were NOT called (precio_min/max not in filtros)
+    const precioFilterCalls = filterCalls.filter(
+      (call: Record<string, unknown>) => call.column === 'precio'
+    );
+    expect(precioFilterCalls).toHaveLength(0);
   });
 
   it('omite una busqueda sin coincidencias nuevas', async () => {
