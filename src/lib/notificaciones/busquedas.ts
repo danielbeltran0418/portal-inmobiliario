@@ -52,10 +52,12 @@ export async function obtenerBusquedasParaNotificar(): Promise<BusquedaConCoinci
   const { data: busquedas, error: errorBusquedas } = await admin
     .from('busquedas_guardadas')
     .select('id, usuario_id, nombre, filtros, ultima_notificacion_en, token_baja')
-    .eq('notificaciones_activas', true);
+    .eq('notificaciones_activas', true)
+    .limit(300);
 
   if (errorBusquedas) {
     console.error('[Notificaciones] Error al consultar busquedas guardadas:', errorBusquedas);
+    throw new Error(`Fallo al consultar busquedas guardadas: ${errorBusquedas.message}`);
   }
 
   const resultado: BusquedaConCoincidencias[] = [];

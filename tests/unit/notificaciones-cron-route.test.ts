@@ -17,6 +17,7 @@ describe('Route Handler del cron diario de notificaciones de busquedas', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.CRON_SECRET = 'secreto-cron-test';
+    process.env.RESEND_FROM = 'Portal Inmobiliario <alertas@tu-dominio.com>';
   });
 
   it('rechaza peticiones sin cabecera o con token incorrecto con 401', async () => {
@@ -54,5 +55,28 @@ describe('Route Handler del cron diario de notificaciones de busquedas', () => {
     const res = await GET(req);
     expect(res.status).toBe(500);
     expect(procesarMock).not.toHaveBeenCalled();
+  });
+
+  it('responde 500 sin procesar nada si RESEND_FROM no esta configurada', async () => {
+    process.env.RESEND_API_KEY = 'clave-de-prueba';
+    delete process.env.RESEND_FROM;
+    const req = new NextRequest('http://localhost:3000/api/cron/notificar-busquedas', {
+      headers: { authorization: 'Bearer secreto-cron-test' },
+    });
+
+    const res = await GET(req);
+    expect(res.status).toBe(500);
+    expect(procesarMock).not.toHaveBeenCalled();
+  });
+
+  it('responde 500 si procesarNotificacionesBusquedas lanza un error inesperado', async () => {
+    process.env.RESEND_API_KEY = 'clave-de-prueba';
+    procesarMock.mockRejectedValueOnce(new Error('fallo critico en la consulta'));
+    const req = new NextRequest('http://localhost:3000/api/cron/notificar-busquedas', {
+      headers: { authorization: 'Bearer secreto-cron-test' },
+    });
+
+    const res = await GET(req);
+    expect(res.status).toBe(500);
   });
 });

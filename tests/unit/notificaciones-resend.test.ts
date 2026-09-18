@@ -17,6 +17,7 @@ describe('enviarDigestBusqueda', () => {
   beforeEach(() => {
     sendMock.mockClear();
     process.env.RESEND_API_KEY = 'clave-de-prueba';
+    process.env.RESEND_FROM = 'Portal Inmobiliario <alertas@tu-dominio.com>';
     process.env.NEXT_PUBLIC_APP_URL = 'https://portal.test';
   });
 
@@ -77,5 +78,35 @@ describe('enviarDigestBusqueda', () => {
         propiedades: [],
       })
     ).rejects.toThrow('RESEND_API_KEY');
+  });
+
+  it('lanza un error si RESEND_FROM no esta configurada', async () => {
+    delete process.env.RESEND_FROM;
+
+    await expect(
+      enviarDigestBusqueda({
+        destinatarioEmail: 'comprador@prueba.test',
+        nombreBusqueda: 'Casas en Riomar',
+        tokenBaja: 'token-abc',
+        propiedades: [],
+      })
+    ).rejects.toThrow('RESEND_FROM');
+  });
+
+  it('incluye una version en texto plano con los datos del digest', async () => {
+    await enviarDigestBusqueda({
+      destinatarioEmail: 'comprador@prueba.test',
+      nombreBusqueda: 'Casas en Riomar',
+      tokenBaja: 'token-abc',
+      propiedades: [
+        { id: 'p1', slug: 'casa-1', titulo: 'Casa 1', precio: 300000000, moneda: 'COP', barrioSlug: 'riomar', imagenId: null },
+      ],
+    });
+
+    const llamada = sendMock.mock.calls[0][0];
+    expect(typeof llamada.text).toBe('string');
+    expect(llamada.text).toContain('Casa 1');
+    expect(llamada.text).toContain('Casas en Riomar');
+    expect(llamada.text).toContain('https://portal.test/notificaciones/baja?token=token-abc');
   });
 });

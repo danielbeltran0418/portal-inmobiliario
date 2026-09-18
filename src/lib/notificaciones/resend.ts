@@ -31,6 +31,23 @@ function urlImagen(p: PropiedadCoincidente): string {
   return p.imagenId ? urlPublica(`/imagen/${p.imagenId}`) : urlPublica('/og-fallback.jpg');
 }
 
+function armarTexto(datos: DatosDigestBusqueda, urlBaja: string): string {
+  const lineasPropiedades = datos.propiedades
+    .map((p) => `- ${p.titulo} — ${formatearPrecio(p.precio, p.moneda)} — ${p.barrioSlug}\n  ${urlFicha(p)}`)
+    .join('\n\n');
+
+  return [
+    datos.nombreBusqueda,
+    '',
+    `Encontramos ${datos.propiedades.length} propiedad(es) nueva(s) que coinciden con esta busqueda:`,
+    '',
+    lineasPropiedades,
+    '',
+    '¿Ya no quieres recibir estas alertas? Dejar de recibir esta busqueda:',
+    urlBaja,
+  ].join('\n');
+}
+
 function armarHtml(datos: DatosDigestBusqueda, urlBaja: string): string {
   const filasPropiedades = datos.propiedades
     .map(
@@ -63,14 +80,18 @@ export async function enviarDigestBusqueda(datos: DatosDigestBusqueda): Promise<
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY es obligatoria para enviar notificaciones');
 
+  const from = process.env.RESEND_FROM;
+  if (!from) throw new Error('RESEND_FROM es obligatoria para enviar notificaciones');
+
   const urlBaja = urlPublica(`/notificaciones/baja?token=${datos.tokenBaja}`);
   const resend = new Resend(apiKey);
 
   const { error } = await resend.emails.send({
-    from: 'Portal Inmobiliario <alertas@portal-inmobiliario.test>',
+    from,
     to: [datos.destinatarioEmail],
     subject: `Nuevas propiedades para "${datos.nombreBusqueda}"`,
     html: armarHtml(datos, urlBaja),
+    text: armarTexto(datos, urlBaja),
   });
 
   if (error) throw new Error(`Fallo el envio de Resend: ${error.message}`);

@@ -84,4 +84,39 @@ describe('procesarNotificacionesBusquedas', () => {
     expect(enviarDigestMock).not.toHaveBeenCalled();
     expect(resultado).toEqual({ procesadas: 1, enviadas: 0, fallidas: 1 });
   });
+
+  it('procesa solo `limite` busquedas cuando hay mas coincidencias que el limite', async () => {
+    const busquedas = [
+      BUSQUEDA_BASE,
+      { ...BUSQUEDA_BASE, busquedaId: 'busq-2', usuarioId: 'user-2' },
+      { ...BUSQUEDA_BASE, busquedaId: 'busq-3', usuarioId: 'user-3' },
+    ];
+    obtenerBusquedasMock.mockResolvedValue(busquedas);
+    enviarDigestMock.mockResolvedValue(undefined);
+
+    const resultado = await procesarNotificacionesBusquedas(2);
+
+    expect(enviarDigestMock).toHaveBeenCalledTimes(2);
+    expect(resultado).toEqual({ procesadas: 2, enviadas: 2, fallidas: 0 });
+  });
+
+  it('registra un error distinguible por consola si falla el UPDATE de ultima_notificacion_en tras un envio exitoso', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    obtenerBusquedasMock.mockResolvedValue([BUSQUEDA_BASE]);
+    enviarDigestMock.mockResolvedValue(undefined);
+    eqMock.mockResolvedValueOnce({ error: new Error('fallo de red en update') });
+
+    const resultado = await procesarNotificacionesBusquedas();
+
+    expect(resultado).toEqual({ procesadas: 1, enviadas: 1, fallidas: 0 });
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Fallo al actualizar ultima_notificacion_en'),
+      'busq-1',
+      expect.any(Error)
+    );
+    const mensajesLogueados = consoleErrorSpy.mock.calls.map((llamada) => llamada[0]);
+    expect(mensajesLogueados).not.toContain('[Notificaciones] Fallo al procesar busqueda');
+
+    consoleErrorSpy.mockRestore();
+  });
 });

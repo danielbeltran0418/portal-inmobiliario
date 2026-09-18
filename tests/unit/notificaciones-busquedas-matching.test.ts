@@ -14,7 +14,9 @@ vi.mock('@/lib/supabase/cliente-admin', () => ({
 function tablaBusquedas(filas: unknown[]) {
   return {
     select: () => ({
-      eq: () => Promise.resolve({ data: filas, error: null }),
+      eq: () => ({
+        limit: () => Promise.resolve({ data: filas, error: null }),
+      }),
     }),
   };
 }
@@ -151,6 +153,53 @@ describe('obtenerBusquedasParaNotificar', () => {
     const resultado = await obtenerBusquedasParaNotificar();
 
     expect(resultado).toHaveLength(0);
+  });
+
+  it('aplica los filtros de tipo, precio_min y precio_max cuando estan presentes en filtros', async () => {
+    const busquedaFila = {
+      id: 'busq-4',
+      usuario_id: 'user-4',
+      nombre: 'Apartamentos en Riomar con filtros',
+      filtros: { barrio: 'riomar', tipo: 'apartamento', precio_min: 100000000, precio_max: 600000000 },
+      ultima_notificacion_en: '2026-09-01T00:00:00Z',
+      token_baja: 'token-4',
+    };
+
+    let propiedadesQuery: unknown;
+
+    fromMock.mockImplementation((tabla: string) => {
+      if (tabla === 'busquedas_guardadas') return tablaBusquedas([busquedaFila]);
+      if (tabla === 'barrios') return tablaBarrios('barrio-riomar-id');
+      if (tabla === 'propiedades') {
+        propiedadesQuery = tablaPropiedadesConstructor([]);
+        return propiedadesQuery;
+      }
+      throw new Error(`tabla no mockeada: ${tabla}`);
+    });
+
+    await obtenerBusquedasParaNotificar();
+
+    const filterCalls = (propiedadesQuery as { _getFilterCalls: () => LlamadaFiltro[] })._getFilterCalls();
+    expect(filterCalls).toContainEqual({ method: 'eq', column: 'tipo_inmueble', value: 'apartamento' });
+    expect(filterCalls).toContainEqual({ method: 'gte', column: 'precio', value: 100000000 });
+    expect(filterCalls).toContainEqual({ method: 'lte', column: 'precio', value: 600000000 });
+  });
+
+  it('lanza un error si la consulta a busquedas_guardadas falla, en vez de retornar vacio silenciosamente', async () => {
+    fromMock.mockImplementation((tabla: string) => {
+      if (tabla === 'busquedas_guardadas') {
+        return {
+          select: () => ({
+            eq: () => ({
+              limit: () => Promise.resolve({ data: null, error: new Error('conexion caida') }),
+            }),
+          }),
+        };
+      }
+      throw new Error(`no deberia consultar otras tablas si busquedas_guardadas falla`);
+    });
+
+    await expect(obtenerBusquedasParaNotificar()).rejects.toThrow('Fallo al consultar busquedas guardadas');
   });
 
   it('omite una busqueda cuyo barrio en filtros ya no existe', async () => {

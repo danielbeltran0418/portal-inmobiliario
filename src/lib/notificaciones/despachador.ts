@@ -10,9 +10,10 @@ export interface ResultadoNotificaciones {
   fallidas: number;
 }
 
-export async function procesarNotificacionesBusquedas(): Promise<ResultadoNotificaciones> {
+export async function procesarNotificacionesBusquedas(limite = 20): Promise<ResultadoNotificaciones> {
   const admin = crearClienteAdmin();
-  const busquedas = await obtenerBusquedasParaNotificar();
+  const todasLasBusquedas = await obtenerBusquedasParaNotificar();
+  const busquedas = todasLasBusquedas.slice(0, limite);
 
   let enviadas = 0;
   let fallidas = 0;
@@ -32,10 +33,18 @@ export async function procesarNotificacionesBusquedas(): Promise<ResultadoNotifi
         propiedades: busqueda.propiedades,
       });
 
-      await admin
+      const { error: errorUpdate } = await admin
         .from('busquedas_guardadas')
         .update({ ultima_notificacion_en: new Date().toISOString() })
         .eq('id', busqueda.busquedaId);
+
+      if (errorUpdate) {
+        console.error(
+          '[Notificaciones] Fallo al actualizar ultima_notificacion_en tras envio exitoso:',
+          busqueda.busquedaId,
+          errorUpdate
+        );
+      }
 
       enviadas += 1;
     } catch (error) {
