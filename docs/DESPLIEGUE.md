@@ -171,8 +171,8 @@ para dejarlo publicado, no.
 registrarse como vendedor y publicar algo, o lo haces tú antes de pasarle el enlace.
 
 Para probar moderación y catálogo sin publicar a mano, `npm run sembrar:publicaciones` crea 10
-publicaciones con foto en estados variados (publicadas, en revisión, pausada, rechazada, y varias
-sospechosas a propósito: precio irreal, contacto en la descripción, duplicado). Contra el proyecto
+publicaciones realistas con foto en estados variados (publicadas, en revisión, pausada y
+rechazada). Contra el proyecto
 alojado hace falta la clave de servicio en `.env.local` y los flags `--vendedor <correo>
 --confirmar` (con `--crear-vendedor` crea esa cuenta si no existe); `--limpiar` borra solo esas 10 (slug `prueba-moderacion-…`).
 

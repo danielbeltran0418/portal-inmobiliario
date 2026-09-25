@@ -45,71 +45,67 @@ interface Semilla {
 }
 
 /**
- * Mezcla a proposito anuncios normales con los que un moderador deberia
- * frenar (precio irreal, contacto en la descripcion, texto en mayusculas,
- * duplicado), en varios estados, para probar suspender y reactivar.
+ * Anuncios realistas, con la descripcion del inmueble, repartidos en varios
+ * estados para probar suspender y reactivar desde moderacion.
  */
 const SEMILLAS: Semilla[] = [
   {
     titulo: 'Apartamento con vista al mar en Riomar',
-    descripcion: 'Apartamento de 3 habitaciones, balcon con vista al mar, piscina y gimnasio en el conjunto. Parqueadero cubierto.',
+    descripcion: 'Apartamento de 3 habitaciones en piso 12, con balcon y vista al mar. Sala-comedor amplia, cocina integral, estudio y zona de ropas. El conjunto tiene piscina, gimnasio y parqueadero cubierto. A 5 minutos del Buenavista.',
     operacion: 'venta', tipo: 'apartamento', precio: 780_000_000, habitaciones: 3, banos: 2, area: 110,
     barrio: 'riomar', estado: 'publicada', color: '#2f6f8f',
   },
   {
     titulo: 'Casa familiar en Villa Santos con patio',
-    descripcion: 'Casa de dos pisos, 4 habitaciones, patio amplio y terraza. Cerca a colegios y centros comerciales.',
+    descripcion: 'Casa de dos pisos con 4 habitaciones (la principal con vestier y bano), sala, comedor, cocina remodelada, patio amplio con arboles frutales y terraza en el segundo piso. Garaje para 2 carros. Cerca a colegios y centros comerciales.',
     operacion: 'venta', tipo: 'casa', precio: 950_000_000, habitaciones: 4, banos: 3, area: 220,
     barrio: 'villa-santos', estado: 'publicada', color: '#8f6a2f',
   },
   {
     titulo: 'Apartaestudio amoblado en El Prado',
-    descripcion: 'Apartaestudio amoblado, ideal para estudiantes o profesionales. Incluye servicios de agua y gas.',
+    descripcion: 'Apartaestudio amoblado con cama doble, escritorio, cocineta equipada y bano con agua caliente. Aire acondicionado e internet incluidos, igual que agua y gas. Ideal para estudiantes o profesionales, a pasos de la Cra. 54.',
     operacion: 'arriendo', tipo: 'apartamento', precio: 1_600_000, habitaciones: 1, banos: 1, area: 38,
     barrio: 'el-prado', estado: 'publicada', color: '#4f8f2f',
   },
   {
     titulo: 'Local comercial esquinero en Boston',
-    descripcion: 'Local esquinero sobre via principal, alto flujo peatonal, bano y deposito.',
+    descripcion: 'Local esquinero de 65 m2 sobre via principal con alto flujo peatonal y vehicular. Doble fachada en vidrio, bano, deposito y punto de agua. Apto para comercio, restaurante o consultorio.',
     operacion: 'arriendo', tipo: 'local', precio: 4_500_000, habitaciones: null, banos: 1, area: 65,
     barrio: 'boston', estado: 'publicada', color: '#6a2f8f',
   },
   {
-    // Sospechoso: precio irreal para el barrio y el area.
-    titulo: 'GANGA casa en Alto Prado casi regalada',
-    descripcion: 'Casa de 5 habitaciones en Alto Prado por un precio unico. Solo pago anticipado, sin visitas previas.',
-    operacion: 'venta', tipo: 'casa', precio: 15_000_000, habitaciones: 5, banos: 4, area: 300,
+    titulo: 'Casa amplia en Alto Prado con piscina',
+    descripcion: 'Casa esquinera de 5 habitaciones, cada una con bano privado. Sala-comedor de doble altura, cocina abierta con isla, estudio, piscina y jardin. Garaje para 3 carros y cuarto de servicio. Calle tranquila a dos cuadras de la Cra. 53.',
+    operacion: 'venta', tipo: 'casa', precio: 2_100_000_000, habitaciones: 5, banos: 4, area: 300,
     barrio: 'alto-prado', estado: 'publicada', color: '#8f2f2f',
   },
   {
-    // Sospechoso: saca el contacto fuera de la plataforma.
     titulo: 'Oficina en Ciudad Jardin lista para estrenar',
-    descripcion: 'Oficina de 45 m2 con aire acondicionado. ESCRIBEME DIRECTO AL WHATSAPP 3001234567 o a ofertas@correo-externo.com, no respondo por aqui.',
+    descripcion: 'Oficina de 45 m2 en piso 6 con vista a la ciudad. Dos espacios de trabajo, sala de reuniones pequena, bano privado y cocineta. Aire acondicionado central, piso en porcelanato y un parqueadero. Edificio con recepcion y vigilancia 24 horas.',
     operacion: 'arriendo', tipo: 'oficina', precio: 2_800_000, habitaciones: null, banos: 1, area: 45,
     barrio: 'ciudad-jardin', estado: 'publicada', color: '#2f8f7a',
   },
   {
     titulo: 'Lote para construir en Miramar',
-    descripcion: 'Lote plano de 250 m2 con servicios disponibles, uso residencial.',
+    descripcion: 'Lote plano de 250 m2 (10 x 25) en zona residencial consolidada, con acometidas de agua, luz y gas en el frente. Permite construir vivienda de hasta 3 pisos segun el POT.',
     operacion: 'venta', tipo: 'lote', precio: 420_000_000, habitaciones: null, banos: null, area: 250,
     barrio: 'miramar', estado: 'en_revision', color: '#7a8f2f',
   },
   {
-    // Sospechoso: duplicado casi exacto del primero.
-    titulo: 'Apartamento con vista al mar en Riomar!!',
-    descripcion: 'Apartamento de 3 habitaciones, balcon con vista al mar, piscina y gimnasio en el conjunto. Parqueadero cubierto.',
-    operacion: 'venta', tipo: 'apartamento', precio: 770_000_000, habitaciones: 3, banos: 2, area: 110,
+    titulo: 'Penthouse duplex en Riomar con terraza',
+    descripcion: 'Penthouse de dos niveles con 3 habitaciones, estudio y terraza privada con BBQ. Cocina integral abierta, zona de ropas y deposito. El conjunto tiene piscina, gimnasio, salon social y dos parqueaderos cubiertos.',
+    operacion: 'venta', tipo: 'apartamento', precio: 1_350_000_000, habitaciones: 3, banos: 3, area: 180,
     barrio: 'riomar', estado: 'en_revision', color: '#2f5a8f',
   },
   {
     titulo: 'Casa en La Concepcion para arriendo',
-    descripcion: 'Casa de 3 habitaciones con garaje, cocina integral y zona de ropas.',
+    descripcion: 'Casa de un piso con 3 habitaciones, 2 banos, sala-comedor, cocina integral, patio y zona de ropas. Garaje cubierto para un carro. Sector tranquilo, cerca a rutas de transporte y al centro comercial Portal del Prado.',
     operacion: 'arriendo', tipo: 'casa', precio: 2_300_000, habitaciones: 3, banos: 2, area: 140,
     barrio: 'la-concepcion', estado: 'pausada', color: '#8f7a2f',
   },
   {
-    titulo: 'Apartamento en Villa Carolina ya rechazado',
-    descripcion: 'Publicacion rechazada de antemano, para probar la reactivacion desde moderacion.',
+    titulo: 'Apartamento en Villa Carolina cerca a la Cra. 51B',
+    descripcion: 'Apartamento de 2 habitaciones y 2 banos en piso 4, con balcon y buena ventilacion. Cocina integral, zona de ropas independiente y un parqueadero. Conjunto con piscina y parque infantil, cerca a supermercados y colegios.',
     operacion: 'venta', tipo: 'apartamento', precio: 520_000_000, habitaciones: 2, banos: 2, area: 80,
     barrio: 'villa-carolina', estado: 'rechazada', color: '#5a5a5a',
   },
