@@ -170,6 +170,12 @@ para dejarlo publicado, no.
 **El catálogo estará vacío.** La base remota nace sin propiedades. Tu compañero tendrá que
 registrarse como vendedor y publicar algo, o lo haces tú antes de pasarle el enlace.
 
+Para probar moderación y catálogo sin publicar a mano, `npm run sembrar:publicaciones` crea 10
+publicaciones con foto en estados variados (publicadas, en revisión, pausada, rechazada, y varias
+sospechosas a propósito: precio irreal, contacto en la descripción, duplicado). Contra el proyecto
+alojado hace falta la clave de servicio en `.env.local` y los flags `--vendedor <correo>
+--confirmar`; `--limpiar` borra solo esas 10 (slug `prueba-moderacion-…`).
+
 ---
 
 ## Comprobación después de desplegar
