@@ -174,7 +174,7 @@ Para probar moderación y catálogo sin publicar a mano, `npm run sembrar:public
 publicaciones con foto en estados variados (publicadas, en revisión, pausada, rechazada, y varias
 sospechosas a propósito: precio irreal, contacto en la descripción, duplicado). Contra el proyecto
 alojado hace falta la clave de servicio en `.env.local` y los flags `--vendedor <correo>
---confirmar`; `--limpiar` borra solo esas 10 (slug `prueba-moderacion-…`).
+--confirmar` (con `--crear-vendedor` crea esa cuenta si no existe); `--limpiar` borra solo esas 10 (slug `prueba-moderacion-…`).
 
 ---
 

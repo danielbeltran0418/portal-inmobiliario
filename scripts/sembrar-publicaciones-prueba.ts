@@ -4,11 +4,16 @@
  *
  *   npx tsx scripts/sembrar-publicaciones-prueba.ts                  # vendedor@portal.com (seed local)
  *   npx tsx scripts/sembrar-publicaciones-prueba.ts --vendedor tu@correo.com
+ *   npx tsx scripts/sembrar-publicaciones-prueba.ts --vendedor nuevo@correo.com --crear-vendedor
  *   npx tsx scripts/sembrar-publicaciones-prueba.ts --limpiar        # borra solo las de prueba
  *
  * Lee NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY de .env.local. Contra
  * un proyecto que no sea local exige ademas --confirmar: la clave de servicio
  * salta RLS y lo que se cree aqui es visible en el catalogo publico.
+ *
+ * --crear-vendedor crea la cuenta si no existe, ya confirmada y con rol vendedor
+ * (lo asigna el trigger handle_new_user a partir de rol_solicitado), e imprime
+ * una contrasena aleatoria para entrar con ella.
  *
  * Todas las publicaciones llevan el slug con el prefijo PREFIJO_SLUG, que es lo
  * unico que usa --limpiar para encontrarlas: nunca toca otra propiedad.
@@ -166,11 +171,28 @@ async function main() {
     vendedorId = data.users.find((u) => u.email?.toLowerCase() === correo)?.id
     if (data.users.length < 200) break
   }
-  if (!vendedorId) throw new Error(`No existe ninguna cuenta con el correo ${correo}`)
+  if (!vendedorId && process.argv.includes('--crear-vendedor')) {
+    const clave = `Prueba-${randomUUID().slice(0, 12)}`
+    const { data, error } = await admin.auth.admin.createUser({
+      email: correo, password: clave, email_confirm: true,
+      user_metadata: { nombre: 'Vendedor de prueba', telefono: '3000000000', rol_solicitado: 'vendedor' },
+    })
+    if (error) throw error
+    vendedorId = data.user.id
+    console.log(`Cuenta vendedor creada: ${correo} / contrasena: ${clave}\n`)
+  }
+  if (!vendedorId) {
+    throw new Error(
+      `No existe ninguna cuenta con el correo ${correo}. ` +
+      'Anade --crear-vendedor para crearla ya confirmada y con rol vendedor.',
+    )
+  }
 
   const { data: perfil } = await admin.from('perfiles').select('rol').eq('id', vendedorId).single()
   if (perfil?.rol !== 'vendedor') {
-    throw new Error(`${correo} tiene rol "${perfil?.rol}", no "vendedor"`)
+    throw new Error(
+      `${correo} tiene rol "${perfil?.rol}", no "vendedor". Usa otra cuenta, o un correo nuevo con --crear-vendedor.`,
+    )
   }
 
   const { data: barrios, error: errBarrios } = await admin.from('barrios').select('id, slug')
@@ -211,5 +233,7 @@ async function main() {
 
 main().catch((error) => {
   console.error(error instanceof Error ? error.message : error)
-  process.exit(1)
+  // exitCode y no process.exit(): en Windows, salir de golpe con conexiones
+  // HTTP aun cerrandose dispara "Assertion failed: UV_HANDLE_CLOSING".
+  process.exitCode = 1
 })
