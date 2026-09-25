@@ -15,18 +15,21 @@ interface Props {
   mensajesIniciales: MensajeChat[]
   estadoConversacion?: string
   franjaPropuesta?: string | null
+  /** Abre el chat ya desplegado (la pagina dedicada del chat). */
+  abiertoInicial?: boolean
 }
 
 export function ChatLeadIA({
   conversacionId,
   mensajesIniciales,
   franjaPropuesta,
+  abiertoInicial = false,
 }: Props) {
   const [mensajes, setMensajes] = useState<MensajeChat[]>(mensajesIniciales)
   const [texto, setTexto] = useState('')
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [abierto, setAbierto] = useState(false)
+  const [abierto, setAbierto] = useState(abiertoInicial)
 
   const limiteAlcanzado = mensajes.filter((m) => m.emisor === 'comprador').length >= 10
 

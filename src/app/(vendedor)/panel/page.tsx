@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { filasDelPanel, type PropiedadCruda } from '@/lib/propiedades/panel'
 import { contarLeadsNuevos } from '@/lib/leads/consultas'
+import { miBloqueoDeCitas } from '@/lib/citas/faltas'
+import { formatearFechaHora } from '@/lib/fechas/formato'
 
 export const metadata: Metadata = {
   title: 'Mis propiedades | Portal Inmobiliario',
@@ -46,6 +48,15 @@ export default async function PaginaPanelVendedor() {
   const filas = filasDelPanel((data ?? []) as unknown as PropiedadCruda[])
   const nuevos = await contarLeadsNuevos(supabase)
 
+  // Sin horario semanal el asistente no tiene horas que ofrecer y nadie puede
+  // agendar: se le dice al vendedor en su primera pantalla, no en una tercera.
+  const [{ count: franjasSemanales }, bloqueadoHasta] = await Promise.all([
+    supabase.from('disponibilidad_semanal')
+      .select('id', { count: 'exact', head: true })
+      .eq('vendedor_id', usuario.user.id),
+    miBloqueoDeCitas(supabase),
+  ])
+
   return (
     <main className="mx-auto max-w-3xl p-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -65,6 +76,23 @@ export default async function PaginaPanelVendedor() {
           </Link>
         </div>
       </div>
+
+      {franjasSemanales === 0 && (
+        <p role="status" className="mt-6 rounded border border-amber-600 p-4 text-sm">
+          Todavía no has marcado las horas en que puedes mostrar tus propiedades, así que los compradores no
+          pueden agendar visitas.{' '}
+          <Link href="/panel/disponibilidad" className="font-medium text-marca hover:underline">
+            Configura tu disponibilidad
+          </Link>
+          .
+        </p>
+      )}
+      {bloqueadoHasta && (
+        <p role="status" className="mt-6 rounded border border-red-600 p-4 text-sm text-red-700">
+          Tienes 3 faltas por cancelar o mover visitas con menos de 8 horas de antelación. No recibirás visitas
+          nuevas hasta el {formatearFechaHora(bloqueadoHasta)}.
+        </p>
+      )}
 
       {filas.length === 0 ? (
         <p className="mt-8 opacity-80">

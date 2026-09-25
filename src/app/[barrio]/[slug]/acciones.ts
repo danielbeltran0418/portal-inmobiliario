@@ -1,6 +1,7 @@
 'use server'
 
 import { after } from 'next/server'
+import { redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { esquemaLead } from '@/lib/validacion/esquemas'
 import {
@@ -58,4 +59,59 @@ export async function enviarLead(_previo: EstadoLead, formData: FormData): Promi
   if (error.code === CODIGO_NO_PUBLICADA) return { error: MENSAJE_LEAD_NO_PUBLICADA }
   if (error.code === CODIGO_PROPIA) return { error: MENSAJE_LEAD_PROPIA }
   return { error: MENSAJE_GENERICO }
+}
+
+export interface EstadoAgendar {
+  error?: string
+}
+
+const MENSAJE_AGENDAR =
+  'Hola, me interesa esta propiedad y quiero agendar una visita. ¿Qué horarios tienen disponibles?'
+
+/**
+ * Boton "Agendar visita" de la ficha: lleva al comprador al chat del
+ * asistente que agenda la cita. Si todavia no habia contactado, crea el lead
+ * con un mensaje fijo (mismo RPC crear_lead que el formulario, con sus mismas
+ * reglas) y abre la conversacion con el asistente ANTES de redirigir, para que
+ * el chat no llegue vacio. Si ya habia contactado, solo lo lleva a su chat.
+ */
+export async function iniciarChatAgendamiento(
+  _previo: EstadoAgendar, formData: FormData,
+): Promise<EstadoAgendar> {
+  const propiedadId = formData.get('propiedad_id')
+  const rutaFicha = formData.get('ruta_ficha')
+  if (typeof propiedadId !== 'string' || typeof rutaFicha !== 'string') return { error: MENSAJE_GENERICO }
+
+  const supabase = await crearClienteServidor()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect(`/login?volver=${encodeURIComponent(rutaFicha)}`)
+
+  const { data: previo } = await supabase.from('leads').select('id')
+    .eq('propiedad_id', propiedadId).eq('comprador_id', user.id).maybeSingle()
+
+  let leadId = previo?.id as string | undefined
+  if (!leadId) {
+    const { data: perfil } = await supabase.from('perfiles').select('telefono')
+      .eq('id', user.id).maybeSingle()
+    const { data, error } = await supabase.rpc('crear_lead', {
+      p_propiedad_id: propiedadId,
+      p_telefono: perfil?.telefono ?? '',
+      p_mensaje: MENSAJE_AGENDAR,
+    })
+    if (error) {
+      if (error.code === CODIGO_NO_PUBLICADA) return { error: MENSAJE_LEAD_NO_PUBLICADA }
+      if (error.code === CODIGO_PROPIA) return { error: MENSAJE_LEAD_PROPIA }
+      return { error: MENSAJE_GENERICO }
+    }
+    leadId = data as string
+  }
+
+  // Idempotente: si la conversacion ya existe no hace nada.
+  try {
+    await procesarLeadIndividual(leadId)
+  } catch (err) {
+    console.error('No se pudo abrir la conversacion con el asistente:', err)
+  }
+
+  redirect(`/mi-cuenta/chat/${leadId}`)
 }

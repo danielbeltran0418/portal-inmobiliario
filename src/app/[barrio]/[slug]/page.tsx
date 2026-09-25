@@ -8,6 +8,8 @@ import { crearClientePublico } from '@/lib/supabase/cliente-publico'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { sesionActual } from '@/lib/auth/sesion'
 import { FormularioLead } from './formulario-lead'
+import { BotonAgendar } from './boton-agendar'
+import { rolDesdeToken } from '@/lib/auth/roles'
 const cargarFicha = cache(async (slug: string) => {
   const { data: p, error } = await crearClientePublico().from('propiedades')
     .select('id,vendedor_id,slug,titulo,descripcion,precio,operacion,tipo_inmueble,habitaciones,banos,area_m2,barrios!inner(nombre,slug),imagenes_propiedad(id,alt_text,orden)')
@@ -35,6 +37,9 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
   // force-dynamic, de modo que no cuesta nada extra.
   const sesion = await sesionActual()
   const rutaFicha = `/${barrio.slug}/${p.slug}`
+  // /mi-cuenta, donde vive el chat, es solo de compradores: a un vendedor que
+  // mira la ficha de otro no se le ofrece un boton que lo mandaria a su panel.
+  const esComprador = sesion.hayUsuario && rolDesdeToken(sesion.accessToken ?? '') === 'comprador'
 
   // Las dos lecturas solo tienen sentido con sesion, y se saltan sin ella.
   let yaContacto = false
@@ -99,14 +104,31 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
           className="font-medium text-marca hover:underline">
           Entra o crea cuenta para contactar
         </Link>{' '}
-        al vendedor de esta propiedad.
+        al vendedor de esta propiedad o agendar una visita con nuestro asistente.
       </p>
     ) : yaContacto ? (
-      <p className="mt-8 rounded-md border border-linea bg-superficie p-6 text-tinta-suave">
-        Ya contactaste sobre esta propiedad.
-      </p>
+      <div className="mt-8 rounded-md border border-linea bg-superficie p-6">
+        <p className="text-tinta-suave">Ya contactaste sobre esta propiedad.</p>
+        {esComprador && (
+          <div className="mt-4">
+            <BotonAgendar propiedadId={p.id} rutaFicha={rutaFicha} texto="Abrir el chat para agendar tu visita" />
+          </div>
+        )}
+      </div>
     ) : esDelVendedor ? null : (
-      <div className="mt-8">
+      <div className="mt-8 space-y-6">
+        {esComprador && (
+          <div className="rounded-md border border-marca bg-superficie p-6">
+            <h2 className="text-xl font-semibold text-tinta">Agendar una visita</h2>
+            <p className="mt-2 text-sm text-tinta-suave">
+              Nuestro asistente te muestra los horarios que el propietario tiene disponibles y deja la visita
+              agendada. Al propietario le llega un correo con la cita.
+            </p>
+            <div className="mt-4">
+              <BotonAgendar propiedadId={p.id} rutaFicha={rutaFicha} texto="Agendar visita con el asistente" />
+            </div>
+          </div>
+        )}
         <FormularioLead propiedadId={p.id} telefonoPrevio={telefonoPrevio} />
       </div>
     )}

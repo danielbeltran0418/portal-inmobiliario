@@ -147,6 +147,24 @@ seguidas, espera o vacía las filas `accion = 'registro'` de `intentos_accion`.
 
 ---
 
+## Visitas: chatbot, avisos por correo y faltas
+
+- **Migración nueva** `20260926000100_faltas_cancelacion_tardia.sql`: aplícala con
+  `npx supabase db push`. Cancelar o mover una visita con menos de 8 horas registra una falta;
+  3 faltas en 30 días bloquean las citas 7 días (el comprador no puede reservar, el vendedor no
+  recibe visitas nuevas).
+- **Correo al propietario** (y a la otra parte al mover o cancelar): usa `RESEND_API_KEY` y
+  `RESEND_FROM`, las mismas de las alertas de búsquedas. Márcalas también para **Preview** si
+  quieres probarlo en la vista previa. Sin ellas la visita se agenda igual y solo queda un aviso
+  en el log (`[citas] Sin RESEND_API_KEY/RESEND_FROM`).
+- **Botón "Agendar visita" de la ficha**: abre el chat con el asistente. El asistente necesita
+  `OPENAI_API_KEY` o `GEMINI_API_KEY`; sin ninguna responde con un mensaje fijo y no puede
+  agendar.
+- El asistente solo ofrece las horas que el vendedor marca en **Panel → Disponibilidad**. El panel
+  del vendedor le avisa si todavía no las ha configurado.
+
+---
+
 ## Crear el super admin, a mano
 
 No hay seed en producción, así que la primera cuenta se crea así:

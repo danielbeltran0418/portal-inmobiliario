@@ -37,7 +37,7 @@ export async function aprobarCitaPropuesta(
   // Carga admin dinamicamente para aislar server-only en tests unitarios de componentes cliente
   const { crearClienteAdmin } = await import('@/lib/supabase/cliente-admin')
   const admin = crearClienteAdmin()
-  const { error: errReserva } = await admin.rpc('reservar_cita_como', {
+  const { data: citaId, error: errReserva } = await admin.rpc('reservar_cita_como', {
     p_lead_id: conv.lead_id,
     p_inicio: conv.franja_propuesta,
     p_actor: conv.comprador_id,
@@ -46,6 +46,10 @@ export async function aprobarCitaPropuesta(
   if (errReserva) {
     return { ok: false, error: errReserva.message || 'Error al reservar la visita' }
   }
+
+  // Aviso por correo al comprador: es el vendedor quien la confirma.
+  const { avisarCita } = await import('@/lib/notificaciones/citas')
+  await avisarCita(citaId as string, 'reservada', usuario.id)
 
   // Marca estado_conversacion = 'cita_confirmada'
   await admin

@@ -153,6 +153,13 @@ export const MENSAJE_VISITA_YA_RESERVADA = 'Ya tienes una visita reservada para 
 export const MENSAJE_VISITA_INEXISTENTE = 'No encontramos esa visita.'
 export const MENSAJE_VISITA_YA_CANCELADA = 'Esta visita ya estaba cancelada.'
 export const MENSAJE_VISITA_YA_EMPEZO = 'No se puede cambiar una visita que ya empez\u00f3.'
+// 20260926000100: 3 faltas (cancelar o mover con menos de 8 horas) en 30 dias
+// bloquean las citas 7 dias. No se dice hasta cuando: la pagina lo muestra
+// aparte a quien esta bloqueado (mi_bloqueo_citas).
+export const MENSAJE_VISITA_COMPRADOR_BLOQUEADO =
+  'Tienes las reservas bloqueadas por cancelar o mover visitas con menos de 8 horas de antelaci\u00f3n.'
+export const MENSAJE_VISITA_VENDEDOR_BLOQUEADO =
+  'Este propietario no est\u00e1 recibiendo visitas en este momento.'
 
 // Borrar una fila de disponibilidad que devuelve CERO filas: no existe o no es
 // del vendedor. PostgREST no da error en ese caso; la accion lo detecta
@@ -171,6 +178,8 @@ const MENSAJES_DE_CITA: ReadonlyMap<string, string> = new Map([
   ['VS006', MENSAJE_VISITA_INEXISTENTE],
   ['VS007', MENSAJE_VISITA_YA_CANCELADA],
   ['VS008', MENSAJE_VISITA_YA_EMPEZO],
+  ['VS009', MENSAJE_VISITA_COMPRADOR_BLOQUEADO],
+  ['VS010', MENSAJE_VISITA_VENDEDOR_BLOQUEADO],
 ])
 
 /**

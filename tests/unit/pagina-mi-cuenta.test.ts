@@ -125,7 +125,7 @@ describe('/mi-cuenta', () => {
     expect(texto).not.toContain('Dirección:')
     expect(enlaces(elemento)).not.toContain(`/mi-cuenta/reservar/${LEAD_CON_VISITA}`)
     expect(buscarTodos(elemento, (n) => n.type === AccionesCita).map((n) => n.props)).toEqual([
-      { citaId: CITA, rutaMover: `/mi-cuenta/visitas/${CITA}/mover` },
+      { citaId: CITA, rutaMover: `/mi-cuenta/visitas/${CITA}/mover`, tardia: expect.any(Boolean) },
     ])
   })
 

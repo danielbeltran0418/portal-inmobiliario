@@ -7,6 +7,7 @@ import { listarCitasDelVendedor } from '@/lib/citas/consultas'
 import { listarCitasPropuestas } from '@/lib/ia/consultas'
 import { formatearFechaHora } from '@/lib/fechas/formato'
 import { AccionesCita } from '@/componentes/citas/acciones-cita'
+import { esCambioTardio } from '@/lib/citas/faltas'
 import { BotonConfirmarPropuesta } from '@/components/panel/boton-confirmar-propuesta'
 
 export const metadata: Metadata = {
@@ -65,7 +66,11 @@ export default async function PaginaCitasVendedor() {
                 <p className="text-sm text-tinta-tenue">{cita.tituloPropiedad ?? 'Propiedad'}</p>
                 <p className="mt-1 font-medium text-tinta">{cita.nombreComprador ?? 'Comprador'}</p>
                 <p className="cifra mt-1 text-tinta">{formatearFechaHora(cita.inicio)}</p>
-                <AccionesCita citaId={cita.id} rutaMover={'/panel/citas/' + cita.id + '/mover'} />
+                <AccionesCita
+                  citaId={cita.id}
+                  rutaMover={'/panel/citas/' + cita.id + '/mover'}
+                  tardia={esCambioTardio(cita.inicio)}
+                />
               </li>
             ))}
           </ul>

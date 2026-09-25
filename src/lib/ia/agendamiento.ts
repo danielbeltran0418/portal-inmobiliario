@@ -1,6 +1,7 @@
 import 'server-only';
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin';
 import { ErrorIA } from './tipos';
+import { avisarCita } from '@/lib/notificaciones/citas';
 
 export interface FranjaLibre {
   inicio: string;
@@ -101,6 +102,9 @@ export async function procesarSolicitudFranja(
     if (errReserva) {
       throw new ErrorIA('IA002', `Error al reservar cita en base de datos: ${errReserva.message}`);
     }
+
+    // Aviso por correo al propietario. avisarCita nunca lanza.
+    await avisarCita(citaId as string, 'reservada', conv.comprador_id);
 
     await admin
       .from('conversaciones_ia')

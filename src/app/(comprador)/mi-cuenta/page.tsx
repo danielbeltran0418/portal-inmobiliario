@@ -8,6 +8,7 @@ import { listarConversacionesComprador } from '@/lib/ia/consultas';
 import { formatearFechaHora } from '@/lib/fechas/formato';
 import { AccionesCita } from '@/componentes/citas/acciones-cita';
 import { ChatLeadIA } from '@/components/mi-cuenta/chat-lead-ia';
+import { esCambioTardio, miBloqueoDeCitas } from '@/lib/citas/faltas';
 
 export const metadata: Metadata = {
   title: 'Mi cuenta | Portal Inmobiliario',
@@ -26,14 +27,21 @@ export default async function PaginaMiCuenta() {
   if (!sesion.idUsuario) redirect('/login');
 
   const supabase = await crearClienteServidor();
-  const [solicitudes, conversaciones] = await Promise.all([
+  const [solicitudes, conversaciones, bloqueadoHasta] = await Promise.all([
     listarSolicitudesDelComprador(supabase, sesion.idUsuario),
     listarConversacionesComprador(supabase, sesion.idUsuario),
+    miBloqueoDeCitas(supabase),
   ]);
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold text-tinta">Mi cuenta</h1>
+      {bloqueadoHasta && (
+        <p role="status" className="rounded-md border border-peligro bg-superficie p-4 text-sm text-peligro">
+          Tienes 3 faltas por cancelar o mover visitas con menos de 8 horas de antelación. No puedes reservar
+          visitas nuevas hasta el {formatearFechaHora(bloqueadoHasta)}.
+        </p>
+      )}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-tinta">Tus solicitudes y conversaciones con IA</h2>
         <span className="text-sm text-tinta-suave">
@@ -64,7 +72,11 @@ export default async function PaginaMiCuenta() {
                     ) : (
                       <p className="mt-1 text-sm text-tinta-suave">La dirección aparecerá 2 horas antes de la visita</p>
                     )}
-                    <AccionesCita citaId={s.visita.id} rutaMover={'/mi-cuenta/visitas/' + s.visita.id + '/mover'} />
+                    <AccionesCita
+                      citaId={s.visita.id}
+                      rutaMover={'/mi-cuenta/visitas/' + s.visita.id + '/mover'}
+                      tardia={esCambioTardio(s.visita.inicio)}
+                    />
                   </div>
                 ) : s.estado === 'aceptado' ? (
                   <Link
