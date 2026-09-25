@@ -127,6 +127,26 @@ justo después de un despliegue nuevo.
 
 ---
 
+## Crear una cuenta de vendedor para pruebas
+
+1. En `/registro`, marca **Publicar propiedades**. El rol se fija al crear la cuenta; no se
+   puede cambiar desde la aplicación después.
+2. Abre el enlace del correo. `/confirmar` acepta tanto la plantilla propia (`token_hash`) como
+   la plantilla por defecto de Supabase alojado (`code`), así que no hace falta tocar
+   *Authentication → Emails → Templates*. Ábrelo **en el mismo navegador** en que te registraste:
+   el `code` se canjea contra una cookie que dejó el registro. Si lo abres en otro, el correo
+   queda verificado igual y basta con iniciar sesión.
+3. **Si el correo no llega** (límite del correo de cortesía), en el panel:
+   *Authentication → Users* → la cuenta → *Confirm email*. Luego inicia sesión normalmente.
+4. Si entras y te manda a `/mi-cuenta` en vez de `/panel`, falta activar el hook de *Custom
+   Access Token* (ver arriba): sin él el token no lleva el rol y todo el mundo es comprador.
+   También puedes revisar en *Table Editor → perfiles* que el `rol` sea `vendedor`.
+
+Recuerda el límite: **tres altas por hora desde la misma IP**. Para varias cuentas de prueba
+seguidas, espera o vacía las filas `accion = 'registro'` de `intentos_accion`.
+
+---
+
 ## Crear el super admin, a mano
 
 No hay seed en producción, así que la primera cuenta se crea así:

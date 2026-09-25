@@ -7,13 +7,18 @@ import { WidgetTurnstile } from '../widget-turnstile'
 const INICIAL: EstadoFormulario = {}
 
 export function FormularioLogin(
-  { claveTurnstile, volver }: { claveTurnstile: string | null; volver: string | null },
+  { claveTurnstile, volver, aviso = null }: {
+    claveTurnstile: string | null
+    volver: string | null
+    aviso?: string | null
+  },
 ) {
   const [estado, accion, pendiente] = useActionState(iniciarSesion, INICIAL)
 
   return (
     <main className="mx-auto max-w-md p-8">
       <h1 className="text-2xl font-semibold">Iniciar sesión</h1>
+      {aviso && <p role="status" className="mt-4 text-amber-700">{aviso}</p>}
       <form action={accion} className="mt-6 space-y-4">
         {volver && <input type="hidden" name="volver" value={volver} />}
         <div>
