@@ -82,7 +82,7 @@ export default async function PaginaPanelVendedor() {
           Todavía no has marcado las horas en que puedes mostrar tus propiedades, así que los compradores no
           pueden agendar visitas.{' '}
           <Link href="/panel/disponibilidad" className="font-medium text-marca hover:underline">
-            Configura tu disponibilidad
+            Marca tus horarios
           </Link>
           .
         </p>
