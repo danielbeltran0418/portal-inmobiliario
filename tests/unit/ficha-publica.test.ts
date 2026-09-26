@@ -152,6 +152,7 @@ it('con sesion de comprador que no ha contactado antes, enseña el formulario pr
   const html = renderToStaticMarkup(await Ficha({ params }))
 
   expect(html).toContain('Contactar al vendedor')
+  expect(html).toContain('Agendar visita con el asistente')
   expect(html).toContain('3000000000')
   expect(html).not.toContain('Entra o crea cuenta')
   expect(html).not.toContain('Ya contactaste')
@@ -186,6 +187,7 @@ it('al vendedor de su propia propiedad no le ofrece el formulario ni el enlace',
   expect(html).not.toContain('Contactar al vendedor')
   expect(html).not.toContain('Ya contactaste')
   expect(html).not.toContain('Entra o crea cuenta')
+  expect(html).not.toContain('Agendar visita')
 })
 
 /**

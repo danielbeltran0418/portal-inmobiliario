@@ -48,3 +48,11 @@ describe('mensajeDeErrorCita', () => {
     }
   })
 })
+
+describe('faltas por cancelacion tardia (20260926000100)', () => {
+  it('VS009 y VS010 tienen su propio mensaje', async () => {
+    const m = await import('@/lib/errores/mapear')
+    expect(m.mensajeDeErrorCita({ code: 'VS009' })).toBe(m.MENSAJE_VISITA_COMPRADOR_BLOQUEADO)
+    expect(m.mensajeDeErrorCita({ code: 'VS010' })).toBe(m.MENSAJE_VISITA_VENDEDOR_BLOQUEADO)
+  })
+})

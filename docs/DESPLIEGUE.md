@@ -127,6 +127,44 @@ justo después de un despliegue nuevo.
 
 ---
 
+## Crear una cuenta de vendedor para pruebas
+
+1. En `/registro`, marca **Publicar propiedades**. El rol se fija al crear la cuenta; no se
+   puede cambiar desde la aplicación después.
+2. Abre el enlace del correo. `/confirmar` acepta tanto la plantilla propia (`token_hash`) como
+   la plantilla por defecto de Supabase alojado (`code`), así que no hace falta tocar
+   *Authentication → Emails → Templates*. Ábrelo **en el mismo navegador** en que te registraste:
+   el `code` se canjea contra una cookie que dejó el registro. Si lo abres en otro, el correo
+   queda verificado igual y basta con iniciar sesión.
+3. **Si el correo no llega** (límite del correo de cortesía), en el panel:
+   *Authentication → Users* → la cuenta → *Confirm email*. Luego inicia sesión normalmente.
+4. Si entras y te manda a `/mi-cuenta` en vez de `/panel`, falta activar el hook de *Custom
+   Access Token* (ver arriba): sin él el token no lleva el rol y todo el mundo es comprador.
+   También puedes revisar en *Table Editor → perfiles* que el `rol` sea `vendedor`.
+
+Recuerda el límite: **tres altas por hora desde la misma IP**. Para varias cuentas de prueba
+seguidas, espera o vacía las filas `accion = 'registro'` de `intentos_accion`.
+
+---
+
+## Visitas: chatbot, avisos por correo y faltas
+
+- **Migración nueva** `20260926000100_faltas_cancelacion_tardia.sql`: aplícala con
+  `npx supabase db push`. Cancelar o mover una visita con menos de 8 horas registra una falta;
+  3 faltas en 30 días bloquean las citas 7 días (el comprador no puede reservar, el vendedor no
+  recibe visitas nuevas).
+- **Correo al propietario** (y a la otra parte al mover o cancelar): usa `RESEND_API_KEY` y
+  `RESEND_FROM`, las mismas de las alertas de búsquedas. Márcalas también para **Preview** si
+  quieres probarlo en la vista previa. Sin ellas la visita se agenda igual y solo queda un aviso
+  en el log (`[citas] Sin RESEND_API_KEY/RESEND_FROM`).
+- **Botón "Agendar visita" de la ficha**: abre el chat con el asistente. El asistente necesita
+  `OPENAI_API_KEY` o `GEMINI_API_KEY`; sin ninguna responde con un mensaje fijo y no puede
+  agendar.
+- El asistente solo ofrece las horas que el vendedor marca en **Panel → Disponibilidad**. El panel
+  del vendedor le avisa si todavía no las ha configurado.
+
+---
+
 ## Crear el super admin, a mano
 
 No hay seed en producción, así que la primera cuenta se crea así:
@@ -149,6 +187,12 @@ para dejarlo publicado, no.
 
 **El catálogo estará vacío.** La base remota nace sin propiedades. Tu compañero tendrá que
 registrarse como vendedor y publicar algo, o lo haces tú antes de pasarle el enlace.
+
+Para probar moderación y catálogo sin publicar a mano, `npm run sembrar:publicaciones` crea 10
+publicaciones realistas con foto en estados variados (publicadas, en revisión, pausada y
+rechazada). Contra el proyecto
+alojado hace falta la clave de servicio en `.env.local` y los flags `--vendedor <correo>
+--confirmar` (con `--crear-vendedor` crea esa cuenta si no existe); `--limpiar` borra solo esas 10 (slug `prueba-moderacion-…`).
 
 ---
 

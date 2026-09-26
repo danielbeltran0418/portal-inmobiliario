@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { claveDeSitioTurnstile } from '@/lib/seguridad/turnstile'
 import { GuionTurnstile } from '../guion-turnstile'
 import { FormularioLogin } from './formulario'
+import { MENSAJE_VERIFICACION_FALLIDA } from '@/lib/errores/mapear'
 
 export const metadata: Metadata = {
   title: 'Iniciar sesión | Portal Inmobiliario',
@@ -18,13 +19,19 @@ export const metadata: Metadata = {
  * dependa de una variable NEXT_PUBLIC_ visible en el bundle.
  */
 export default async function PaginaLogin(
-  { searchParams }: { searchParams: Promise<{ volver?: string }> },
+  { searchParams }: { searchParams: Promise<{ volver?: string; verificacion?: string }> },
 ) {
-  const { volver } = await searchParams
+  const { volver, verificacion } = await searchParams
+  // Solo un valor fijo decide el aviso; el texto nunca sale de la URL.
+  const aviso = verificacion === 'fallida' ? MENSAJE_VERIFICACION_FALLIDA : null
   return (
     <>
       <GuionTurnstile />
-      <FormularioLogin claveTurnstile={claveDeSitioTurnstile()} volver={volver ?? null} />
+      <FormularioLogin
+        claveTurnstile={claveDeSitioTurnstile()}
+        volver={volver ?? null}
+        aviso={aviso}
+      />
     </>
   )
 }

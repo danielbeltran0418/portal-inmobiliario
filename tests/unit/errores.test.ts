@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { mapearError, MENSAJE_GENERICO, MENSAJE_CREDENCIALES } from '@/lib/errores/mapear'
+import {
+  mapearError,
+  MENSAJE_GENERICO,
+  MENSAJE_CREDENCIALES,
+  MENSAJE_CORREO_SIN_VERIFICAR,
+} from '@/lib/errores/mapear'
 
 describe('mapearError', () => {
   it('nunca revela nombres de tablas ni restricciones de Postgres', () => {
@@ -22,6 +27,11 @@ describe('mapearError', () => {
   it('usa el mismo mensaje para un usuario inexistente', () => {
     const r = mapearError({ code: 'user_not_found', message: 'User not found' })
     expect(r.mensaje).toBe(MENSAJE_CREDENCIALES)
+  })
+
+  it('avisa de que falta verificar el correo en vez del generico', () => {
+    const r = mapearError({ code: 'email_not_confirmed', message: 'Email not confirmed' })
+    expect(r.mensaje).toBe(MENSAJE_CORREO_SIN_VERIFICAR)
   })
 
   it('genera un id de correlacion distinto en cada llamada', () => {

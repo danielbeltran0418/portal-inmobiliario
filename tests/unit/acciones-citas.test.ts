@@ -3,8 +3,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const revalidatePath = vi.fn()
 vi.mock('next/cache', () => ({ revalidatePath }))
 vi.mock('@/lib/supabase/cliente-servidor', () => ({
-  crearClienteServidor: async () => ({ rpc: baseFalsaRpc }),
+  crearClienteServidor: async () => ({
+    rpc: baseFalsaRpc,
+    auth: { getUser: async () => ({ data: { user: { id: ACTOR } } }) },
+  }),
 }))
+// El correo a la otra parte se prueba aparte (notificaciones-citas.test.ts):
+// aqui solo importa que cada accion lo pida con el evento correcto.
+const avisarCita = vi.fn()
+vi.mock('@/lib/notificaciones/citas', () => ({ avisarCita }))
+
+const ACTOR = '5b7e9c11-2d4f-4a6b-8c1d-3e5f7a9b1c2d'
 
 const LEAD = '3f1c1b5e-8f5a-4d2b-9c1e-2a7b6d4e5f60'
 const CITA = '9a2d7c41-3b6e-4f18-8d5a-1c2b3e4f5a6b'
@@ -58,12 +67,14 @@ beforeEach(() => {
   codigoForzado = null
   escrituras = []
   revalidatePath.mockReset()
+  avisarCita.mockReset()
 })
 
 describe('reservarCita', () => {
   it('con un lead y una franja validos queda hecha y revalida las dos vistas', async () => {
     expect(await reservarCita({}, formulario({ lead_id: LEAD, inicio: FRANJA }))).toEqual({ hecho: true })
     expect(escrituras).toEqual([`reservada ${FRANJA}`])
+    expect(avisarCita).toHaveBeenCalledWith(CITA, 'reservada', ACTOR)
     expect(revalidatePath).toHaveBeenCalledWith('/mi-cuenta')
     expect(revalidatePath).toHaveBeenCalledWith('/panel/citas')
   })
@@ -99,6 +110,7 @@ describe('reservarCita', () => {
     codigoForzado = codigo
     expect(await reservarCita({}, formulario({ lead_id: LEAD, inicio: FRANJA }))).toEqual({ error: mensaje })
     expect(revalidatePath).not.toHaveBeenCalled()
+    expect(avisarCita).not.toHaveBeenCalled()
   })
 
   it('un error que no es VS cae en el mensaje generico', async () => {
@@ -111,6 +123,7 @@ describe('moverCita', () => {
   it('con una cita y una franja validas queda hecha y revalida', async () => {
     expect(await moverCita({}, formulario({ cita_id: CITA, inicio: OTRA_FRANJA }))).toEqual({ hecho: true })
     expect(escrituras).toEqual([`movida ${OTRA_FRANJA}`])
+    expect(avisarCita).toHaveBeenCalledWith(CITA, 'movida', ACTOR)
     expect(revalidatePath).toHaveBeenCalledWith('/mi-cuenta')
     expect(revalidatePath).toHaveBeenCalledWith('/panel/citas')
   })
@@ -137,6 +150,7 @@ describe('cancelarCita', () => {
   it('con una cita valida queda hecha y revalida', async () => {
     expect(await cancelarCita({}, formulario({ cita_id: CITA }))).toEqual({ hecho: true })
     expect(escrituras).toEqual(['cancelada'])
+    expect(avisarCita).toHaveBeenCalledWith(CITA, 'cancelada', ACTOR)
     expect(revalidatePath).toHaveBeenCalledWith('/mi-cuenta')
   })
 

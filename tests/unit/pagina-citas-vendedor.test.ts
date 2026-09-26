@@ -101,7 +101,7 @@ describe('/panel/citas', () => {
 
     const acciones = buscarTodos(elemento, (n) => n.type === AccionesCita)
     expect(acciones.map((n) => n.props)).toEqual([
-      { citaId: ID_CONFIRMADA, rutaMover: `/panel/citas/${ID_CONFIRMADA}/mover` },
+      { citaId: ID_CONFIRMADA, rutaMover: `/panel/citas/${ID_CONFIRMADA}/mover`, tardia: expect.any(Boolean) },
     ])
   })
 })
