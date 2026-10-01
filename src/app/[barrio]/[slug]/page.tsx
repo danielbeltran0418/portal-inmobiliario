@@ -78,59 +78,56 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
     esFavorito = fav !== null
   }
 
-  return <main className="mx-auto w-full max-w-5xl px-6 py-12">
+  return <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 sm:py-14">
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosFicha(p, barrio)) }} />
-    <Link href={`/${barrio.slug}`}>Volver a {barrio.nombre}</Link>
-    <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-      <h1 className="text-3xl font-semibold">{p.titulo}</h1>
-      {sesion.hayUsuario && (
-        <BotonFavorito propiedadId={p.id} inicialEsFavorito={esFavorito} mostrarTexto />
-      )}
-    </div>
-    <p className="mt-3 text-xl">{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p.precio)} · {p.operacion}</p>
-    <p className="mt-2">{barrio.nombre}, Barranquilla</p>
-    <div className="my-8 grid gap-4 sm:grid-cols-2">{fotos.map(f => <Image key={f.id} src={`/imagen/${f.id}`} alt={f.alt_text} width={800} height={600} unoptimized className="aspect-[4/3] w-full rounded object-cover" />)}</div>
-    <h2 className="text-xl font-semibold">Acerca de esta propiedad</h2>
-    <p className="mt-4 whitespace-pre-wrap">{p.descripcion}</p>
-    <dl className="mt-6 flex flex-wrap gap-8">
-      {p.habitaciones != null && <div><dt>Habitaciones</dt><dd>{p.habitaciones}</dd></div>}
-      {p.banos != null && <div><dt>Baños</dt><dd>{p.banos}</dd></div>}
-      {p.area_m2 != null && <div><dt>Área</dt><dd>{p.area_m2} m²</dd></div>}
-    </dl>
-
-    {!sesion.hayUsuario ? (
-      <p className="mt-8 rounded-md border border-linea bg-superficie p-6">
-        <Link href={`/login?volver=${encodeURIComponent(rutaFicha)}`}
-          className="font-medium text-marca hover:underline">
-          Entra o crea cuenta para contactar
-        </Link>{' '}
-        al vendedor de esta propiedad o agendar una visita con nuestro asistente.
-      </p>
-    ) : yaContacto ? (
-      <div className="mt-8 rounded-md border border-linea bg-superficie p-6">
-        <p className="text-tinta-suave">Ya contactaste sobre esta propiedad.</p>
-        {esComprador && (
-          <div className="mt-4">
-            <BotonAgendar propiedadId={p.id} rutaFicha={rutaFicha} texto="Abrir el chat para agendar tu visita" />
-          </div>
-        )}
-      </div>
-    ) : esDelVendedor ? null : (
-      <div className="mt-8 space-y-6">
-        {esComprador && (
-          <div className="rounded-md border border-marca bg-superficie p-6">
-            <h2 className="text-xl font-semibold text-tinta">Agendar una visita</h2>
-            <p className="mt-2 text-sm text-tinta-suave">
-              Nuestro asistente te muestra los horarios que el propietario tiene disponibles y deja la visita
-              agendada. Al propietario le llega un correo con la cita.
-            </p>
-            <div className="mt-4">
-              <BotonAgendar propiedadId={p.id} rutaFicha={rutaFicha} texto="Agendar visita con el asistente" />
+    <Link href={`/${barrio.slug}`} className="inline-flex items-center gap-2 text-sm font-semibold text-tinta-suave transition-colors hover:text-marca">
+      <span aria-hidden="true">←</span> Volver a propiedades de {barrio.nombre}
+    </Link>
+    <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_360px] lg:items-start">
+      <div>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wider text-marca">
+              <span className="rounded-sm bg-marca-suave px-2.5 py-1">{p.operacion}</span>
+              <span className="text-tinta-tenue">{p.tipo_inmueble || 'Inmueble'} · {barrio.nombre}</span>
             </div>
+            <h1 className="mt-3 font-titulo text-3xl font-bold tracking-tight text-tinta sm:text-4xl">{p.titulo}</h1>
+            <p className="cifra mt-3 font-titulo text-2xl font-bold text-tinta">{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p.precio)}</p>
+          </div>
+          {sesion.hayUsuario && <BotonFavorito propiedadId={p.id} inicialEsFavorito={esFavorito} mostrarTexto />}
+        </div>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">{fotos.map(f => <Image key={f.id} src={`/imagen/${f.id}`} alt={f.alt_text} width={800} height={600} unoptimized className="aspect-[4/3] w-full rounded-xl border border-linea object-cover shadow-xs" />)}</div>
+        <section className="mt-10 border-t border-linea pt-8">
+          <h2 className="font-titulo text-xl font-bold text-tinta">Acerca de esta propiedad</h2>
+          <p className="mt-4 whitespace-pre-wrap leading-relaxed text-tinta-suave">{p.descripcion}</p>
+          <dl className="mt-7 grid grid-cols-3 gap-3">
+            {p.habitaciones != null && <div className="rounded-lg border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Habitaciones</dt><dd className="mt-1 text-lg font-bold text-tinta">{p.habitaciones}</dd></div>}
+            {p.banos != null && <div className="rounded-lg border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Baños</dt><dd className="mt-1 text-lg font-bold text-tinta">{p.banos}</dd></div>}
+            {p.area_m2 != null && <div className="rounded-lg border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Área</dt><dd className="mt-1 text-lg font-bold text-tinta">{p.area_m2} m²</dd></div>}
+          </dl>
+        </section>
+      </div>
+
+      </div>
+      <aside className="lg:sticky lg:top-24">
+        {!sesion.hayUsuario ? (
+          <div className="rounded-xl border border-linea bg-superficie p-6 shadow-xs">
+            <h2 className="font-titulo text-xl font-bold text-tinta">¿Te interesa esta propiedad?</h2>
+            <p className="mt-2 text-sm leading-relaxed text-tinta-suave">Entra o crea tu cuenta para contactar directamente al propietario y agendar una visita.</p>
+            <Link href={`/login?volver=${encodeURIComponent(rutaFicha)}`} className="mt-5 inline-flex w-full items-center justify-center rounded-md bg-marca px-4 py-3 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte">Entra o crea cuenta</Link>
+          </div>
+        ) : yaContacto ? (
+          <div className="rounded-xl border border-linea bg-superficie p-6 shadow-xs">
+            <p className="text-sm font-medium text-tinta">Ya contactaste sobre esta propiedad.</p>
+            {esComprador && <div className="mt-4"><BotonAgendar propiedadId={p.id} rutaFicha={rutaFicha} texto="Abrir el chat para agendar tu visita" /></div>}
+          </div>
+        ) : esDelVendedor ? null : (
+          <div className="flex flex-col gap-6">
+            {esComprador && <div className="rounded-xl border border-marca/40 bg-superficie p-6 shadow-xs"><h2 className="font-titulo text-xl font-bold text-tinta">Agendar una visita</h2><p className="mt-2 text-sm leading-relaxed text-tinta-suave">Consulta los horarios disponibles y agenda tu visita con el asistente.</p><div className="mt-5"><BotonAgendar propiedadId={p.id} rutaFicha={rutaFicha} texto="Agendar visita" /></div></div>}
+            <div className="rounded-xl border border-linea bg-superficie p-6 shadow-xs"><h2 className="font-titulo text-xl font-bold text-tinta">Contactar al propietario</h2><p className="mt-2 text-sm text-tinta-suave">Escribe tu mensaje y recibe respuesta directamente.</p><div className="mt-4"><FormularioLead propiedadId={p.id} telefonoPrevio={telefonoPrevio} /></div></div>
           </div>
         )}
-        <FormularioLead propiedadId={p.id} telefonoPrevio={telefonoPrevio} />
-      </div>
-    )}
+      </aside>
+    </div>
   </main>
 }
