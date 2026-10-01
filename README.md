@@ -277,3 +277,23 @@ tests/unit          vitest, sin dependencias externas
 tests/rls           vitest contra la base real
 tests/e2e           playwright
 ```
+
+## 11. Componentes de interfaz (shadcn/ui)
+
+`src/components/ui/` tiene los componentes base de [shadcn/ui](https://ui.shadcn.com)
+(button, card, badge, dialog, sheet, tabs, switch, table, skeleton, alert,
+tooltip, dropdown-menu, input, textarea, label), con `cn()` en `src/lib/utils.ts`
+y la configuracion en `components.json`.
+
+- **Los colores son los del portal.** Las variables de shadcn (`primary`, `muted`,
+  `border`...) estan en el `@theme` de `src/app/globals.css` como alias de los
+  tokens propios (`marca`, `superficie-alt`, `linea`...). Por eso el modo oscuro
+  funciona sin hacer nada.
+- **No ejecutar `npx shadcn init` otra vez**: reescribe `globals.css` y borra los
+  tokens. Para agregar un componente basta `npx shadcn@latest add <nombre>`; si el
+  comando propone tocar `globals.css`, rechazarlo.
+- **No instalar `next-themes`**: inyecta un script en linea que la CSP con nonce
+  bloquea. El modo oscuro va por `prefers-color-scheme`.
+- **En formularios que envian a server actions, controles nativos** (`<input>`,
+  `<select>`, `<textarea>`) con el estilo de `Input`/`Textarea`/`Label`. Las
+  pruebas E2E dependen de ellos y de sus `name`.

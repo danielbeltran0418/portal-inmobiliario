@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /*
  * Sistema de diseño del portal. Carácter "cálido y local": la personalidad
@@ -107,6 +108,27 @@
   --font-titulo: var(--fuente-titulo), Georgia, "Times New Roman", serif;
   --font-sans:   var(--fuente-texto), system-ui, -apple-system, sans-serif;
 
+  /* shadcn/ui (src/components/ui): sus nombres semanticos, apuntando a los
+     tokens del portal. Al ser alias, el modo oscuro de arriba se aplica solo. */
+  --color-background:         var(--fondo);
+  --color-foreground:         var(--tinta);
+  --color-card:               var(--superficie);
+  --color-card-foreground:    var(--tinta);
+  --color-popover:            var(--superficie);
+  --color-popover-foreground: var(--tinta);
+  --color-primary:            var(--marca);
+  --color-primary-foreground: var(--marca-contraste);
+  --color-secondary:          var(--superficie-alt);
+  --color-secondary-foreground: var(--tinta);
+  --color-muted:              var(--superficie-alt);
+  --color-muted-foreground:   var(--tinta-suave);
+  --color-accent:             var(--marca-suave);
+  --color-accent-foreground:  var(--marca-fuerte);
+  --color-destructive:        var(--peligro);
+  --color-border:             var(--linea);
+  --color-input:              var(--linea);
+  --color-ring:               var(--marca);
+
   --radius-md: var(--radio);
   --radius-sm: var(--radio-sm);
   --radius-lg: var(--radio-lg);
@@ -189,5 +211,14 @@ h1, h2, h3, h4 {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* shadcn/ui asume que `border` sin color usa --color-border, pero en
+   Tailwind 4 el valor por defecto es currentColor. Se limita a sus
+   componentes (todos llevan data-slot) para no alterar el resto. */
+@layer base {
+  [data-slot] {
+    border-color: var(--color-border);
   }
 }
