@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { sesionActual } from '@/lib/auth/sesion'
 import { estadoDeCabecera } from '@/lib/navegacion/enlaces'
 import { cerrarSesion } from './acciones-sesion'
+import { MenuMovil } from './ui/compuestos'
 
 export const NOMBRE_DEL_SITIO = 'Portal Inmobiliario'
 
@@ -50,7 +51,7 @@ export async function Cabecera() {
           <span>{NOMBRE_DEL_SITIO}</span>
         </Link>
 
-        <div className="flex flex-wrap items-center gap-4 text-sm sm:gap-5">
+        <div className="hidden flex-wrap items-center gap-4 text-sm sm:gap-5 md:flex">
           {enlaces.map((enlace) => (
             <Link
               key={enlace.destino}
@@ -76,6 +77,7 @@ export async function Cabecera() {
             </form>
           )}
         </div>
+        <MenuMovil enlaces={enlaces} cerrarSesion={cerrarSesion} autenticado={autenticado} />
       </nav>
     </header>
   )
