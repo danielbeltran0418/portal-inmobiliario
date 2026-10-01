@@ -112,7 +112,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
           <div className="rounded-xl border border-linea bg-superficie p-6 shadow-xs">
             <h2 className="font-titulo text-xl font-bold text-tinta">¿Te interesa esta propiedad?</h2>
             <p className="mt-2 text-sm leading-relaxed text-tinta-suave">Entra o crea tu cuenta para contactar directamente al propietario y agendar una visita.</p>
-            <Link href={`/login?volver=${encodeURIComponent(rutaFicha)}`} className="mt-5 inline-flex w-full items-center justify-center rounded-md bg-marca px-4 py-3 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte">Entra o crea cuenta</Link>
+            <Link href={`/login?volver=${encodeURIComponent(rutaFicha)}`} className="mt-5 inline-flex w-full items-center justify-center rounded-md bg-marca px-4 py-3 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte">Entra o crea cuenta para contactar</Link>
           </div>
         ) : yaContacto ? (
           <div className="rounded-xl border border-linea bg-superficie p-6 shadow-xs">
@@ -121,7 +121,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
           </div>
         ) : esDelVendedor ? null : (
           <div className="flex flex-col gap-6">
-            {esComprador && <div className="rounded-xl border border-marca/40 bg-superficie p-6 shadow-xs"><h2 className="font-titulo text-xl font-bold text-tinta">Agendar una visita</h2><p className="mt-2 text-sm leading-relaxed text-tinta-suave">Consulta los horarios disponibles y agenda tu visita con el asistente.</p><div className="mt-5"><BotonAgendar propiedadId={p.id} rutaFicha={rutaFicha} texto="Agendar visita" /></div></div>}
+            {esComprador && <div className="rounded-xl border border-marca/40 bg-superficie p-6 shadow-xs"><h2 className="font-titulo text-xl font-bold text-tinta">Agendar una visita</h2><p className="mt-2 text-sm leading-relaxed text-tinta-suave">Consulta los horarios disponibles y agenda tu visita con el asistente.</p><div className="mt-5"><BotonAgendar propiedadId={p.id} rutaFicha={rutaFicha} texto="Agendar visita con el asistente" /></div></div>}
             <div className="rounded-xl border border-linea bg-superficie p-6 shadow-xs"><h2 className="font-titulo text-xl font-bold text-tinta">Contactar al propietario</h2><p className="mt-2 text-sm text-tinta-suave">Escribe tu mensaje y recibe respuesta directamente.</p><div className="mt-4"><FormularioLead propiedadId={p.id} telefonoPrevio={telefonoPrevio} /></div></div>
           </div>
         )}

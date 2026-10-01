@@ -19,10 +19,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-const CLASE_BOTON_PRIMARIO =
-  'inline-flex items-center justify-center rounded bg-foreground px-5 py-2.5 ' +
-  'text-sm font-medium text-background hover:opacity-90'
-
 /**
  * Listado de propiedades del vendedor: la primera pantalla que ve al entrar.
  *
@@ -72,12 +68,12 @@ export default async function PaginaPanelVendedor() {
             <p className="mt-2 text-tinta-suave">Administra tus anuncios, visitas y mensajes desde un solo lugar.</p>
           </div>
           <Button asChild size="lg" className="w-full sm:w-auto">
-            <Link href="/panel/propiedades/nueva"><Plus data-icon="inline-start" />Publicar propiedad</Link>
+            <Link href="/panel/propiedades/nueva"><Plus data-icon="inline-start" />Publicar una propiedad</Link>
           </Button>
         </header>
 
         {franjasSemanales === 0 && <Aviso variante="aviso" titulo="Completa tu disponibilidad"><Link href="/panel/disponibilidad" className="font-semibold underline">Marca tus horarios</Link> para que los compradores puedan agendar visitas.</Aviso>}
-        {bloqueadoHasta && <Aviso variante="peligro" titulo="Agenda temporalmente bloqueada">No recibirás visitas nuevas hasta el {formatearFechaHora(bloqueadoHasta)}.</Aviso>}
+        {bloqueadoHasta && <Aviso variante="peligro" titulo="Agenda temporalmente bloqueada">Tienes 3 faltas por cancelar o mover visitas con menos de 8 horas de antelación. No recibirás visitas nuevas hasta el {formatearFechaHora(bloqueadoHasta)}.</Aviso>}
 
         <section aria-label="Resumen de actividad" className="grid gap-4 sm:grid-cols-3">
           <Card className="border-linea bg-superficie"><CardContent className="flex items-center gap-4 p-5"><div className="flex size-11 items-center justify-center rounded-xl bg-marca-suave text-marca"><Home aria-hidden="true" /></div><div><p className="text-2xl font-bold text-tinta">{filas.length}</p><p className="text-sm text-tinta-suave">Propiedades</p></div></CardContent></Card>
@@ -86,7 +82,7 @@ export default async function PaginaPanelVendedor() {
         </section>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <Card className="border-linea bg-superficie"><CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-linea-suave"><CardTitle className="text-xl">Tus anuncios</CardTitle><Link href="/panel/propiedades/nueva" className="hidden text-sm font-semibold text-marca hover:underline sm:inline">Nuevo anuncio <ArrowUpRight aria-hidden="true" className="ml-1 inline" /></Link></CardHeader><CardContent className="p-0">{filas.length === 0 ? <EstadoVacio titulo="Aún no tienes anuncios" descripcion="Publica tu primera propiedad y empieza a recibir contactos de compradores." icono={Home}><Button asChild><Link href="/panel/propiedades/nueva"><Plus data-icon="inline-start" />Crear anuncio</Link></Button></EstadoVacio> : <ul className="divide-y divide-linea-suave">{filas.map((fila) => <li key={fila.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Link href={`/panel/propiedades/${fila.id}`} className="truncate text-base font-semibold text-tinta hover:text-marca hover:underline">{fila.titulo}</Link><ChipEstado estado={fila.estado} /></div><p className="mt-1 text-sm text-tinta-suave">{fila.precioTexto}</p>{fila.faltantes.length > 0 && <p className="mt-2 text-xs text-aviso">Falta: {fila.faltantes.join(', ')}</p>}</div><Button asChild variant="outline" size="sm" className="w-full sm:w-auto"><Link href={`/panel/propiedades/${fila.id}`}>Editar</Link></Button></li>)}</ul>}</CardContent></Card>
+          <Card className="border-linea bg-superficie"><CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-linea-suave"><CardTitle className="text-xl">Tus anuncios</CardTitle><Link href="/panel/propiedades/nueva" className="hidden text-sm font-semibold text-marca hover:underline sm:inline">Nuevo anuncio <ArrowUpRight aria-hidden="true" className="ml-1 inline" /></Link></CardHeader><CardContent className="p-0">{filas.length === 0 ? <EstadoVacio titulo="Todavía no has publicado ninguna propiedad" descripcion="Publica tu primera propiedad y empieza a recibir contactos de compradores." icono={Home}><span className="sr-only">Todavía no has publicado ninguna propiedad</span><Button asChild><Link href="/panel/propiedades/nueva"><Plus data-icon="inline-start" />Crear anuncio</Link></Button></EstadoVacio> : <ul className="divide-y divide-linea-suave">{filas.map((fila) => <li key={fila.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Link href={`/panel/propiedades/${fila.id}`} className="truncate text-base font-semibold text-tinta hover:text-marca hover:underline">{fila.titulo}</Link><ChipEstado estado={fila.estado}>{fila.estadoTexto}</ChipEstado></div><p className="mt-1 text-sm text-tinta-suave">{fila.precioTexto}</p>{fila.faltantes.length > 0 && <p className="mt-2 text-xs text-aviso">Falta: {fila.faltantes.join(', ')}</p>}</div><Button asChild variant="outline" size="sm" className="w-full sm:w-auto"><Link href={`/panel/propiedades/${fila.id}`}>Editar</Link></Button></li>)}</ul>}</CardContent></Card>
           <aside className="flex flex-col gap-4"><Card className="border-linea bg-superficie"><CardHeader><CardTitle className="text-base">Accesos rápidos</CardTitle></CardHeader><CardContent className="flex flex-col gap-2"><Button asChild variant="ghost" className="justify-start"><Link href="/panel/leads"><MessageSquare data-icon="inline-start" />Mensajes recibidos{nuevos > 0 && <Badge variant="secondary" className="ml-auto">{nuevos}</Badge>}</Link></Button><Button asChild variant="ghost" className="justify-start"><Link href="/panel/citas"><CalendarDays data-icon="inline-start" />Mis visitas</Link></Button><Button asChild variant="ghost" className="justify-start"><Link href="/panel/disponibilidad"><Clock3 data-icon="inline-start" />Disponibilidad</Link></Button></CardContent></Card></aside>
         </div>
       </div>

@@ -13,13 +13,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
 export type EstadoPropiedad = 'borrador' | 'en_revision' | 'publicada' | 'pausada' | 'vendida' | 'rechazada'
 
 type IconoLucide = typeof Home
 
-export function ChipEstado({ estado, className }: { estado: string; className?: string }) {
+export function ChipEstado({ estado, className, children }: { estado: string; className?: string; children?: ReactNode }) {
   const estilos: Record<string, string> = {
     borrador: 'bg-muted text-muted-foreground',
     en_revision: 'bg-aviso-suave text-aviso',
@@ -32,7 +33,7 @@ export function ChipEstado({ estado, className }: { estado: string; className?: 
     borrador: 'Borrador', en_revision: 'En revisión', publicada: 'Publicada',
     pausada: 'Pausada', vendida: 'Vendida', rechazada: 'Rechazada',
   }
-  return <Badge variant="outline" className={cn('border-transparent font-semibold', estilos[estado] ?? 'bg-muted text-muted-foreground', className)}>{etiquetas[estado] ?? estado}</Badge>
+  return <Badge variant="outline" className={cn('border-transparent font-semibold', estilos[estado] ?? 'bg-muted text-muted-foreground', className)}>{children ?? etiquetas[estado] ?? estado}</Badge>
 }
 
 export function Aviso({ variante = 'aviso', titulo, children, className }: { variante?: 'aviso' | 'peligro' | 'exito' | 'info'; titulo?: string; children: ReactNode; className?: string }) {
@@ -62,7 +63,7 @@ export function ModalMotivo({ titulo, descripcion, trigger, children }: { titulo
 export type EnlaceNavegacion = { destino: string; etiqueta: string }
 
 export function MenuMovil({ enlaces, cerrarSesion, autenticado = false }: { enlaces: readonly EnlaceNavegacion[]; cerrarSesion: () => Promise<void>; autenticado?: boolean }) {
-  return <details className="relative md:hidden"><summary className="cursor-pointer list-none rounded-md border border-linea px-3 py-2 text-sm font-medium text-tinta-suave">Menú</summary><div className="absolute right-0 top-12 z-10 w-64 rounded-lg border border-linea bg-superficie p-4 shadow-lg"><nav aria-label="Menú móvil" className="flex flex-col gap-2">{enlaces.map((enlace) => <Link key={enlace.destino} href={enlace.destino} className="rounded-md px-3 py-2 text-sm hover:bg-superficie-alt">{enlace.etiqueta}</Link>)}{autenticado && <form action={cerrarSesion}><button type="submit" className="rounded-md px-3 py-2 text-left text-sm text-tinta-suave hover:bg-superficie-alt">Cerrar sesión</button></form>}</nav></div></details>
+  return <Sheet><SheetTrigger asChild><button type="button" className="rounded-md border border-linea px-3 py-2 text-sm font-medium text-tinta-suave md:hidden">Menú</button></SheetTrigger><SheetContent side="right"><SheetHeader><SheetTitle>Menú</SheetTitle><SheetDescription className="sr-only">Navegación principal</SheetDescription></SheetHeader><nav aria-label="Menú móvil" className="flex flex-col gap-2 px-4">{enlaces.map((enlace) => <Link key={enlace.destino} href={enlace.destino} className="rounded-md px-3 py-2 text-sm hover:bg-superficie-alt">{enlace.etiqueta}</Link>)}{autenticado && <form action={cerrarSesion}><button type="submit" className="rounded-md px-3 py-2 text-left text-sm text-tinta-suave hover:bg-superficie-alt">Cerrar sesión</button></form>}</nav></SheetContent></Sheet>
 }
 
 export function MenuMovilCliente({ enlaces }: { enlaces: EnlaceNavegacion[] }) {
