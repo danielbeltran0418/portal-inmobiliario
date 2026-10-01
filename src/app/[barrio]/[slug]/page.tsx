@@ -107,8 +107,6 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
           </dl>
         </section>
       </div>
-
-      </div>
       <aside className="lg:sticky lg:top-24">
         {!sesion.hayUsuario ? (
           <div className="rounded-xl border border-linea bg-superficie p-6 shadow-xs">
