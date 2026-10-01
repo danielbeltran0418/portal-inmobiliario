@@ -172,8 +172,17 @@ test.describe('Recorrido de Agentes IA de punta a punta', () => {
 
     expect(conv).toBeTruthy()
 
-    // Obtener una fecha futura valida para la cita (un lunes a las 15:00 UTC)
-    const fechaPropuesta = '2026-09-28T15:00:00.000Z'
+    // Proximo lunes (nunca hoy) a las 15:00 UTC = 10:00 en Bogota, dentro de
+    // la disponibilidad del vendedor (lunes 09:00-18:00) y de la ventana de 14
+    // dias. Antes era una fecha fija ('2026-09-28T15:00Z') y la prueba empezo
+    // a fallar en cuanto esa fecha quedo en el pasado.
+    const proximoLunes = new Date()
+    proximoLunes.setUTCDate(proximoLunes.getUTCDate() + ((8 - proximoLunes.getUTCDay()) % 7 || 7))
+    proximoLunes.setUTCHours(15, 0, 0, 0)
+    const fechaPropuesta = proximoLunes.toISOString()
+    const diaPropuesto = new Intl.DateTimeFormat('es-CO', {
+      weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Bogota',
+    }).format(proximoLunes)
     // Asegurar que el lead este aceptado para permitir confirmacion
     await admin.from('leads').update({ estado: 'aceptado' }).eq('id', conv!.lead_id)
     await admin
@@ -204,7 +213,7 @@ test.describe('Recorrido de Agentes IA de punta a punta', () => {
     await expect(seccionConfirmadas).toContainText('Apartamento de prueba para Agente IA E2E', {
       timeout: 15000,
     })
-    await expect(seccionConfirmadas).toContainText('lunes, 28 de septiembre')
+    await expect(seccionConfirmadas).toContainText(diaPropuesto)
 
     // 7. Verificacion en registro_auditoria
     const { data: eventos } = await admin
