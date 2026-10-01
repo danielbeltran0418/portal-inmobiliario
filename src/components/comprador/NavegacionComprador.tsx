@@ -14,7 +14,7 @@ export function NavegacionComprador() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex items-center gap-2 border-b border-linea pb-4 mb-8 overflow-x-auto text-sm font-medium">
+    <nav aria-label="Secciones de tu cuenta" className="-mx-1 mb-8 flex items-center gap-2 overflow-x-auto border-b border-linea px-1 pb-4 text-sm font-medium">
       {ENLACES.map((item) => {
         const activo = pathname === item.ruta;
         return (
