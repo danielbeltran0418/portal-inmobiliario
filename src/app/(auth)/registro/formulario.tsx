@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { registrarUsuario, type EstadoFormulario } from './acciones'
 import { WidgetTurnstile } from '../widget-turnstile'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 
 const INICIAL: EstadoFormulario = {}
 
@@ -19,7 +19,7 @@ export function FormularioRegistro({ claveTurnstile }: { claveTurnstile: string 
       <main className="flex flex-1 items-center justify-center px-6 py-12 sm:py-16">
         <Card className="w-full max-w-md border-linea bg-superficie shadow-sm">
           <CardHeader>
-            <CardTitle className="font-titulo text-2xl">Revisa tu correo</CardTitle>
+            <h1 data-slot="card-title" className="font-titulo text-2xl leading-none font-semibold">Revisa tu correo</h1>
             <CardDescription>Te enviamos un enlace de verificación para activar tu cuenta.</CardDescription>
           </CardHeader>
           <CardContent><Link href="/login" className="text-sm font-semibold text-marca hover:underline">Volver a iniciar sesión</Link></CardContent>
@@ -32,7 +32,7 @@ export function FormularioRegistro({ claveTurnstile }: { claveTurnstile: string 
     <main className="flex flex-1 items-center justify-center px-6 py-12 sm:py-16">
       <Card className="w-full max-w-lg border-linea bg-superficie shadow-sm">
         <CardHeader className="gap-2">
-          <CardTitle className="font-titulo text-2xl">Crea tu cuenta</CardTitle>
+          <h1 data-slot="card-title" className="font-titulo text-2xl leading-none font-semibold">Crea tu cuenta</h1>
           <CardDescription>Elige cómo quieres usar el portal. Podrás cambiar tus datos después.</CardDescription>
         </CardHeader>
         <CardContent>

@@ -6,7 +6,7 @@ import { iniciarSesion, type EstadoFormulario } from './acciones'
 import { WidgetTurnstile } from '../widget-turnstile'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 
 const INICIAL: EstadoFormulario = {}
 
@@ -27,8 +27,8 @@ export function FormularioLogin(
             <span className="text-lg font-bold">PI</span>
           </div>
           <div>
-            <CardTitle className="font-titulo text-2xl">Bienvenido de nuevo</CardTitle>
-            <CardDescription className="mt-2">Entra para gestionar tus propiedades o búsquedas guardadas.</CardDescription>
+            <h1 data-slot="card-title" className="font-titulo text-2xl leading-none font-semibold">Iniciar sesión</h1>
+            <CardDescription className="mt-2">Bienvenido de nuevo. Entra para gestionar tus propiedades o búsquedas guardadas.</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
