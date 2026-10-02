@@ -1,6 +1,5 @@
 'use server'
 
-import { after } from 'next/server'
 import { redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { esquemaLead } from '@/lib/validacion/esquemas'
@@ -39,20 +38,19 @@ export async function enviarLead(_previo: EstadoLead, formData: FormData): Promi
 
   if (!error) {
     const leadId = data as string | undefined
-    if (leadId) {
-      try {
-        after(async () => {
-          try {
-            await procesarLeadIndividual(leadId)
-          } catch (err) {
-            console.error('Error al despachar atencion automatica de lead:', err)
-          }
-        })
-      } catch {
-        // En entornos de prueba fuera del contexto de solicitud de Next.js
-      }
+    if (!leadId) return { enviado: true }
+
+    // El comprador pasa directo al chat con el asistente: no espera a que el
+    // vendedor acepte. La conversacion se abre ANTES de redirigir para que el
+    // chat no llegue vacio; si la IA falla, el chat igual existe (respuesta de
+    // contingencia) o la pagina pide recargar. El asistente acepta el lead por
+    // su cuenta al agendar la visita (src/lib/ia/agendamiento.ts).
+    try {
+      await procesarLeadIndividual(leadId)
+    } catch (err) {
+      console.error('Error al despachar atencion automatica de lead:', err)
     }
-    return { enviado: true }
+    redirect(`/mi-cuenta/chat/${leadId}`)
   }
 
   if (error.code === CODIGO_DUPLICADO) return { error: MENSAJE_LEAD_DUPLICADO }
