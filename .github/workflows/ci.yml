@@ -10,6 +10,8 @@ jobs:
     # ubuntu-latest trae Docker preinstalado, que es lo que necesita la pila
     # local de Supabase.
     runs-on: ubuntu-latest
+    # Sin tope, un apt-get colgado deja el job seis horas ocupando el runner.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
         with:
@@ -103,7 +105,14 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run test:unit
       - run: npm run test:rls
-      - run: npx playwright install --with-deps chromium
+      # apt-get se ha llegado a colgar aqui; si pasa, se corta y se reintenta.
+      - name: Instalar Chromium para Playwright
+        run: |
+          for intento in 1 2 3; do
+            timeout 10m npx playwright install --with-deps chromium && exit 0
+            echo "Intento $intento fallido; reintentando"
+          done
+          exit 1
       - run: npm run test:e2e
 
       # La cuenta vendedor es compartida por estos dos specs. La suite completa
