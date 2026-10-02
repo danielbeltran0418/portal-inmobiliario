@@ -24,13 +24,19 @@ export default async function PaginaControl() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-titulo text-3xl font-bold tracking-tight text-tinta">
-          Control del Sistema
-        </h1>
-        <p className="mt-1 text-sm text-tinta-suave">
-          Control integral de publicaciones, monetización, agentes inteligentes y trazabilidad.
-        </p>
+      <div className="flex flex-col gap-4 border-b border-linea pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-marca">Vista general</p>
+          <h1 className="mt-2 font-titulo text-3xl font-bold tracking-tight text-tinta">
+            Control del Sistema
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-tinta-suave">
+            Control integral de publicaciones, monetización, agentes inteligentes y trazabilidad.
+          </p>
+        </div>
+        <div className="rounded-full border border-linea bg-superficie px-3 py-1.5 text-xs font-medium text-tinta-suave">
+          Datos en tiempo real
+        </div>
       </div>
 
       {/* Tarjetas de Indicadores Clave (KPIs) */}
