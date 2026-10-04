@@ -11,13 +11,31 @@ export interface ResultadoMensajeComprador {
   respuesta?: string
 }
 
+/**
+ * Mismo tope que el maxLength de la caja de texto del chat. El del navegador
+ * no protege nada: quien llame al server action directamente puede mandar
+ * cerca de 1 MB, y cada turno reenvia el historial completo al modelo. Sin
+ * este tope, un solo comprador podia hacer que el portal pagara cientos de
+ * miles de tokens por mensaje.
+ */
+const LARGO_MAXIMO_MENSAJE = 500
+
 export async function enviarMensajeComprador(
   conversacionId: string,
   contenido: string,
 ): Promise<ResultadoMensajeComprador> {
+  if (typeof contenido !== 'string') {
+    return { ok: false, error: 'El mensaje no puede estar vacío' }
+  }
   const textoLimpio = contenido.trim()
   if (!textoLimpio) {
     return { ok: false, error: 'El mensaje no puede estar vacío' }
+  }
+  if (textoLimpio.length > LARGO_MAXIMO_MENSAJE) {
+    return {
+      ok: false,
+      error: `El mensaje no puede pasar de ${LARGO_MAXIMO_MENSAJE} caracteres.`,
+    }
   }
 
   const supabase = await crearClienteServidor()
@@ -60,7 +78,14 @@ export async function enviarMensajeComprador(
         codigo: 'IA_TOPE_TURNOS',
       }
     }
-    return { ok: false, error: errObj.message ?? 'Límite excedido' }
+    // Solo los errores de limite traen un mensaje pensado para el comprador.
+    // Cualquier otro (por ejemplo, un fallo de la base al contar mensajes)
+    // lleva detalles internos que no deben llegar al navegador.
+    if (errObj.codigo?.startsWith('IA_')) {
+      return { ok: false, error: errObj.message ?? 'Límite excedido' }
+    }
+    console.error('[IA] Error al verificar limites de la conversacion:', err)
+    return { ok: false, error: 'No pudimos enviar tu mensaje. Inténtalo de nuevo en un momento.' }
   }
 
   const { crearClienteAdmin } = await import('@/lib/supabase/cliente-admin')

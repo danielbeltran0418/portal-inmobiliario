@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
+import { MENSAJE_GENERICO, mensajeDeErrorCita } from '@/lib/errores/mapear'
 
 export interface ResultadoAccionIA {
   ok: boolean
@@ -44,7 +45,9 @@ export async function aprobarCitaPropuesta(
   })
 
   if (errReserva) {
-    return { ok: false, error: errReserva.message || 'Error al reservar la visita' }
+    // Por codigo, como en src/componentes/citas/acciones.ts: el message de
+    // Postgres es un detalle interno y no se le muestra al vendedor.
+    return { ok: false, error: mensajeDeErrorCita(errReserva) }
   }
 
   // Aviso por correo al comprador: es el vendedor quien la confirma.
@@ -57,11 +60,16 @@ export async function aprobarCitaPropuesta(
     .update({ estado_conversacion: 'cita_confirmada' })
     .eq('id', conversacionId)
 
-  // Registra auditoria
-  await admin.rpc('registrar_auditoria', {
-    p_usuario_id: usuario.id,
+  // Registra auditoria. registrar_evento_auditoria es el unico escritor de
+  // registro_auditoria (20260831000700); la llamada anterior apuntaba a una
+  // funcion que no existe y el evento se perdia en silencio.
+  await admin.rpc('registrar_evento_auditoria', {
     p_accion: 'ia_cita_aprobada_vendedor',
-    p_detalles: { conversacion_id: conversacionId, lead_id: conv.lead_id },
+    p_entidad: 'conversaciones_ia',
+    p_entidad_id: conversacionId,
+    p_actor_id: usuario.id,
+    p_metadatos: { lead_id: conv.lead_id, cita_id: citaId },
+    p_ip: null,
   })
 
   revalidatePath('/panel/citas')
@@ -85,7 +93,8 @@ export async function actualizarAutoConfirmacion(
     .eq('vendedor_id', usuario.id)
 
   if (error) {
-    return { ok: false, error: error.message || 'Error al actualizar auto-confirmación' }
+    console.error('[IA] Error al actualizar auto-confirmacion:', error)
+    return { ok: false, error: MENSAJE_GENERICO }
   }
 
   revalidatePath('/panel/disponibilidad')

@@ -114,5 +114,41 @@ describe('Chat Interactivo del Comprador IA', () => {
       expect(res.status).toBe(429)
       expect(res.error).toBe('Por favor espera un momento antes de enviar otro mensaje.')
     })
+
+    it('4. rechaza en el servidor un mensaje de mas de 500 caracteres sin llamar a la IA', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'comprador-1' } } })
+
+      const res = await enviarMensajeComprador('conv-1', 'a'.repeat(501))
+      expect(res.ok).toBe(false)
+      expect(res.error).toContain('500 caracteres')
+      expect(mockFrom).not.toHaveBeenCalled()
+      expect(mockVerificarLimites).not.toHaveBeenCalled()
+      expect(mockAdminFrom).not.toHaveBeenCalled()
+    })
+
+    it('5. no expone al navegador un error interno que no sea de limite', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'comprador-1' } } })
+      mockFrom.mockReturnValue({
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({
+                data: { id: 'conv-1', comprador_id: 'comprador-1', vendedor_id: 'vendedor-1' },
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      })
+      mockVerificarLimites.mockRejectedValue(
+        new Error('Error al consultar mensajes_ia: relation "x" does not exist'),
+      )
+      const consola = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      const res = await enviarMensajeComprador('conv-1', 'Hola')
+      expect(res.ok).toBe(false)
+      expect(res.error).not.toContain('mensajes_ia')
+      consola.mockRestore()
+    })
   })
 })

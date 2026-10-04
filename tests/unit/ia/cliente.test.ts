@@ -65,6 +65,33 @@ describe('Cliente de inferencia IA', () => {
     expect(respuesta.tokens.total_tokens).toBe(145);
   });
 
+  it('1b. acota los tokens de la respuesta: OpenAI con max_completion_tokens y Gemini con max_tokens', async () => {
+    const mockRespuesta = {
+      choices: [{ message: { role: 'assistant', content: 'ok' } }],
+      usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+    };
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockRespuesta,
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const mensajes = [{ rol: 'user' as const, contenido: 'Hola' }];
+
+    process.env.OPENAI_API_KEY = 'sk-test-openai';
+    delete process.env.GEMINI_API_KEY;
+    await ejecutarInferenciaIA(mensajes);
+    const cuerpoOpenAI = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(cuerpoOpenAI.max_completion_tokens).toBe(2048);
+    expect(cuerpoOpenAI.max_tokens).toBeUndefined();
+
+    delete process.env.OPENAI_API_KEY;
+    process.env.GEMINI_API_KEY = 'gemini-test';
+    await ejecutarInferenciaIA(mensajes, [], { maxTokens: 300 });
+    const cuerpoGemini = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(cuerpoGemini.max_tokens).toBe(300);
+  });
+
   it('2. ejecuta inferencia con emision de Function Calling estructurado y validado', async () => {
     process.env.OPENAI_API_KEY = 'sk-test-openai';
 
