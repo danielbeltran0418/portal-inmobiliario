@@ -13,7 +13,7 @@ export function FormularioLead(
   if (estado.enviado) {
     return (
       <p className="rounded-md border border-exito bg-exito-suave p-4 text-exito">
-        Tu mensaje se envio. El vendedor vera tus datos de contacto cuando lo acepte.
+        Tu mensaje se envio. Revisa la conversacion con el asistente en Mi cuenta.
       </p>
     )
   }

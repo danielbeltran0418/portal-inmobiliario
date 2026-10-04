@@ -157,7 +157,8 @@ test('comprador envia un lead; el vendedor lo ve sin contacto, y al aceptar apar
     await paginaComprador.fill('textarea[name="mensaje"]', MENSAJE)
     await enviarYEsperar(paginaComprador, 'Enviar mensaje')
 
-    await expect(paginaComprador.getByText(/Tu mensaje se envio/i)).toBeVisible()
+    // Sin esperar al vendedor: el comprador cae directo en el chat con el asistente.
+    await expect(paginaComprador).toHaveURL(/\/mi-cuenta\/chat\/[0-9a-f-]+$/, { timeout: 15000 })
   } finally {
     await contextoComprador.close()
   }
