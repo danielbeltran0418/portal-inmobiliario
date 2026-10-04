@@ -11,6 +11,14 @@ const MODELO_OPENAI_DEFAULT = 'gpt-5.6-luna';
 const MODELO_GEMINI_DEFAULT = 'gemini-3.8-flash';
 const TIMEOUT_MS_DEFAULT = 15000;
 
+/**
+ * Tope de tokens de cada respuesta. Sin el, lo unico que acota el gasto de
+ * una llamada es la ventana de contexto del modelo. Es holgado a proposito:
+ * en los modelos con razonamiento el tope incluye los tokens de razonamiento,
+ * y uno demasiado bajo deja la respuesta vacia.
+ */
+const MAX_TOKENS_RESPUESTA_DEFAULT = 2048;
+
 interface OpenAIMessage {
   role: string;
   content: string | null;
@@ -48,6 +56,7 @@ export async function ejecutarInferenciaIA(
   }
 
   const timeoutMs = opciones.timeoutMs ?? TIMEOUT_MS_DEFAULT;
+  const maxTokens = opciones.maxTokens ?? MAX_TOKENS_RESPUESTA_DEFAULT;
 
   // 1. Intentar proveedor principal: OpenAI GPT-5.6 Luna
   if (apiKeyOpenAI) {
@@ -57,7 +66,8 @@ export async function ejecutarInferenciaIA(
         herramientas,
         apiKeyOpenAI,
         opciones.model ?? MODELO_OPENAI_DEFAULT,
-        timeoutMs
+        timeoutMs,
+        maxTokens
       );
     } catch (err: unknown) {
       if (apiKeyGemini) {
@@ -71,7 +81,8 @@ export async function ejecutarInferenciaIA(
             herramientas,
             apiKeyGemini,
             opciones.geminiModel ?? MODELO_GEMINI_DEFAULT,
-            timeoutMs
+            timeoutMs,
+            maxTokens
           );
         } catch (geminiErr) {
           throw new ErrorIA(
@@ -96,7 +107,8 @@ export async function ejecutarInferenciaIA(
         herramientas,
         apiKeyGemini,
         opciones.geminiModel ?? MODELO_GEMINI_DEFAULT,
-        timeoutMs
+        timeoutMs,
+        maxTokens
       );
     } catch (geminiErr) {
       if (geminiErr instanceof ErrorIA) throw geminiErr;
@@ -115,7 +127,8 @@ async function llamarOpenAI(
   herramientas: DefinicionHerramienta[],
   apiKey: string,
   model: string,
-  timeoutMs: number
+  timeoutMs: number,
+  maxTokens: number
 ): Promise<RespuestaInferencia> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -125,6 +138,8 @@ async function llamarOpenAI(
       model,
       messages: formatearMensajesOpenAI(mensajes),
       temperature: 0.2,
+      // max_tokens esta obsoleto en OpenAI y los modelos GPT-5 lo rechazan.
+      max_completion_tokens: maxTokens,
     };
     if (herramientas.length > 0) {
       payload.tools = herramientas;
@@ -171,7 +186,8 @@ async function llamarGeminiOpenAICompat(
   herramientas: DefinicionHerramienta[],
   apiKey: string,
   model: string,
-  timeoutMs: number
+  timeoutMs: number,
+  maxTokens: number
 ): Promise<RespuestaInferencia> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -181,6 +197,8 @@ async function llamarGeminiOpenAICompat(
       model,
       messages: formatearMensajesOpenAI(mensajes),
       temperature: 0.2,
+      // La capa compatible de Gemini documenta max_tokens.
+      max_tokens: maxTokens,
     };
     if (herramientas.length > 0) {
       payload.tools = herramientas;

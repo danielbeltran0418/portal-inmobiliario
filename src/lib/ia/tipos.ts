@@ -38,6 +38,8 @@ export interface OpcionesInferencia {
   temperature?: number;
   timeoutMs?: number;
   geminiModel?: string;
+  /** Tope de tokens de la respuesta. Ver MAX_TOKENS_RESPUESTA_DEFAULT en cliente.ts. */
+  maxTokens?: number;
 }
 
 export type CodigoErrorIA = 'IA001' | 'IA002' | 'IA003' | 'IA004' | 'IA005';

@@ -129,6 +129,12 @@ describe('Componentes del Panel de Vendedor IA', () => {
         p_inicio: '2026-09-20T14:00:00.000Z',
         p_actor: 'comp-1',
       })
+      expect(mockAdminRpc).toHaveBeenCalledWith('registrar_evento_auditoria', expect.objectContaining({
+        p_accion: 'ia_cita_aprobada_vendedor',
+        p_entidad: 'conversaciones_ia',
+        p_entidad_id: 'conv-1',
+        p_actor_id: 'vendedor-1',
+      }))
     })
 
     it('6. actualizarAutoConfirmacion actualiza disponibilidad_semanal', async () => {
