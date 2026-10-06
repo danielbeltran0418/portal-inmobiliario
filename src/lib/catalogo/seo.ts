@@ -126,14 +126,38 @@ export function metadatosFicha(p: FichaSeo, barrio: BarrioSeo): Metadata {
   }
 }
 
+/** BreadcrumbList de schema.org: la miga visible, para que los buscadores la usen. */
+export function datosMigas(items: { nombre: string; ruta: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.nombre,
+      item: urlPublica(item.ruta),
+    })),
+  }
+}
+
 export function datosFicha(p: FichaSeo, barrio: BarrioSeo) {
   const url = urlPublica(`/${barrio.slug}/${p.slug}`)
+  // La miga va DENTRO del RealEstateListing (que es una WebPage y admite
+  // `breadcrumb`) y no como un segundo script: la pagina emite un solo
+  // ld+json y las pruebas E2E lo leen como tal.
+  const migas = datosMigas([
+    { nombre: 'Inicio', ruta: '/' },
+    { nombre: barrio.nombre, ruta: `/${barrio.slug}` },
+    { nombre: p.titulo, ruta: `/${barrio.slug}/${p.slug}` },
+  ])
+  const breadcrumb = { '@type': migas['@type'], itemListElement: migas.itemListElement }
   return {
     '@context': 'https://schema.org',
     '@type': 'RealEstateListing',
     name: p.titulo,
     description: p.descripcion,
     url,
+    breadcrumb,
     image: [...p.imagenes_propiedad].sort((a, b) => a.orden - b.orden).map((f) => urlPublica(`/imagen/${f.id}`)),
     contentLocation: {
       '@type': 'Place',
@@ -149,6 +173,7 @@ export function datosFicha(p: FichaSeo, barrio: BarrioSeo) {
       '@type': 'Offer',
       price: p.precio,
       priceCurrency: 'COP',
+      availability: 'https://schema.org/InStock',
       url,
       businessFunction:
         p.operacion === 'arriendo'

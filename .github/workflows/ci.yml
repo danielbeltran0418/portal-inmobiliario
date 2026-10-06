@@ -5,6 +5,12 @@ on:
   push:
     branches: [main, dev]
 
+# El job solo lee: sin permisos de escritura sobre el token. pull-requests: read
+# lo necesita gitleaks-action para listar los commits de un PR.
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   verificar:
     # ubuntu-latest trae Docker preinstalado, que es lo que necesita la pila
@@ -13,12 +19,12 @@ jobs:
     # Sin tope, un apt-get colgado deja el job seis horas ocupando el runner.
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
       - name: Buscar secretos filtrados
-        uses: gitleaks/gitleaks-action@v3
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -29,7 +35,7 @@ jobs:
       # `npm run test:rls` cae entero antes de la primera asercion.
       #
       # No se veia en local porque alli se corre con Node 22+.
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: npm
@@ -37,9 +43,11 @@ jobs:
       - run: npm ci
 
       - name: Instalar el CLI de Supabase
-        uses: supabase/setup-cli@v3
+        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
         with:
-          version: latest
+          # Fijada (la misma que se usa en local): con `latest` un release nuevo
+          # del CLI puede romper el CI sin que cambie nada en el repo.
+          version: 2.120.0
 
       - name: Levantar la pila local de Supabase
         run: supabase start
