@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Karla } from "next/font/google";
 import { Cabecera } from "@/components/cabecera";
 import { PieDePagina } from "@/components/pie-de-pagina";
@@ -21,6 +21,20 @@ const fuenteTexto = Karla({
   variable: "--fuente-texto",
   subsets: ["latin"],
 });
+
+/**
+ * viewport-fit=cover deja pintar bajo el notch y activa env(safe-area-inset-*);
+ * theme-color da a la barra de estado el color de la cabecera en cada esquema
+ * (los valores son --fondo de globals.css). No se fija maximumScale ni
+ * userScalable: bloquear el zoom es un fallo de accesibilidad.
+ */
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FBF8F3" },
+    { media: "(prefers-color-scheme: dark)", color: "#15120D" },
+  ],
+};
 
 export const metadata: Metadata = {
   title: "Portal inmobiliario",

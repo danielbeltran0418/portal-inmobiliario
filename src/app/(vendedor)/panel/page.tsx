@@ -59,7 +59,7 @@ export default async function PaginaPanelVendedor() {
   ])
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-superficie-alt/40">
+    <main className="min-h-[calc(100dvh-4rem)] bg-superficie-alt/40">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
