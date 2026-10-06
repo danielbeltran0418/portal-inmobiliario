@@ -39,7 +39,6 @@ describe('RLS y Vigencia de Pagos de Posicionamiento (SP7)', () => {
         tipo_inmueble: 'casa',
         precio: 450000000,
         estado: 'borrador',
-        destacada: false,
       })
       .select('id')
       .single()

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 import sharp from 'sharp'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { clienteAdmin, sesionVendedor } from './ayudantes'
+import { clienteAdmin, rutaImagenPropia, sesionVendedor } from './ayudantes'
 import { BUCKET_PROPIEDADES } from '@/lib/imagenes/firmar'
 
 // subirImagen/eliminarImagen/reordenarImagen dependen de crearClienteServidor()
@@ -224,10 +224,11 @@ describe('acciones de imagenes (contra Postgres y Storage reales)', () => {
     }
 
     async function crearTresImagenes(cliente: SupabaseClient, propiedadId: string) {
+      const base = (n: number) => rutaImagenPropia(cliente, propiedadId, `orden-${n}-${Date.now()}.webp`)
       const filas = [
-        { propiedad_id: propiedadId, ruta_storage: `fixtures/orden-0-${Date.now()}.webp`, alt_text: 'Primera imagen de la propiedad', orden: 0 },
-        { propiedad_id: propiedadId, ruta_storage: `fixtures/orden-1-${Date.now()}.webp`, alt_text: 'Segunda imagen de la propiedad', orden: 1 },
-        { propiedad_id: propiedadId, ruta_storage: `fixtures/orden-2-${Date.now()}.webp`, alt_text: 'Tercera imagen de la propiedad', orden: 2 },
+        { propiedad_id: propiedadId, ruta_storage: await base(0), alt_text: 'Primera imagen de la propiedad', orden: 0 },
+        { propiedad_id: propiedadId, ruta_storage: await base(1), alt_text: 'Segunda imagen de la propiedad', orden: 1 },
+        { propiedad_id: propiedadId, ruta_storage: await base(2), alt_text: 'Tercera imagen de la propiedad', orden: 2 },
       ]
       const { data, error } = await cliente.from('imagenes_propiedad').insert(filas).select('id, orden').order('orden', { ascending: true })
       expect(error).toBeNull()

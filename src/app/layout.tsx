@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Karla } from "next/font/google";
-import { Cabecera } from "@/componentes/cabecera";
-import { PieDePagina } from "@/componentes/pie-de-pagina";
+import { Cabecera } from "@/components/cabecera";
+import { PieDePagina } from "@/components/pie-de-pagina";
 import "./globals.css";
 
 /**

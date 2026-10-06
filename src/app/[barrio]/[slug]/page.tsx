@@ -26,6 +26,12 @@ export async function generateMetadata({ params }: { params: Promise<{ barrio: s
 }
 export default async function FichaPublica({ params }: { params: Promise<{ barrio: string; slug: string }> }) {
   const ruta = await params
+  // La sesion no depende de la ficha: se lanza a la vez. Si la ficha no
+  // existe, notFound() corta antes de esperarla; el .catch() la marca como
+  // atendida para que su rechazo no quede suelto. Al esperarla mas abajo, un
+  // fallo real sigue propagandose.
+  const sesionPendiente = sesionActual()
+  sesionPendiente.catch(() => {})
   const p = await cargarFicha(ruta.slug)
   const barrio = Array.isArray(p.barrios) ? p.barrios[0] : p.barrios
   if (!barrio) notFound()
@@ -35,7 +41,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
   // La ficha es publica y esta cacheada por SP1; esta parte depende de la
   // sesion, asi que se resuelve en cada peticion. El layout raiz ya declara
   // force-dynamic, de modo que no cuesta nada extra.
-  const sesion = await sesionActual()
+  const sesion = await sesionPendiente
   const rutaFicha = `/${barrio.slug}/${p.slug}`
   // /mi-cuenta, donde vive el chat, es solo de compradores: a un vendedor que
   // mira la ficha de otro no se le ofrece un boton que lo mandaria a su panel.
@@ -83,7 +89,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
     <Link href={`/${barrio.slug}`} className="inline-flex items-center gap-2 text-sm font-semibold text-tinta-suave transition-colors hover:text-marca">
       <span aria-hidden="true">←</span> Volver a propiedades de {barrio.nombre}
     </Link>
-    <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_360px] lg:items-start">
+    <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
       <div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -91,7 +97,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
               <span className="rounded-sm bg-marca-suave px-2.5 py-1">{p.operacion}</span>
               <span className="text-tinta-tenue">{p.tipo_inmueble || 'Inmueble'} · {barrio.nombre}</span>
             </div>
-            <h1 className="mt-3 font-titulo text-3xl font-bold tracking-tight text-tinta sm:text-4xl">{p.titulo}</h1>
+            <h1 className="mt-3 break-words font-titulo text-3xl font-bold tracking-tight text-tinta sm:text-4xl">{p.titulo}</h1>
             <p className="cifra mt-3 font-titulo text-2xl font-bold text-tinta">{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p.precio)}</p>
           </div>
           {sesion.hayUsuario && <BotonFavorito propiedadId={p.id} inicialEsFavorito={esFavorito} mostrarTexto />}
@@ -99,8 +105,8 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
         <div className="mt-8 grid gap-4 sm:grid-cols-2">{fotos.map(f => <Image key={f.id} src={`/imagen/${f.id}`} alt={f.alt_text} width={800} height={600} unoptimized className="aspect-[4/3] w-full rounded-xl border border-linea object-cover shadow-xs" />)}</div>
         <section className="mt-10 border-t border-linea pt-8">
           <h2 className="font-titulo text-xl font-bold text-tinta">Acerca de esta propiedad</h2>
-          <p className="mt-4 whitespace-pre-wrap leading-relaxed text-tinta-suave">{p.descripcion}</p>
-          <dl className="mt-7 grid grid-cols-3 gap-3">
+          <p className="mt-4 whitespace-pre-wrap break-words leading-relaxed text-tinta-suave">{p.descripcion}</p>
+          <dl className="mt-7 grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-3">
             {p.habitaciones != null && <div className="rounded-lg border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Habitaciones</dt><dd className="mt-1 text-lg font-bold text-tinta">{p.habitaciones}</dd></div>}
             {p.banos != null && <div className="rounded-lg border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Baños</dt><dd className="mt-1 text-lg font-bold text-tinta">{p.banos}</dd></div>}
             {p.area_m2 != null && <div className="rounded-lg border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Área</dt><dd className="mt-1 text-lg font-bold text-tinta">{p.area_m2} m²</dd></div>}

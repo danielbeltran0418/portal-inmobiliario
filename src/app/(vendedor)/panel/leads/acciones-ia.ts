@@ -38,6 +38,23 @@ export async function aprobarCitaPropuesta(
   // Carga admin dinamicamente para aislar server-only en tests unitarios de componentes cliente
   const { crearClienteAdmin } = await import('@/lib/supabase/cliente-admin')
   const admin = crearClienteAdmin()
+
+  // Aprobar la propuesta ES aceptar el lead: el vendedor ya verificado arriba
+  // toma la decision que el chat IA no puede tomar por el (procesarSolicitudFranja).
+  // Con SU cliente y no con admin: el trigger de transicion registra
+  // lead_aceptado con auth.uid(), y con service_role el actor quedaria NULL,
+  // indistinguible de una aceptacion automatica. RLS y el GRANT de estado
+  // le permiten actualizar sus propios leads.
+  const { error: errAceptar } = await supabase
+    .from('leads')
+    .update({ estado: 'aceptado' })
+    .eq('id', conv.lead_id)
+    .eq('estado', 'nuevo')
+  if (errAceptar) {
+    console.error('[IA] Error al aceptar el lead al aprobar la cita:', errAceptar)
+    return { ok: false, error: MENSAJE_GENERICO }
+  }
+
   const { data: citaId, error: errReserva } = await admin.rpc('reservar_cita_como', {
     p_lead_id: conv.lead_id,
     p_inicio: conv.franja_propuesta,
@@ -45,7 +62,7 @@ export async function aprobarCitaPropuesta(
   })
 
   if (errReserva) {
-    // Por codigo, como en src/componentes/citas/acciones.ts: el message de
+    // Por codigo, como en src/components/citas/acciones.ts: el message de
     // Postgres es un detalle interno y no se le muestra al vendedor.
     return { ok: false, error: mensajeDeErrorCita(errReserva) }
   }

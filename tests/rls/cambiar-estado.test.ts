@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { clienteAdmin, sesionVendedor } from './ayudantes'
+import { clienteAdmin, rutaImagenPropia, sesionVendedor } from './ayudantes'
 
 // cambiarEstado() depende de crearClienteServidor() (cookies() de
 // next/headers, solo resuelve dentro de una peticion real de Next). Se
@@ -73,7 +73,7 @@ describe('cambiarEstado: distingue foto de precio (defecto del brief original)',
 
     const { error: errorImagen } = await cliente.from('imagenes_propiedad').insert({
       propiedad_id: propiedadId,
-      ruta_storage: 'prueba-cambiar-estado/imagen.webp',
+      ruta_storage: await rutaImagenPropia(cliente, propiedadId, 'imagen.webp'),
       alt_text: 'Fachada de la casa de prueba',
     })
     expect(errorImagen).toBeNull()
@@ -109,7 +109,7 @@ describe('cambiarEstado: distingue foto de precio (defecto del brief original)',
 
     const { error: errorImagen } = await cliente.from('imagenes_propiedad').insert({
       propiedad_id: propiedadId,
-      ruta_storage: 'prueba-cambiar-estado/completa.webp',
+      ruta_storage: await rutaImagenPropia(cliente, propiedadId, 'completa.webp'),
       alt_text: 'Fachada de la casa completa',
     })
     expect(errorImagen).toBeNull()

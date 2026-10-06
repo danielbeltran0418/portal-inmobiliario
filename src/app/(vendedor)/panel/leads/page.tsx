@@ -36,7 +36,7 @@ export default async function PaginaLeads() {
           {leads.map((lead) => {
             const conv = conversaciones[lead.id]
             return (
-              <li key={lead.id} className="rounded-md border border-linea bg-superficie p-5">
+              <li key={lead.id} className="break-words rounded-md border border-linea bg-superficie p-5 [overflow-wrap:anywhere]">
                 <p className="text-sm text-tinta-tenue">{lead.propiedades?.titulo}</p>
                 <p className="mt-1 font-medium text-tinta">{lead.nombre_mostrado}</p>
                 <p className="mt-2 whitespace-pre-wrap text-tinta-suave">{lead.mensaje}</p>

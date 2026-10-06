@@ -54,7 +54,7 @@ async function baseFalsaRpc(nombre: string, argumentos: Record<string, unknown>)
   return falla('PGRST202')
 }
 
-const { reservarCita, moverCita, cancelarCita } = await import('@/componentes/citas/acciones')
+const { reservarCita, moverCita, cancelarCita } = await import('@/components/citas/acciones')
 const mapear = await import('@/lib/errores/mapear')
 
 function formulario(campos: Record<string, string>): FormData {

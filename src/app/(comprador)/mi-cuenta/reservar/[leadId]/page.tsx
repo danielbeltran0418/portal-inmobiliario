@@ -7,7 +7,7 @@ import { obtenerFranjasLibres, obtenerLeadParaReservar } from '@/lib/citas/consu
 import { agruparFranjasPorDia } from '@/lib/citas/agrupar'
 import { esquemaIdentificador } from '@/lib/validacion/esquemas'
 import { MENSAJE_VISITA_LEAD_NO_ACEPTADO } from '@/lib/errores/mapear'
-import { SelectorFranjas } from '@/componentes/citas/selector-franjas'
+import { SelectorFranjas } from '@/components/citas/selector-franjas'
 
 export const metadata: Metadata = {
   title: 'Reservar visita | Portal Inmobiliario',

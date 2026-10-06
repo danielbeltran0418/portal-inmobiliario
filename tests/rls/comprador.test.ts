@@ -51,6 +51,14 @@ describe('RLS: Panel del Comprador (Favoritos y Búsquedas Guardadas)', () => {
 
     if (errProp || !prop) throw errProp ?? new Error('No se pudo crear propiedad de prueba');
     propiedadId = prop.id;
+
+    // Favoritos solo admite propiedades publicadas (20261007000200), y publicar
+    // exige al menos una imagen.
+    const { error: errImagen } = await admin.from('imagenes_propiedad')
+      .insert({ propiedad_id: propiedadId, ruta_storage: `fixtures/fav-${propiedadId}.webp`, alt_text: 'Imagen prestada para publicar' });
+    if (errImagen) throw errImagen;
+    const { error: errPublicar } = await admin.from('propiedades').update({ estado: 'publicada' }).eq('id', propiedadId);
+    if (errPublicar) throw errPublicar;
   });
 
   describe('Tabla favoritos', () => {

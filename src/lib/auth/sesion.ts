@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 
 /**
@@ -35,8 +36,12 @@ export const SIN_SESION: Sesion = { hayUsuario: false, accessToken: null, idUsua
  *     (src/lib/auth/roles.ts). El objeto `user` no trae el claim del hook.
  *
  * El orden importa: sin usuario validado no se mira el token para nada.
+ *
+ * cache() de React memoiza por peticion: la cabecera del layout y la pagina
+ * la piden a la vez y antes cada una pagaba su propio viaje a auth. No
+ * prerenderiza nada, asi que no choca con la regla de render dinamico del CI.
  */
-export async function sesionActual(): Promise<Sesion> {
+export const sesionActual = cache(async (): Promise<Sesion> => {
   const supabase = await crearClienteServidor()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -44,4 +49,4 @@ export async function sesionActual(): Promise<Sesion> {
 
   const { data: { session } } = await supabase.auth.getSession()
   return { hayUsuario: true, accessToken: session?.access_token ?? null, idUsuario: user.id }
-}
+})

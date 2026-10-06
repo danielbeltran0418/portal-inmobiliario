@@ -45,7 +45,7 @@ test('crear, completar, publicar y pausar una propiedad desde el panel', async (
   //
   // El boton se busca por NOMBRE, no por `button[type="submit"]` a secas: en
   // esta pantalla el vendedor esta autenticado, asi que la Cabecera (Task de
-  // SP1/SP2, src/componentes/cabecera.tsx) YA renderiza su propio
+  // SP1/SP2, src/components/cabecera.tsx) YA renderiza su propio
   // `<button type="submit">Cerrar sesión</button>`, hermano del formulario de
   // esta pagina en el DOM (los dos cuelgan de <body>, ver src/app/layout.tsx).
   // `page.click('button[type="submit"]')` toma el PRIMER boton que matchea en

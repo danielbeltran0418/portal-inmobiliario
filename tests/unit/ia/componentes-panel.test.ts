@@ -95,35 +95,51 @@ describe('Componentes del Panel de Vendedor IA', () => {
     it('5. aprobarCitaPropuesta invoca reservar_cita_como y marca cita_confirmada', async () => {
       mockGetUser.mockResolvedValue({ data: { user: { id: 'vendedor-1' } } })
 
-      mockFrom.mockReturnValue({
-        select: () => ({
-          eq: () => ({
-            eq: () => ({
-              maybeSingle: async () => ({
-                data: {
-                  id: 'conv-1',
-                  lead_id: 'lead-1',
-                  comprador_id: 'comp-1',
-                  vendedor_id: 'vendedor-1',
-                  franja_propuesta: '2026-09-20T14:00:00.000Z',
-                  estado_conversacion: 'cita_propuesta',
-                },
-                error: null,
-              }),
-            }),
-          }),
-        }),
+      // Aceptar el lead lo hace el cliente DEL VENDEDOR (no admin): asi el
+      // trigger de transicion registra lead_aceptado con su actor_id.
+      const mockVendedorUpdateLead = vi.fn().mockReturnValue({
+        eq: () => ({ eq: async () => ({ data: null, error: null }) }),
       })
+      mockFrom.mockImplementation((tabla: string) =>
+        tabla === 'leads'
+          ? { update: mockVendedorUpdateLead }
+          : {
+              select: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    maybeSingle: async () => ({
+                      data: {
+                        id: 'conv-1',
+                        lead_id: 'lead-1',
+                        comprador_id: 'comp-1',
+                        vendedor_id: 'vendedor-1',
+                        franja_propuesta: '2026-09-20T14:00:00.000Z',
+                        estado_conversacion: 'cita_propuesta',
+                      },
+                      error: null,
+                    }),
+                  }),
+                }),
+              }),
+            },
+      )
 
       mockAdminRpc.mockResolvedValue({ data: 'cita-uuid-1', error: null })
-      mockAdminFrom.mockReturnValue({
-        update: () => ({
-          eq: async () => ({ data: null, error: null }),
-        }),
+      const mockAdminUpdate = vi.fn().mockReturnValue({
+        // Sirve tanto para .eq() terminal (conversaciones_ia) como para el
+        // encadenado .eq().eq() con que se acepta el lead.
+        eq: () => {
+          const resultado = Promise.resolve({ data: null, error: null }) as Promise<unknown> & { eq: () => Promise<unknown> }
+          resultado.eq = async () => ({ data: null, error: null })
+          return resultado
+        },
       })
+      mockAdminFrom.mockReturnValue({ update: mockAdminUpdate })
 
       const res = await aprobarCitaPropuesta('conv-1')
       expect(res.ok).toBe(true)
+      expect(mockVendedorUpdateLead).toHaveBeenCalledWith({ estado: 'aceptado' })
+      expect(mockAdminFrom).not.toHaveBeenCalledWith('leads')
       expect(mockAdminRpc).toHaveBeenCalledWith('reservar_cita_como', {
         p_lead_id: 'lead-1',
         p_inicio: '2026-09-20T14:00:00.000Z',

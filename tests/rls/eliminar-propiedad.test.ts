@@ -63,7 +63,8 @@ describe('eliminarPropiedad: drena la cola de limpieza de Storage de verdad', ()
 
     const propiedadId = await crearBorrador(cliente, vendedorId)
 
-    const ruta = `${vendedorId}/eliminar-prueba-${Date.now()}.webp`
+    // <vendedor>/<propiedad>/: desde 20261007000100 la base lo exige al insertar la fila.
+    const ruta = `${vendedorId}/${propiedadId}/eliminar-prueba-${Date.now()}.webp`
     const { error: errorSubida } = await clienteAdmin().storage
       .from(BUCKET_PROPIEDADES)
       .upload(ruta, new TextEncoder().encode('contenido real de prueba'), {

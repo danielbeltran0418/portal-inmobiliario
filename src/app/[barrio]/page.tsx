@@ -1,5 +1,6 @@
 import { BotonGuardarBusqueda } from '@/components/comprador/BotonGuardarBusqueda'
-import { metadatosBarrio } from '@/lib/catalogo/seo'
+import { cache } from 'react'
+import { metadatosBarrio, catalogoIndexable } from '@/lib/catalogo/seo'
 import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
@@ -12,18 +13,24 @@ const CAMPO =
 
 type Entrada = { params: Promise<{ barrio: string }>; searchParams: Promise<ParametrosCatalogo> }
 
-export default async function PaginaBarrio({ params, searchParams }: Entrada) {
-  const { barrio: slug } = await params
-  const db = crearClientePublico()
-  const { data: barrio, error } = await db
+// La pagina y generateMetadata necesitan el mismo barrio: una sola consulta por peticion.
+const cargarBarrio = cache(async (slug: string) => {
+  const { data, error } = await crearClientePublico()
     .from('barrios')
     .select('id,nombre,slug')
     .eq('slug', slug)
     .maybeSingle()
   if (error) throw new Error('No se pudo cargar el barrio')
+  return data
+})
+
+export default async function PaginaBarrio({ params, searchParams }: Entrada) {
+  const [{ barrio: slug }, parametros] = await Promise.all([params, searchParams])
+  const db = crearClientePublico()
+  const barrio = await cargarBarrio(slug)
   if (!barrio) notFound()
 
-  const filtros = leerFiltros(await searchParams)
+  const filtros = leerFiltros(parametros)
   // La URL es entrada no confiable: un desplazamiento excesivo se trata como primera página.
   if (!Number.isSafeInteger(filtros.pagina * TAMANO_PAGINA)) filtros.pagina = 1
   const { propiedades, total } = await listarPropiedadesPublicas(db, barrio.id, filtros)
@@ -41,7 +48,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
       {/* Miga de pan estilizada */}
-      <nav aria-label="Miga de pan" className="flex items-center gap-2 text-xs font-medium text-tinta-tenue">
+      <nav aria-label="Miga de pan" className="flex flex-wrap items-center gap-2 text-xs font-medium text-tinta-tenue">
         <Link href="/" className="transition-colors hover:text-marca">
           Inicio
         </Link>
@@ -55,7 +62,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
           <span className="inline-flex items-center gap-1.5 rounded-sm bg-marca-suave px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-marca">
             Barrio · Barranquilla
           </span>
-          <h1 className="mt-2 font-titulo text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
+          <h1 className="mt-2 break-words font-titulo text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
             Propiedades en {barrio.nombre}
           </h1>
           <p className="mt-1 text-sm text-tinta-suave">
@@ -220,7 +227,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
                     <p className="text-xs font-medium uppercase tracking-wide text-tinta-tenue">
                       {p.tipo_inmueble || 'Inmueble'}
                     </p>
-                    <h2 className="mt-1 font-titulo text-lg font-bold text-tinta transition-colors group-hover:text-marca">
+                    <h2 className="mt-1 line-clamp-2 break-words font-titulo text-lg font-bold text-tinta transition-colors group-hover:text-marca">
                       {p.titulo}
                     </h2>
                     <p className="cifra mt-2 font-titulo text-xl font-bold text-tinta">
@@ -277,14 +284,9 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
   )
 }
 
-export async function generateMetadata({ params }: Entrada) {
-  const { barrio: slug } = await params
-  const { data, error } = await crearClientePublico()
-    .from('barrios')
-    .select('nombre,slug')
-    .eq('slug', slug)
-    .maybeSingle()
-  if (error) throw new Error('No se pudo cargar el barrio')
+export async function generateMetadata({ params, searchParams }: Entrada) {
+  const [{ barrio: slug }, parametros] = await Promise.all([params, searchParams])
+  const data = await cargarBarrio(slug)
   if (!data) notFound()
-  return metadatosBarrio(data)
+  return metadatosBarrio(data, { indexable: catalogoIndexable(leerFiltros(parametros)) })
 }

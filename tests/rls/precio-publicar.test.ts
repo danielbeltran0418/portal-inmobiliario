@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { clienteAdmin, sesionVendedor } from './ayudantes'
+import { clienteAdmin, rutaImagenPropia, sesionVendedor } from './ayudantes'
 
 // Falsificacion de la migracion 20260907000100 (propiedades_exigir_precio):
 // aplicada, esta suite (entonces con una segunda prueba de INSERT que se
@@ -44,7 +44,7 @@ describe('publicar exige precio (no NULL)', () => {
     // aqui. Se sube una imagen para aislar la prueba al precio.
     const { error: errorImagen } = await cliente.from('imagenes_propiedad').insert({
       propiedad_id: propiedadId,
-      ruta_storage: 'prueba/imagen-precio.webp',
+      ruta_storage: await rutaImagenPropia(cliente, propiedadId, 'imagen-precio.webp'),
       alt_text: 'Fachada de la casa de prueba',
     })
     expect(errorImagen).toBeNull()
@@ -139,7 +139,7 @@ describe('no se puede vaciar el precio de una propiedad ya publicada', () => {
 
     const { error: errorImagen } = await cliente.from('imagenes_propiedad').insert({
       propiedad_id: propiedadId,
-      ruta_storage: 'prueba/imagen-precio-vaciable.webp',
+      ruta_storage: await rutaImagenPropia(cliente, propiedadId, 'imagen-precio-vaciable.webp'),
       alt_text: 'Fachada de la casa publicada',
     })
     expect(errorImagen).toBeNull()

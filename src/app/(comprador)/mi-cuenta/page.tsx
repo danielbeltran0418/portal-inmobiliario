@@ -6,7 +6,7 @@ import { crearClienteServidor } from '@/lib/supabase/cliente-servidor';
 import { listarSolicitudesDelComprador } from '@/lib/citas/consultas';
 import { listarConversacionesComprador } from '@/lib/ia/consultas';
 import { formatearFechaHora } from '@/lib/fechas/formato';
-import { AccionesCita } from '@/componentes/citas/acciones-cita';
+import { AccionesCita } from '@/components/citas/acciones-cita';
 import { ChatLeadIA } from '@/components/mi-cuenta/chat-lead-ia';
 import { esCambioTardio, miBloqueoDeCitas } from '@/lib/citas/faltas';
 

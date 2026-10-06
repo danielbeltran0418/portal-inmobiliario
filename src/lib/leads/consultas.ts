@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+const LIMITE_BANDEJA = 200
+
 export interface LeadDeBandeja {
   id: string
   nombre_mostrado: string
@@ -23,6 +25,9 @@ export async function listarLeadsDelVendedor(cliente: SupabaseClient): Promise<L
     .select('id,nombre_mostrado,mensaje,estado,creado_en,propiedades(titulo,slug),leads_contacto(correo,telefono)')
     .order('estado', { ascending: true })
     .order('creado_en', { ascending: false })
+    // Sin tope, PostgREST corta en 1000 filas sin avisar y cada fila pinta
+    // componentes de cliente. Con el orden de arriba entran primero los nuevos.
+    .limit(LIMITE_BANDEJA)
   if (error) throw new Error('No se pudo cargar la bandeja de leads')
   return (data ?? []) as unknown as LeadDeBandeja[]
 }

@@ -13,7 +13,16 @@ export async function crearClienteServidor() {
         setAll: (cookiesAEstablecer) => {
           try {
             for (const { name, value, options } of cookiesAEstablecer) {
-              almacen.set(name, value, options)
+              // Mismas banderas que fuerza src/proxy.ts al refrescar la sesion:
+              // sin esto, la primera cookie tras login o /confirmar salia con
+              // los valores por defecto de @supabase/ssr (legible por JS).
+              almacen.set(name, value, {
+                ...options,
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+              })
             }
           } catch {
             // Llamado desde un Server Component: el middleware ya refresco la sesion.

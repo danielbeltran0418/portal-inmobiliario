@@ -31,8 +31,8 @@ const { default: PaginaCitasVendedor, metadata: metadataCitas } = await import('
 const { default: PaginaMoverCitaVendedor, metadata: metadataMover } = await import(
   '@/app/(vendedor)/panel/citas/[id]/mover/page'
 )
-const { AccionesCita } = await import('@/componentes/citas/acciones-cita')
-const { SelectorFranjas } = await import('@/componentes/citas/selector-franjas')
+const { AccionesCita } = await import('@/components/citas/acciones-cita')
+const { SelectorFranjas } = await import('@/components/citas/selector-franjas')
 
 const normalizar = (texto: string) => texto.replace(/\s/g, ' ')
 

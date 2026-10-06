@@ -36,8 +36,8 @@ let franjasPorVendedor: Record<string, unknown[]> = {}
 const { default: PaginaMiCuenta } = await import('@/app/(comprador)/mi-cuenta/page')
 const { default: PaginaReservarVisita } = await import('@/app/(comprador)/mi-cuenta/reservar/[leadId]/page')
 const { default: PaginaMoverMiVisita } = await import('@/app/(comprador)/mi-cuenta/visitas/[id]/mover/page')
-const { AccionesCita } = await import('@/componentes/citas/acciones-cita')
-const { SelectorFranjas } = await import('@/componentes/citas/selector-franjas')
+const { AccionesCita } = await import('@/components/citas/acciones-cita')
+const { SelectorFranjas } = await import('@/components/citas/selector-franjas')
 const { MENSAJE_VISITA_LEAD_NO_ACEPTADO } = await import('@/lib/errores/mapear')
 
 const normalizar = (texto: string) => texto.replace(/\s/g, ' ')
