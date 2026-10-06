@@ -197,15 +197,22 @@ describe('imagenes de propiedad', () => {
       .select('propiedad_id').eq('id', imagen!.id).single()
     expect(enBase!.propiedad_id).toBe(idPublicada)
 
-    // Caso positivo en el mismo test: mover la imagen a OTRA propiedad del
-    // propio vendedor A SI tiene que funcionar. Sin esto, un WITH CHECK que
-    // denegara todo UPDATE pasaria las aserciones de arriba.
-    const { data: movida, error: errorMover } = await cliente.from('imagenes_propiedad')
+    // Caso positivo en el mismo test: el dueno SI puede editar su propia
+    // imagen. Sin esto, un WITH CHECK o un GRANT que denegara todo UPDATE
+    // pasaria las aserciones de arriba.
+    const { data: editada, error: errorEditar } = await cliente.from('imagenes_propiedad')
+      .update({ alt_text: 'Texto corregido por su dueno' }).eq('id', imagen!.id)
+      .select('id, alt_text')
+    expect(errorEditar).toBeNull()
+    expect(editada).toHaveLength(1)
+
+    // Mover una imagen a otra propiedad, ni siquiera propia, ya no esta
+    // permitido (20261007000100): su ruta de Storage lleva el id de la
+    // propiedad, y la aplicacion nunca la mueve. Solo alt_text y orden se
+    // editan despues de crearla.
+    const { error: errorMover } = await cliente.from('imagenes_propiedad')
       .update({ propiedad_id: idBorrador }).eq('id', imagen!.id)
-      .select('id, propiedad_id')
-    expect(errorMover).toBeNull()
-    expect(movida).toHaveLength(1)
-    expect(movida![0].propiedad_id).toBe(idBorrador)
+    expect(errorMover?.code).toBe('42501')
   })
 
   /**

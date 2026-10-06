@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { clienteAdmin, sesionVendedor } from './ayudantes'
+import { clienteAdmin, rutaImagenPropia, sesionVendedor } from './ayudantes'
 
 describe('publicar exige al menos una imagen', () => {
   let vendedorId: string
@@ -87,7 +87,7 @@ describe('publicar exige al menos una imagen', () => {
   it('CASO POSITIVO: con una imagen, publicar por UPDATE funciona', async () => {
     const { error: errorImagen } = await cliente.from('imagenes_propiedad').insert({
       propiedad_id: propiedadId,
-      ruta_storage: 'prueba/imagen.webp',
+      ruta_storage: await rutaImagenPropia(cliente, propiedadId, 'imagen.webp'),
       alt_text: 'Fachada de la casa de prueba',
     })
     expect(errorImagen).toBeNull()

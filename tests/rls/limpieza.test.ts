@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { clienteAdmin, clienteAnonimo, sesionVendedor } from './ayudantes'
+import { clienteAdmin, clienteAnonimo, rutaImagenPropia, sesionVendedor } from './ayudantes'
 
 describe('cola de limpieza de Storage', () => {
   it('borrar una propiedad encola las rutas de TODAS sus imagenes (borrado en cascada)', async () => {
@@ -34,8 +34,8 @@ describe('cola de limpieza de Storage', () => {
     // dispare UNA VEZ POR CADA FILA que CASCADE borra, no solo una vez por la
     // sentencia. Con una sola imagen, un trigger STATEMENT-level mal escrito
     // (o una version que solo mirara la primera fila) pasaria igual.
-    const rutaA = `prueba-limpieza/${Date.now()}-a.webp`
-    const rutaB = `prueba-limpieza/${Date.now()}-b.webp`
+    const rutaA = await rutaImagenPropia(cliente, propiedad!.id, `limpieza-${Date.now()}-a.webp`)
+    const rutaB = await rutaImagenPropia(cliente, propiedad!.id, `limpieza-${Date.now()}-b.webp`)
 
     // orden explicito y distinto en cada fila: ambas nacerian en 0 por el
     // DEFAULT de la columna, y el UNIQUE (propiedad_id, orden) de

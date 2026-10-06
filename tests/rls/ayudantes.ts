@@ -183,6 +183,18 @@ export async function sesionVendedor(): Promise<SupabaseClient> {
 }
 
 
+/**
+ * Ruta de imagen valida para el cliente dado: <vendedor_id>/<propiedad_id>/<nombre>.
+ * Desde 20261007000100 la base rechaza (42501) cualquier ruta fuera de esa
+ * carpeta cuando escribe un usuario, asi que los fixtures que inserten
+ * imagenes con el cliente del vendedor deben usarla.
+ */
+export async function rutaImagenPropia(cliente: SupabaseClient, propiedadId: string, nombre: string): Promise<string> {
+  const { data, error } = await cliente.auth.getUser()
+  if (error || !data.user) throw error ?? new Error('Sin sesion para construir la ruta de imagen')
+  return `${data.user.id}/${propiedadId}/${nombre}`
+}
+
 /** Inventario completo para fixtures; no confundir la primera página con toda la base. */
 export async function listarUsuariosDePrueba() {
   const users: User[] = []
