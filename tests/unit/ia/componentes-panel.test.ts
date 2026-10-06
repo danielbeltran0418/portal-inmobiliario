@@ -116,14 +116,21 @@ describe('Componentes del Panel de Vendedor IA', () => {
       })
 
       mockAdminRpc.mockResolvedValue({ data: 'cita-uuid-1', error: null })
-      mockAdminFrom.mockReturnValue({
-        update: () => ({
-          eq: async () => ({ data: null, error: null }),
-        }),
+      const mockAdminUpdate = vi.fn().mockReturnValue({
+        // Sirve tanto para .eq() terminal (conversaciones_ia) como para el
+        // encadenado .eq().eq() con que se acepta el lead.
+        eq: () => {
+          const resultado = Promise.resolve({ data: null, error: null }) as Promise<unknown> & { eq: () => Promise<unknown> }
+          resultado.eq = async () => ({ data: null, error: null })
+          return resultado
+        },
       })
+      mockAdminFrom.mockReturnValue({ update: mockAdminUpdate })
 
       const res = await aprobarCitaPropuesta('conv-1')
       expect(res.ok).toBe(true)
+      expect(mockAdminFrom).toHaveBeenCalledWith('leads')
+      expect(mockAdminUpdate).toHaveBeenCalledWith({ estado: 'aceptado' })
       expect(mockAdminRpc).toHaveBeenCalledWith('reservar_cita_como', {
         p_lead_id: 'lead-1',
         p_inicio: '2026-09-20T14:00:00.000Z',

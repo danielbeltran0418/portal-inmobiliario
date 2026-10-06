@@ -75,11 +75,6 @@ export async function procesarSolicitudFranja(
     throw new ErrorIA('IA002', 'Franja solicitada no disponible o caducada');
   }
 
-  // 3. Si el lead aún estaba en 'nuevo', calificarlo/transicionarlo a 'aceptado'
-  if (estadoLead === 'nuevo') {
-    await admin.from('leads').update({ estado: 'aceptado' }).eq('id', conv.lead_id);
-  }
-
   // 4. Consultar configuración de auto-confirmación del vendedor
   const { data: disps } = await admin
     .from('disponibilidad_semanal')
@@ -92,7 +87,15 @@ export async function procesarSolicitudFranja(
 
   // 5. Bifurcación según autonomía
   if (autoConfirmar) {
-    // Caso A: Reserva inmediata autónoma
+    // Caso A: Reserva inmediata autónoma. Aceptar el lead es decisión del
+    // vendedor; aquí solo se acepta porque él delegó con auto_confirmar_citas.
+    // Sin esa delegación (caso B) el lead sigue en 'nuevo' y lo acepta el
+    // vendedor al aprobar la propuesta (aprobarCitaPropuesta): el texto del
+    // comprador no puede decidirlo por él.
+    if (estadoLead === 'nuevo') {
+      await admin.from('leads').update({ estado: 'aceptado' }).eq('id', conv.lead_id);
+    }
+
     const { data: citaId, error: errReserva } = await admin.rpc('reservar_cita_como', {
       p_lead_id: conv.lead_id,
       p_inicio: inicioIso,

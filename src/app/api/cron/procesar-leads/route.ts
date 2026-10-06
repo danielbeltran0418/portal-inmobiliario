@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { procesarLeadsNuevos } from '@/lib/ia/despachador';
+import { cronAutorizado } from '@/lib/seguridad/secreto-cron';
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronAutorizado(req.headers.get('authorization'), process.env.CRON_SECRET)) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 

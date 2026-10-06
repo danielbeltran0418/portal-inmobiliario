@@ -38,6 +38,19 @@ export async function aprobarCitaPropuesta(
   // Carga admin dinamicamente para aislar server-only en tests unitarios de componentes cliente
   const { crearClienteAdmin } = await import('@/lib/supabase/cliente-admin')
   const admin = crearClienteAdmin()
+
+  // Aprobar la propuesta ES aceptar el lead: el vendedor ya verificado arriba
+  // toma la decision que el chat IA no puede tomar por el (procesarSolicitudFranja).
+  const { error: errAceptar } = await admin
+    .from('leads')
+    .update({ estado: 'aceptado' })
+    .eq('id', conv.lead_id)
+    .eq('estado', 'nuevo')
+  if (errAceptar) {
+    console.error('[IA] Error al aceptar el lead al aprobar la cita:', errAceptar)
+    return { ok: false, error: MENSAJE_GENERICO }
+  }
+
   const { data: citaId, error: errReserva } = await admin.rpc('reservar_cita_como', {
     p_lead_id: conv.lead_id,
     p_inicio: conv.franja_propuesta,
