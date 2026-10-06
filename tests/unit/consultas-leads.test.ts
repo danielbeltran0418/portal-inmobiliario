@@ -3,9 +3,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { listarLeadsDelVendedor, contarLeadsNuevos } from '@/lib/leads/consultas'
 
 function clienteListado(resultado: { data: unknown; error: object | null }) {
-  const q = { select: vi.fn(), order: vi.fn() }
+  const q = { select: vi.fn(), order: vi.fn(), limit: vi.fn() }
   q.select.mockReturnValue(q)
-  q.order.mockReturnValueOnce(q).mockResolvedValueOnce(resultado)
+  q.order.mockReturnValue(q)
+  q.limit.mockResolvedValue(resultado)
   return { q, db: { from: vi.fn().mockReturnValue(q) } as unknown as SupabaseClient }
 }
 
@@ -33,6 +34,12 @@ describe('listarLeadsDelVendedor', () => {
     await listarLeadsDelVendedor(db)
     expect(q.order).toHaveBeenCalledWith('estado', { ascending: true })
     expect(q.order).toHaveBeenCalledWith('creado_en', { ascending: false })
+  })
+
+  it('acota la bandeja: PostgREST corta en silencio en 1000 filas y las nuevas deben verse primero', async () => {
+    const { db, q } = clienteListado({ data: [], error: null })
+    await listarLeadsDelVendedor(db)
+    expect(q.limit).toHaveBeenCalledWith(200)
   })
 
   it('devuelve la lista tal cual la trae la consulta', async () => {

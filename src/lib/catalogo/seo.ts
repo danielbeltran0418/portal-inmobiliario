@@ -27,7 +27,40 @@ const NOMBRE_SITIO = 'Portal Inmobiliario'
 const LOCALE_SITIO = 'es_CO'
 const IMAGEN_FALLBACK = '/og-fallback.jpg'
 
-export function metadatosBarrio(barrio: BarrioSeo): Metadata {
+/**
+ * Descripcion para meta tags: colapsa espacios y saltos de linea y, si pasa de
+ * 160 caracteres, corta en el limite de palabra y anade una elipsis.
+ */
+export function descripcionCorta(texto: string, maximo = 160): string {
+  const limpio = texto.replace(/\s+/g, ' ').trim()
+  if (limpio.length <= maximo) return limpio
+  const recorte = limpio.slice(0, maximo - 1)
+  const ultimoEspacio = recorte.lastIndexOf(' ')
+  return `${(ultimoEspacio > 0 ? recorte.slice(0, ultimoEspacio) : recorte).trimEnd()}…`
+}
+
+/**
+ * Solo la primera pagina del catalogo de un barrio sin filtros merece indexarse:
+ * cada combinacion de filtros o pagina es otra URL con contenido casi igual
+ * (todas declaran la misma canonica) y multiplica lo que el rastreador visita.
+ */
+export function catalogoIndexable(filtros: {
+  operacion?: string
+  tipo?: string
+  precioMin?: number
+  precioMax?: number
+  pagina: number
+}): boolean {
+  return (
+    filtros.operacion === undefined &&
+    filtros.tipo === undefined &&
+    filtros.precioMin === undefined &&
+    filtros.precioMax === undefined &&
+    filtros.pagina <= 1
+  )
+}
+
+export function metadatosBarrio(barrio: BarrioSeo, opciones: { indexable?: boolean } = {}): Metadata {
   const titulo = `Propiedades en ${barrio.nombre}, Barranquilla`
   const descripcion = `Encuentra propiedades en venta y arriendo en ${barrio.nombre}, Barranquilla. Consulta precios, características y fotos.`
   const url = urlPublica(`/${barrio.slug}`)
@@ -38,6 +71,7 @@ export function metadatosBarrio(barrio: BarrioSeo): Metadata {
     title: titulo,
     description: descripcion,
     alternates: { canonical: url },
+    ...(opciones.indexable === false ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       title: titulo,
       description: descripcion,
@@ -59,7 +93,7 @@ export function metadatosBarrio(barrio: BarrioSeo): Metadata {
 export function metadatosFicha(p: FichaSeo, barrio: BarrioSeo): Metadata {
   const titulo = `${p.titulo} · ${barrio.nombre}, Barranquilla`
   const descripcion =
-    p.descripcion.trim().slice(0, 160) ||
+    descripcionCorta(p.descripcion) ||
     `${p.titulo} en ${p.operacion} en ${barrio.nombre}, Barranquilla. Consulta precio y características.`
   const url = urlPublica(`/${barrio.slug}/${p.slug}`)
 

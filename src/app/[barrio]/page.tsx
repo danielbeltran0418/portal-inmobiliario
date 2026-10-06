@@ -1,5 +1,6 @@
 import { BotonGuardarBusqueda } from '@/components/comprador/BotonGuardarBusqueda'
-import { metadatosBarrio } from '@/lib/catalogo/seo'
+import { cache } from 'react'
+import { metadatosBarrio, catalogoIndexable } from '@/lib/catalogo/seo'
 import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
@@ -12,18 +13,24 @@ const CAMPO =
 
 type Entrada = { params: Promise<{ barrio: string }>; searchParams: Promise<ParametrosCatalogo> }
 
-export default async function PaginaBarrio({ params, searchParams }: Entrada) {
-  const { barrio: slug } = await params
-  const db = crearClientePublico()
-  const { data: barrio, error } = await db
+// La pagina y generateMetadata necesitan el mismo barrio: una sola consulta por peticion.
+const cargarBarrio = cache(async (slug: string) => {
+  const { data, error } = await crearClientePublico()
     .from('barrios')
     .select('id,nombre,slug')
     .eq('slug', slug)
     .maybeSingle()
   if (error) throw new Error('No se pudo cargar el barrio')
+  return data
+})
+
+export default async function PaginaBarrio({ params, searchParams }: Entrada) {
+  const [{ barrio: slug }, parametros] = await Promise.all([params, searchParams])
+  const db = crearClientePublico()
+  const barrio = await cargarBarrio(slug)
   if (!barrio) notFound()
 
-  const filtros = leerFiltros(await searchParams)
+  const filtros = leerFiltros(parametros)
   // La URL es entrada no confiable: un desplazamiento excesivo se trata como primera página.
   if (!Number.isSafeInteger(filtros.pagina * TAMANO_PAGINA)) filtros.pagina = 1
   const { propiedades, total } = await listarPropiedadesPublicas(db, barrio.id, filtros)
@@ -277,14 +284,9 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
   )
 }
 
-export async function generateMetadata({ params }: Entrada) {
-  const { barrio: slug } = await params
-  const { data, error } = await crearClientePublico()
-    .from('barrios')
-    .select('nombre,slug')
-    .eq('slug', slug)
-    .maybeSingle()
-  if (error) throw new Error('No se pudo cargar el barrio')
+export async function generateMetadata({ params, searchParams }: Entrada) {
+  const [{ barrio: slug }, parametros] = await Promise.all([params, searchParams])
+  const data = await cargarBarrio(slug)
   if (!data) notFound()
-  return metadatosBarrio(data)
+  return metadatosBarrio(data, { indexable: catalogoIndexable(leerFiltros(parametros)) })
 }
