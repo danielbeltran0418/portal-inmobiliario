@@ -44,6 +44,8 @@ export const metadata: Metadata = {
 export default async function PaginaInicio() {
   // La sesion y los barrios no dependen entre si: en paralelo.
   const sesionPendiente = sesionActual()
+  // Si la consulta de barrios lanza antes de esperarla, no dejar su rechazo suelto.
+  sesionPendiente.catch(() => {})
 
   // Los barrios se leen con el cliente publico: RLS decide que es visible, y
   // un visitante anonimo debe poder ver esta lista sin cuenta.

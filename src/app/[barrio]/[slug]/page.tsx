@@ -27,8 +27,11 @@ export async function generateMetadata({ params }: { params: Promise<{ barrio: s
 export default async function FichaPublica({ params }: { params: Promise<{ barrio: string; slug: string }> }) {
   const ruta = await params
   // La sesion no depende de la ficha: se lanza a la vez. Si la ficha no
-  // existe, notFound() corta y la promesa sobrante se descarta sin efecto.
+  // existe, notFound() corta antes de esperarla; el .catch() la marca como
+  // atendida para que su rechazo no quede suelto. Al esperarla mas abajo, un
+  // fallo real sigue propagandose.
   const sesionPendiente = sesionActual()
+  sesionPendiente.catch(() => {})
   const p = await cargarFicha(ruta.slug)
   const barrio = Array.isArray(p.barrios) ? p.barrios[0] : p.barrios
   if (!barrio) notFound()
