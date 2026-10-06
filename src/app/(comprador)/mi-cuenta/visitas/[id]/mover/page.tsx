@@ -7,7 +7,7 @@ import { obtenerCitaDeParticipante, obtenerFranjasLibres } from '@/lib/citas/con
 import { agruparFranjasPorDia } from '@/lib/citas/agrupar'
 import { formatearFechaHora } from '@/lib/fechas/formato'
 import { esquemaIdentificador } from '@/lib/validacion/esquemas'
-import { SelectorFranjas } from '@/componentes/citas/selector-franjas'
+import { SelectorFranjas } from '@/components/citas/selector-franjas'
 
 export const metadata: Metadata = {
   title: 'Mover mi visita | Portal Inmobiliario',

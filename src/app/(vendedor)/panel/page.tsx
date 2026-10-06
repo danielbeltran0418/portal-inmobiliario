@@ -5,7 +5,7 @@ import { CalendarDays, Clock3, Home, MessageSquare, Plus, ArrowUpRight } from 'l
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Aviso, ChipEstado, EstadoVacio } from '@/componentes/ui/compuestos'
+import { Aviso, ChipEstado, EstadoVacio } from '@/components/ui/compuestos'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { filasDelPanel, type PropiedadCruda } from '@/lib/propiedades/panel'
 import { contarLeadsNuevos } from '@/lib/leads/consultas'

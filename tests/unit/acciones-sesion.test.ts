@@ -13,7 +13,7 @@ vi.mock('next/headers', () => ({
   cookies: async () => ({ getAll, delete: borrar }),
 }))
 
-const { cerrarSesion } = await import('@/componentes/acciones-sesion')
+const { cerrarSesion } = await import('@/components/acciones-sesion')
 
 const cookie = (name: string) => ({ name, value: 'x' })
 

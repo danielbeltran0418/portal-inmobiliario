@@ -146,7 +146,7 @@ describe('el cierre de sesion no viaja por GET', () => {
     readFileSync(path.join(process.cwd(), relativa), 'utf8')
 
   it('la accion esta declarada como server action', () => {
-    const codigo = fuente('src/componentes/acciones-sesion.ts')
+    const codigo = fuente('src/components/acciones-sesion.ts')
     expect(codigo.trimStart().startsWith("'use server'")).toBe(true)
     // Que ademas LLAME a signOut, no solo que sea un server action. El
     // argumento con el que lo llama (el alcance del cierre, que decide si se
@@ -155,7 +155,7 @@ describe('el cierre de sesion no viaja por GET', () => {
   })
 
   it('la cabecera lo envia con un <form>, no con un <Link> ni un <a>', () => {
-    const codigo = fuente('src/componentes/cabecera.tsx')
+    const codigo = fuente('src/components/cabecera.tsx')
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/\/\/.*$/gm, '')
 

@@ -62,7 +62,7 @@ export async function aprobarCitaPropuesta(
   })
 
   if (errReserva) {
-    // Por codigo, como en src/componentes/citas/acciones.ts: el message de
+    // Por codigo, como en src/components/citas/acciones.ts: el message de
     // Postgres es un detalle interno y no se le muestra al vendedor.
     return { ok: false, error: mensajeDeErrorCita(errReserva) }
   }

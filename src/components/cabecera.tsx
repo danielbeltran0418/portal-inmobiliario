@@ -65,7 +65,7 @@ export async function Cabecera() {
           {autenticado && (
             /**
              * Un formulario, no un enlace. Ver el porque en
-             * src/componentes/acciones-sesion.ts.
+             * src/components/acciones-sesion.ts.
              */
             <form action={cerrarSesion}>
               <button

@@ -93,7 +93,7 @@ test('cerrar sesion destruye la sesion: la ruta protegida se veia y deja de vers
   // --- Cerrar sesion --------------------------------------------------------
   // Y de paso queda fijado que viaja por POST. Un GET lo dispara un tercero
   // desde otra pagina y lo disparan solos los prefetchers; ver el comentario
-  // de src/componentes/acciones-sesion.ts.
+  // de src/components/acciones-sesion.ts.
   const [peticion] = await Promise.all([
     page.waitForRequest((r) => r.method() === 'POST'),
     cabecera(page).getByRole('button', { name: BOTON_CERRAR_SESION }).click(),
@@ -143,7 +143,7 @@ test('cerrar sesion destruye la sesion: la ruta protegida se veia y deja de vers
  * Esto cae si alguien vuelve a `signOut()` sin argumentos: el default de
  * @supabase/auth-js es `{ scope: 'global' }`, que cierra la sesion en todos
  * los dispositivos de la cuenta. Ver el bloque "Por que scope: 'local'" de
- * src/componentes/acciones-sesion.ts.
+ * src/components/acciones-sesion.ts.
  */
 test('cerrar sesion en un dispositivo no cierra la del otro', async ({ browser }) => {
   const cuenta = CUENTAS[1] // vendedor

@@ -8,8 +8,8 @@ vi.mock('@/lib/supabase/cliente-servidor', () => ({ crearClienteServidor: async 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 
 const { agruparFranjasPorDia } = await import('@/lib/citas/agrupar')
-const { SelectorFranjas } = await import('@/componentes/citas/selector-franjas')
-const { AccionesCita } = await import('@/componentes/citas/acciones-cita')
+const { SelectorFranjas } = await import('@/components/citas/selector-franjas')
+const { AccionesCita } = await import('@/components/citas/acciones-cita')
 
 const normalizar = (texto: string) => texto.replace(/\s/g, ' ')
 

@@ -6,7 +6,7 @@ import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { listarCitasDelVendedor } from '@/lib/citas/consultas'
 import { listarCitasPropuestas } from '@/lib/ia/consultas'
 import { formatearFechaHora } from '@/lib/fechas/formato'
-import { AccionesCita } from '@/componentes/citas/acciones-cita'
+import { AccionesCita } from '@/components/citas/acciones-cita'
 import { esCambioTardio } from '@/lib/citas/faltas'
 import { BotonConfirmarPropuesta } from '@/components/panel/boton-confirmar-propuesta'
 
