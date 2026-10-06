@@ -103,19 +103,20 @@ export function BotonModeracion({ propiedadId, estadoActual }: BotonModeracionPr
       {/* Modal / Dialogo de suspensión */}
       {modalSuspender && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl bg-superficie p-6 shadow-xl border border-linea">
-            <h3 className="text-lg font-bold text-tinta">Suspender Publicación</h3>
+          <div role="dialog" aria-modal="true" aria-labelledby="dialogo-suspender-publicacion" className="w-full max-w-md rounded-xl bg-superficie p-6 shadow-xl border border-linea">
+            <h3 id="dialogo-suspender-publicacion" className="text-lg font-bold text-tinta">Suspender Publicación</h3>
             <p className="mt-1 text-xs text-tinta-suave">
               La propiedad dejará de verse en el catálogo público. Describe la razón de la moderación:
             </p>
             <textarea
+              aria-label="Motivo de la moderación"
               className="mt-3 w-full rounded-lg border border-linea p-2 text-sm text-tinta focus:border-marca focus:outline-hidden"
               rows={3}
               placeholder="Ej: Fotografías de terceros con marcas de agua / datos de contacto en descripción"
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
             />
-            {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+            {error && <p role="alert" className="mt-2 text-xs text-red-600">{error}</p>}
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
@@ -146,13 +147,14 @@ export function BotonModeracion({ propiedadId, estadoActual }: BotonModeracionPr
               Esta acción borrará la ficha, sus imágenes y acuerdos asociados en cascada. Ingresa el motivo:
             </p>
             <textarea
+              aria-label="Motivo de la moderación"
               className="mt-3 w-full rounded-lg border border-linea p-2 text-sm text-tinta focus:border-red-600 focus:outline-hidden"
               rows={3}
               placeholder="Ej: Anuncio fraudulento / suplantación de identidad"
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
             />
-            {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+            {error && <p role="alert" className="mt-2 text-xs text-red-600">{error}</p>}
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"

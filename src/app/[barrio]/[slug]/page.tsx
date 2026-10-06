@@ -26,6 +26,9 @@ export async function generateMetadata({ params }: { params: Promise<{ barrio: s
 }
 export default async function FichaPublica({ params }: { params: Promise<{ barrio: string; slug: string }> }) {
   const ruta = await params
+  // La sesion no depende de la ficha: se lanza a la vez. Si la ficha no
+  // existe, notFound() corta y la promesa sobrante se descarta sin efecto.
+  const sesionPendiente = sesionActual()
   const p = await cargarFicha(ruta.slug)
   const barrio = Array.isArray(p.barrios) ? p.barrios[0] : p.barrios
   if (!barrio) notFound()
@@ -35,7 +38,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
   // La ficha es publica y esta cacheada por SP1; esta parte depende de la
   // sesion, asi que se resuelve en cada peticion. El layout raiz ya declara
   // force-dynamic, de modo que no cuesta nada extra.
-  const sesion = await sesionActual()
+  const sesion = await sesionPendiente
   const rutaFicha = `/${barrio.slug}/${p.slug}`
   // /mi-cuenta, donde vive el chat, es solo de compradores: a un vendedor que
   // mira la ficha de otro no se le ofrece un boton que lo mandaria a su panel.

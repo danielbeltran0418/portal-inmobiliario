@@ -42,7 +42,8 @@ export const metadata: Metadata = {
 }
 
 export default async function PaginaInicio() {
-  const panel = enlaceDePanel(await sesionActual())
+  // La sesion y los barrios no dependen entre si: en paralelo.
+  const sesionPendiente = sesionActual()
 
   // Los barrios se leen con el cliente publico: RLS decide que es visible, y
   // un visitante anonimo debe poder ver esta lista sin cuenta.
@@ -52,6 +53,7 @@ export default async function PaginaInicio() {
     .select('nombre,slug')
     .eq('activo', true)
     .order('nombre')
+  const panel = enlaceDePanel(await sesionPendiente)
   const barrios = barriosCrudos ?? []
 
   return (

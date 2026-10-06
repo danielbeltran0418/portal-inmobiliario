@@ -37,19 +37,20 @@ export function BotonCancelarPosicionamiento({ pagoId }: { pagoId: string }) {
 
       {modalAbierto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 text-left">
-          <div className="w-full max-w-md rounded-xl bg-superficie p-6 shadow-xl border border-linea">
-            <h3 className="text-lg font-bold text-tinta">Cancelar Acuerdo de Posicionamiento</h3>
+          <div role="dialog" aria-modal="true" aria-labelledby="dialogo-cancelar-acuerdo-de-posicionamiento" className="w-full max-w-md rounded-xl bg-superficie p-6 shadow-xl border border-linea">
+            <h3 id="dialogo-cancelar-acuerdo-de-posicionamiento" className="text-lg font-bold text-tinta">Cancelar Acuerdo de Posicionamiento</h3>
             <p className="mt-1 text-xs text-tinta-suave">
               La propiedad dejará de estar destacada en el catálogo inmediatamente.
             </p>
             <input
               type="text"
               className="mt-3 w-full rounded-lg border border-linea p-2 text-sm text-tinta focus:border-marca focus:outline-hidden"
+              aria-label="Motivo de cancelación"
               placeholder="Motivo de cancelación (opcional)"
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
             />
-            {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+            {error && <p role="alert" className="mt-2 text-xs text-red-600">{error}</p>}
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
