@@ -63,6 +63,22 @@ describe('CN-005: solo un vendedor crea anuncios', () => {
   })
 })
 
+describe('CN-005: solo un vendedor sube archivos al bucket de propiedades', () => {
+  const contenido = () => Buffer.from('contenido de prueba para storage')
+
+  it('un comprador no puede subir a su propia carpeta', async () => {
+    const { error } = await comprador.storage.from('propiedades')
+      .upload(`${idComprador}/${randomUUID()}.webp`, contenido(), { contentType: 'image/webp' })
+    expect(error).not.toBeNull()
+  })
+
+  it('un vendedor si puede subir a su carpeta (control positivo)', async () => {
+    const { error } = await vendedor.storage.from('propiedades')
+      .upload(`${idVendedor}/${randomUUID()}.webp`, contenido(), { contentType: 'image/webp' })
+    expect(error).toBeNull()
+  })
+})
+
 describe('CN-014: favoritos, busquedas guardadas y telefono', () => {
   it('no se puede marcar como favorita una propiedad no publicada', async () => {
     const borrador = await propiedadDe(idVendedor, 'borrador')
