@@ -223,3 +223,50 @@ describe('cambiarEstado: un vendedor no puede cambiar el estado de la propiedad 
     expect(enBase!.estado).toBe('borrador')
   })
 })
+
+// CN-001: la guarda de la base (20261006000100) ya impide sacar de
+// 'rechazada' una propiedad suspendida; estas pruebas fijan lo que la
+// aplicacion le dice al vendedor y que el estado se valide en runtime.
+describe('cambiarEstado: moderacion (CN-001)', () => {
+  it('rechaza en runtime un estado que el vendedor no puede elegir, aunque la base lo admita', async () => {
+    const cliente = await sesionVendedor()
+    clienteActual = cliente
+    const { data: usuario } = await cliente.auth.getUser()
+    const propiedadId = await crearBorrador(cliente, usuario.user!.id, { precio: 100000000 })
+
+    // 'en_revision' existe en el enum y ninguna guarda de la base lo
+    // prohibe: solo la validacion de la accion lo frena. El tipo
+    // EstadoDestino de TypeScript no existe en runtime.
+    const r = await cambiarEstado(propiedadId, 'en_revision' as never)
+
+    expect(r.error).toBe('No pudimos completar la operacion. Intenta de nuevo en un momento.')
+    const { data: enBase } = await clienteAdmin()
+      .from('propiedades').select('estado').eq('id', propiedadId).single()
+    expect(enBase!.estado).toBe('borrador')
+  })
+
+  it('a una propiedad suspendida le explica al vendedor que la reactiva la administracion', async () => {
+    const cliente = await sesionVendedor()
+    clienteActual = cliente
+    const { data: usuario } = await cliente.auth.getUser()
+    const propiedadId = await crearBorrador(cliente, usuario.user!.id, { precio: 100000000 })
+    await clienteAdmin().from('imagenes_propiedad').insert({
+      propiedad_id: propiedadId,
+      ruta_storage: `${usuario.user!.id}/${propiedadId}/foto.webp`,
+      alt_text: 'Foto de prueba',
+      orden: 0,
+    })
+    const { error: errSusp } = await clienteAdmin()
+      .from('propiedades').update({ estado: 'rechazada' }).eq('id', propiedadId)
+    expect(errSusp).toBeNull()
+
+    const r = await cambiarEstado(propiedadId, 'publicada')
+
+    expect(r.error).toBe(
+      'Esta propiedad fue suspendida por la administracion. Solo la administracion puede reactivarla.',
+    )
+    const { data: enBase } = await clienteAdmin()
+      .from('propiedades').select('estado').eq('id', propiedadId).single()
+    expect(enBase!.estado).toBe('rechazada')
+  })
+})

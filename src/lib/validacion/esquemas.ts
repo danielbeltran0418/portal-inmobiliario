@@ -20,6 +20,11 @@ export type DatosLogin = z.infer<typeof esquemaLogin>
 export const OPERACIONES = ['venta', 'arriendo'] as const
 export const TIPOS_INMUEBLE = ['apartamento', 'casa', 'local', 'lote', 'oficina'] as const
 
+// Estados que el vendedor puede elegir desde su panel. 'en_revision' y
+// 'rechazada' existen en el enum de la base pero no son suyos: el segundo lo
+// fija la moderacion (20261006000100), el primero no lo usa ningun flujo.
+export const esquemaEstadoDestino = z.enum(['publicada', 'pausada', 'vendida', 'borrador'])
+
 // numeric(14,2) en la columna `precio`: 12 digitos enteros + 2 decimales.
 // Sin este limite, un valor exagerado pasa la validacion de la aplicacion y
 // llega a Postgres, que responde con un "numeric field overflow" crudo en
