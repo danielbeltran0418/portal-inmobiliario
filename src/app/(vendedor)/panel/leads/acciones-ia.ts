@@ -41,7 +41,11 @@ export async function aprobarCitaPropuesta(
 
   // Aprobar la propuesta ES aceptar el lead: el vendedor ya verificado arriba
   // toma la decision que el chat IA no puede tomar por el (procesarSolicitudFranja).
-  const { error: errAceptar } = await admin
+  // Con SU cliente y no con admin: el trigger de transicion registra
+  // lead_aceptado con auth.uid(), y con service_role el actor quedaria NULL,
+  // indistinguible de una aceptacion automatica. RLS y el GRANT de estado
+  // le permiten actualizar sus propios leads.
+  const { error: errAceptar } = await supabase
     .from('leads')
     .update({ estado: 'aceptado' })
     .eq('id', conv.lead_id)

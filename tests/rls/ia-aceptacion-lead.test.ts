@@ -76,6 +76,14 @@ describe('CN-004: el chat IA no acepta leads por el vendedor', () => {
 
     expect(res).toEqual({ ok: true })
     expect(await estadoDelLead(comprador.leadId)).toBe('aceptado')
+
+    // La decision es del vendedor y asi queda en la auditoria: el actor es el.
+    const { data: eventos } = await admin
+      .from('registro_auditoria')
+      .select('actor_id')
+      .eq('accion', 'lead_aceptado')
+      .eq('entidad_id', comprador.leadId)
+    expect(eventos).toEqual([{ actor_id: vendedor.id }])
     const { data: citas } = await admin.from('citas').select('estado').eq('lead_id', comprador.leadId)
     expect(citas).toEqual([{ estado: 'confirmada' }])
   })
