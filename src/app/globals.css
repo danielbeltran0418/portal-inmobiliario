@@ -24,7 +24,7 @@
 
   --tinta:          #1F1B14;
   --tinta-suave:    #5C5346;
-  --tinta-tenue:    #8A8071;
+  --tinta-tenue:    #6B6256;
 
   /* Verde caribe. Es el color de marca y se gasta con cuentagotas:
      enlaces, foco, y la acción principal de cada pantalla. */
@@ -60,7 +60,7 @@
 
     --tinta:          #F2EBDF;
     --tinta-suave:    #A89D8C;
-    --tinta-tenue:    #7B7163;
+    --tinta-tenue:    #9A8F7F;
 
     --marca:          #46B5A4;
     --marca-fuerte:   #63C7B7;
@@ -211,6 +211,8 @@ h1, h2, h3, h4 {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
 }
 

@@ -25,7 +25,7 @@ export function FormularioLead(
 
       <label className="mt-4 block text-sm text-tinta-suave">
         Telefono
-        <input className={`${CAMPO} mt-1`} name="telefono" defaultValue={telefonoPrevio} required />
+        <input className={`${CAMPO} mt-1`} name="telefono" type="tel" autoComplete="tel" inputMode="tel" defaultValue={telefonoPrevio} required />
       </label>
 
       <label className="mt-4 block text-sm text-tinta-suave">
@@ -34,7 +34,7 @@ export function FormularioLead(
           placeholder="Cuentale al vendedor que te interesa." />
       </label>
 
-      {estado.error && <p className="mt-3 text-sm text-peligro">{estado.error}</p>}
+      {estado.error && <p role="alert" className="mt-3 text-sm text-peligro">{estado.error}</p>}
 
       <button type="submit" disabled={enviando}
         className="mt-4 cursor-pointer rounded-sm bg-marca px-5 py-2 font-medium text-marca-contraste hover:bg-marca-fuerte disabled:opacity-60">

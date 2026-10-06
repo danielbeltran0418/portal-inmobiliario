@@ -41,7 +41,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
       {/* Miga de pan estilizada */}
-      <nav aria-label="Miga de pan" className="flex items-center gap-2 text-xs font-medium text-tinta-tenue">
+      <nav aria-label="Miga de pan" className="flex flex-wrap items-center gap-2 text-xs font-medium text-tinta-tenue">
         <Link href="/" className="transition-colors hover:text-marca">
           Inicio
         </Link>
@@ -55,7 +55,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
           <span className="inline-flex items-center gap-1.5 rounded-sm bg-marca-suave px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-marca">
             Barrio · Barranquilla
           </span>
-          <h1 className="mt-2 font-titulo text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
+          <h1 className="mt-2 break-words font-titulo text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
             Propiedades en {barrio.nombre}
           </h1>
           <p className="mt-1 text-sm text-tinta-suave">
@@ -220,7 +220,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
                     <p className="text-xs font-medium uppercase tracking-wide text-tinta-tenue">
                       {p.tipo_inmueble || 'Inmueble'}
                     </p>
-                    <h2 className="mt-1 font-titulo text-lg font-bold text-tinta transition-colors group-hover:text-marca">
+                    <h2 className="mt-1 line-clamp-2 break-words font-titulo text-lg font-bold text-tinta transition-colors group-hover:text-marca">
                       {p.titulo}
                     </h2>
                     <p className="cifra mt-2 font-titulo text-xl font-bold text-tinta">
