@@ -39,7 +39,9 @@ test('olvide mi contrasena: enlace por correo, clave nueva y login con ella', as
   await expect(page).toHaveURL(/\/restablecer$/)
   await page.fill('input[name="password"]', CLAVE_NUEVA)
   await page.fill('input[name="confirmacion"]', CLAVE_NUEVA)
-  await page.click('button[type="submit"]')
+  // Por nombre, no button[type="submit"]: con la sesion del enlace abierta, la
+  // cabecera ya trae su propio submit ("Cerrar sesion") antes que este.
+  await page.getByRole('button', { name: 'Guardar contraseña' }).click()
   await expect(page).toHaveURL(/\/mi-cuenta$/)
 
   // La marca se consumio: volver a /restablecer ya no deja cambiarla.
