@@ -263,4 +263,30 @@ describe('crear_lead: el unico camino de escritura de un lead', () => {
     expect(evento?.metadatos?.propiedad_id).toBe(propiedadId)
     expect(evento?.metadatos?.vendedor_id).toBe(vendedorId)
   })
+
+  // Migracion 20261013000100: un comprador no puede contactar a medio pais en
+  // un dia (cada lead dispara una inferencia de IA y un aviso al vendedor).
+  it('[limite] el contacto numero 21 en 24 horas se rechaza con LD005', async () => {
+    const { compradorCorreo, password, propiedadId } = await fixtura()
+    const admin = clienteAdmin()
+    const cliente = await clienteComo(compradorCorreo, password)
+    const { data: { user } } = await cliente.auth.getUser()
+    const { data: prop } = await admin.from('propiedades').select('vendedor_id').eq('id', propiedadId).single()
+    // 20 leads previos del comprador, sembrados directamente.
+    const ids: string[] = []
+    for (let i = 0; i < 20; i++) {
+      const { data: p, error } = await admin.from('propiedades').insert({
+        vendedor_id: prop!.vendedor_id, slug: `limite-${randomUUID()}`, titulo: 'Propiedad para el limite de leads',
+        descripcion: 'Descripcion de prueba suficientemente larga.', operacion: 'venta', tipo_inmueble: 'casa', precio: 1,
+      }).select('id').single()
+      if (error) throw error
+      ids.push(p.id)
+      await admin.from('leads').insert({
+        propiedad_id: p.id, comprador_id: user!.id, vendedor_id: prop!.vendedor_id, nombre_mostrado: 'X', mensaje: 'Mensaje de prueba para el limite.',
+      })
+    }
+    const { error } = await cliente.rpc('crear_lead', { p_propiedad_id: propiedadId, p_telefono: '3001234567', p_mensaje: MENSAJE })
+    expect(error?.code).toBe('LD005')
+    await admin.from('propiedades').delete().in('id', ids)
+  })
 })

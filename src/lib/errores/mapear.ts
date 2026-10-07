@@ -94,6 +94,8 @@ export const MENSAJE_LEAD_DUPLICADO = 'Ya contactaste sobre esta propiedad.'
 export const MENSAJE_LEAD_NO_PUBLICADA = 'Esta propiedad ya no esta disponible.'
 export const MENSAJE_LEAD_PROPIA = 'No puedes contactar sobre tu propia propiedad.'
 export const MENSAJE_LEAD_YA_RESPONDIDO = 'Este lead ya fue respondido.'
+export const MENSAJE_LEAD_LIMITE =
+  'Ya contactaste muchas propiedades en las últimas 24 horas. Podrás contactar más mañana.'
 
 const CODIGOS_DE_CREDENCIALES = new Set([
   'invalid_credentials',

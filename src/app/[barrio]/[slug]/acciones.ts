@@ -6,7 +6,7 @@ import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { esquemaLead } from '@/lib/validacion/esquemas'
 import {
   MENSAJE_GENERICO, MENSAJE_LEAD_DUPLICADO,
-  MENSAJE_LEAD_NO_PUBLICADA, MENSAJE_LEAD_PROPIA,
+  MENSAJE_LEAD_NO_PUBLICADA, MENSAJE_LEAD_PROPIA, MENSAJE_LEAD_LIMITE,
 } from '@/lib/errores/mapear'
 import { procesarLeadIndividual } from '@/lib/ia/despachador'
 
@@ -17,6 +17,7 @@ export interface EstadoLead {
 
 const CODIGO_NO_PUBLICADA = 'LD002'
 const CODIGO_PROPIA = 'LD003'
+const CODIGO_LIMITE = 'LD005'
 const CODIGO_DUPLICADO = '23505'
 
 export async function enviarLead(_previo: EstadoLead, formData: FormData): Promise<EstadoLead> {
@@ -58,6 +59,7 @@ export async function enviarLead(_previo: EstadoLead, formData: FormData): Promi
   if (error.code === CODIGO_DUPLICADO) return { error: MENSAJE_LEAD_DUPLICADO }
   if (error.code === CODIGO_NO_PUBLICADA) return { error: MENSAJE_LEAD_NO_PUBLICADA }
   if (error.code === CODIGO_PROPIA) return { error: MENSAJE_LEAD_PROPIA }
+  if (error.code === CODIGO_LIMITE) return { error: MENSAJE_LEAD_LIMITE }
   return { error: MENSAJE_GENERICO }
 }
 
@@ -101,6 +103,7 @@ export async function iniciarChatAgendamiento(
     if (error) {
       if (error.code === CODIGO_NO_PUBLICADA) return { error: MENSAJE_LEAD_NO_PUBLICADA }
       if (error.code === CODIGO_PROPIA) return { error: MENSAJE_LEAD_PROPIA }
+      if (error.code === CODIGO_LIMITE) return { error: MENSAJE_LEAD_LIMITE }
       return { error: MENSAJE_GENERICO }
     }
     leadId = data as string
