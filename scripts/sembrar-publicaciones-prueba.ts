@@ -20,8 +20,8 @@
  */
 import { config } from 'dotenv'
 import { randomUUID } from 'node:crypto'
-import sharp from 'sharp'
 import { createClient } from '@supabase/supabase-js'
+import { fotoComoWebp, fotosDePrueba } from './fotos-prueba'
 
 config({ path: '.env.local', quiet: true })
 
@@ -41,7 +41,6 @@ interface Semilla {
   area: number
   barrio: string
   estado: Estado
-  color: string
 }
 
 /**
@@ -53,61 +52,61 @@ const SEMILLAS: Semilla[] = [
     titulo: 'Apartamento con vista al mar en Riomar',
     descripcion: 'Apartamento de 3 habitaciones en piso 12, con balcon y vista al mar. Sala-comedor amplia, cocina integral, estudio y zona de ropas. El conjunto tiene piscina, gimnasio y parqueadero cubierto. A 5 minutos del Buenavista.',
     operacion: 'venta', tipo: 'apartamento', precio: 780_000_000, habitaciones: 3, banos: 2, area: 110,
-    barrio: 'riomar', estado: 'publicada', color: '#2f6f8f',
+    barrio: 'riomar', estado: 'publicada',
   },
   {
     titulo: 'Casa familiar en Villa Santos con patio',
     descripcion: 'Casa de dos pisos con 4 habitaciones (la principal con vestier y bano), sala, comedor, cocina remodelada, patio amplio con arboles frutales y terraza en el segundo piso. Garaje para 2 carros. Cerca a colegios y centros comerciales.',
     operacion: 'venta', tipo: 'casa', precio: 950_000_000, habitaciones: 4, banos: 3, area: 220,
-    barrio: 'villa-santos', estado: 'publicada', color: '#8f6a2f',
+    barrio: 'villa-santos', estado: 'publicada',
   },
   {
     titulo: 'Apartaestudio amoblado en El Prado',
     descripcion: 'Apartaestudio amoblado con cama doble, escritorio, cocineta equipada y bano con agua caliente. Aire acondicionado e internet incluidos, igual que agua y gas. Ideal para estudiantes o profesionales, a pasos de la Cra. 54.',
     operacion: 'arriendo', tipo: 'apartamento', precio: 1_600_000, habitaciones: 1, banos: 1, area: 38,
-    barrio: 'el-prado', estado: 'publicada', color: '#4f8f2f',
+    barrio: 'el-prado', estado: 'publicada',
   },
   {
     titulo: 'Local comercial esquinero en Boston',
     descripcion: 'Local esquinero de 65 m2 sobre via principal con alto flujo peatonal y vehicular. Doble fachada en vidrio, bano, deposito y punto de agua. Apto para comercio, restaurante o consultorio.',
     operacion: 'arriendo', tipo: 'local', precio: 4_500_000, habitaciones: null, banos: 1, area: 65,
-    barrio: 'boston', estado: 'publicada', color: '#6a2f8f',
+    barrio: 'boston', estado: 'publicada',
   },
   {
     titulo: 'Casa amplia en Alto Prado con piscina',
     descripcion: 'Casa esquinera de 5 habitaciones, cada una con bano privado. Sala-comedor de doble altura, cocina abierta con isla, estudio, piscina y jardin. Garaje para 3 carros y cuarto de servicio. Calle tranquila a dos cuadras de la Cra. 53.',
     operacion: 'venta', tipo: 'casa', precio: 2_100_000_000, habitaciones: 5, banos: 4, area: 300,
-    barrio: 'alto-prado', estado: 'publicada', color: '#8f2f2f',
+    barrio: 'alto-prado', estado: 'publicada',
   },
   {
     titulo: 'Oficina en Ciudad Jardin lista para estrenar',
     descripcion: 'Oficina de 45 m2 en piso 6 con vista a la ciudad. Dos espacios de trabajo, sala de reuniones pequena, bano privado y cocineta. Aire acondicionado central, piso en porcelanato y un parqueadero. Edificio con recepcion y vigilancia 24 horas.',
     operacion: 'arriendo', tipo: 'oficina', precio: 2_800_000, habitaciones: null, banos: 1, area: 45,
-    barrio: 'ciudad-jardin', estado: 'publicada', color: '#2f8f7a',
+    barrio: 'ciudad-jardin', estado: 'publicada',
   },
   {
     titulo: 'Lote para construir en Miramar',
     descripcion: 'Lote plano de 250 m2 (10 x 25) en zona residencial consolidada, con acometidas de agua, luz y gas en el frente. Permite construir vivienda de hasta 3 pisos segun el POT.',
     operacion: 'venta', tipo: 'lote', precio: 420_000_000, habitaciones: null, banos: null, area: 250,
-    barrio: 'miramar', estado: 'en_revision', color: '#7a8f2f',
+    barrio: 'miramar', estado: 'en_revision',
   },
   {
     titulo: 'Penthouse duplex en Riomar con terraza',
     descripcion: 'Penthouse de dos niveles con 3 habitaciones, estudio y terraza privada con BBQ. Cocina integral abierta, zona de ropas y deposito. El conjunto tiene piscina, gimnasio, salon social y dos parqueaderos cubiertos.',
     operacion: 'venta', tipo: 'apartamento', precio: 1_350_000_000, habitaciones: 3, banos: 3, area: 180,
-    barrio: 'riomar', estado: 'en_revision', color: '#2f5a8f',
+    barrio: 'riomar', estado: 'en_revision',
   },
   {
     titulo: 'Casa en La Concepcion para arriendo',
     descripcion: 'Casa de un piso con 3 habitaciones, 2 banos, sala-comedor, cocina integral, patio y zona de ropas. Garaje cubierto para un carro. Sector tranquilo, cerca a rutas de transporte y al centro comercial Portal del Prado.',
     operacion: 'arriendo', tipo: 'casa', precio: 2_300_000, habitaciones: 3, banos: 2, area: 140,
-    barrio: 'la-concepcion', estado: 'pausada', color: '#8f7a2f',
+    barrio: 'la-concepcion', estado: 'pausada',
   },
   {
     titulo: 'Apartamento en Villa Carolina cerca a la Cra. 51B',
     descripcion: 'Apartamento de 2 habitaciones y 2 banos en piso 4, con balcon y buena ventilacion. Cocina integral, zona de ropas independiente y un parqueadero. Conjunto con piscina y parque infantil, cerca a supermercados y colegios.',
     operacion: 'venta', tipo: 'apartamento', precio: 520_000_000, habitaciones: 2, banos: 2, area: 80,
-    barrio: 'villa-carolina', estado: 'rechazada', color: '#5a5a5a',
+    barrio: 'villa-carolina', estado: 'rechazada',
   },
 ]
 
@@ -118,17 +117,6 @@ function argumento(nombre: string): string | undefined {
 
 function esLocal(url: string): boolean {
   return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/.test(url)
-}
-
-/** Foto de relleno: un dibujo de una casa sobre el color de la semilla. Sin texto, sin fuentes. */
-async function imagenDePrueba(color: string): Promise<Buffer> {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
-    <rect width="1200" height="800" fill="${color}"/>
-    <polygon points="600,180 900,420 300,420" fill="#ffffff" opacity="0.85"/>
-    <rect x="360" y="420" width="480" height="260" fill="#ffffff" opacity="0.85"/>
-    <rect x="560" y="530" width="80" height="150" fill="${color}"/>
-  </svg>`
-  return sharp(Buffer.from(svg)).webp({ quality: 80 }).toBuffer()
 }
 
 async function main() {
@@ -208,16 +196,23 @@ async function main() {
     }).select('id').single()
     if (error) throw error
 
-    // Misma forma de ruta que acciones-imagenes.ts: <uid>/<propiedad>/<uuid>.webp
-    const ruta = `${vendedorId}/${prop.id}/${randomUUID()}.webp`
-    const { error: errSubida } = await admin.storage.from(BUCKET)
-      .upload(ruta, await imagenDePrueba(s.color), { contentType: 'image/webp' })
-    if (errSubida) throw errSubida
+    // Fotos reales de scripts/fotos-prueba/ (la primera es la portada), con el
+    // mismo procesamiento y la misma forma de ruta que acciones-imagenes.ts:
+    // <uid>/<propiedad>/<uuid>.webp -- la base rechaza cualquier otra ruta.
+    for (const [orden, foto] of fotosDePrueba(s.tipo).entries()) {
+      const ruta = `${vendedorId}/${prop.id}/${randomUUID()}.webp`
+      const { error: errSubida } = await admin.storage.from(BUCKET)
+        .upload(ruta, await fotoComoWebp(foto), { contentType: 'image/webp' })
+      if (errSubida) throw errSubida
 
-    const { error: errImagen } = await admin.from('imagenes_propiedad').insert({
-      propiedad_id: prop.id, ruta_storage: ruta, alt_text: `Foto de ${s.titulo}`, orden: 0,
-    })
-    if (errImagen) throw errImagen
+      const { error: errImagen } = await admin.from('imagenes_propiedad').insert({
+        propiedad_id: prop.id,
+        ruta_storage: ruta,
+        alt_text: orden === 0 ? `Foto de ${s.titulo}` : `Interior de ${s.titulo}`,
+        orden,
+      })
+      if (errImagen) throw errImagen
+    }
 
     const { error: errEstado } = await admin.from('propiedades').update({ estado: s.estado }).eq('id', prop.id)
     if (errEstado) throw errEstado
