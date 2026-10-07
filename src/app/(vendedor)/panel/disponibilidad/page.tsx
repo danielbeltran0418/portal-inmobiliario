@@ -8,6 +8,7 @@ import { leerAutoConfirmacion } from '@/lib/ia/consultas'
 import { ToggleAutoConfirmar } from '@/components/panel/toggle-auto-confirmar'
 import { Desbloquear, EliminarFranja, FormularioBloqueo, FormularioFranja } from './formularios'
 import { horaCorta, nombreDia } from './opciones'
+import { CuadriculaSemanal } from './cuadricula'
 
 export const metadata: Metadata = {
   title: 'Disponibilidad | Portal Inmobiliario',
@@ -40,7 +41,9 @@ export default async function PaginaDisponibilidad() {
         <p className="mt-1 text-sm text-tinta-suave">
           Las visitas duran una hora y empiezan en punto. Las horas son de Colombia.
         </p>
-        <div className="mt-4"><FormularioFranja /></div>
+        <div className="mt-4"><CuadriculaSemanal franjas={franjas} /></div>
+        <h3 className="mt-6 text-sm font-semibold text-tinta">O añade un rango de horas de una vez</h3>
+        <div className="mt-2"><FormularioFranja /></div>
         {franjas.length === 0 ? (
           <p className="mt-4 text-tinta-suave">Todavía no has definido tu horario: nadie puede reservarte visitas.</p>
         ) : (
