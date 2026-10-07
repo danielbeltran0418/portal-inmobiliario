@@ -27,11 +27,11 @@ export function GraficoEmbudo({ embudo }: { embudo: MetricasEmbudo }) {
       descripcion: `${citas.tasaAgendamiento}% de agendamiento sobre aceptados`,
     },
     {
-      etiqueta: '4. Citas Completadas',
+      etiqueta: '4. Visitas realizadas',
       valor: citas.completadas,
       porcentaje: leads.total > 0 ? (citas.completadas / maximo) * 100 : 0,
       color: 'bg-marca-fuerte',
-      descripcion: 'Visitas presenciales realizadas',
+      descripcion: 'Citas confirmadas cuya hora ya pasó',
     },
   ]
 

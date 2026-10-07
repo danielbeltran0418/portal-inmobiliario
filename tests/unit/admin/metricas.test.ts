@@ -1,154 +1,62 @@
 import { describe, it, expect, vi } from 'vitest'
-import {
-  consultarMetricasEmbudo,
-  consultarMetricasIA,
-} from '@/lib/admin/metricas'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { consultarMetricasEmbudo, consultarMetricasIA } from '@/lib/admin/metricas'
 
-describe('Motor de Métricas Comerciales y Telemetría de IA (SP7)', () => {
-  describe('consultarMetricasEmbudo', () => {
-    it('maneja el caso de datos vacíos sin errores de división por cero', async () => {
-      const clienteMock = {
-        from: vi.fn().mockImplementation(() => {
-          return {
-            select: vi.fn().mockResolvedValue({ data: [], error: null }),
-          }
-        }),
-      }
+const AGREGADOS = {
+  propiedades: { total: 4, publicadas: 2, borradores: 1, pausadas_o_rechazadas: 1, destacadas: 1 },
+  leads: { total: 4, nuevos: 1, aceptados: 2, descartados: 1 },
+  citas: { total: 2, confirmadas: 1, canceladas: 1, realizadas: 1 },
+  posicionamiento: { total: 2, activos: 1, monto: '150000.00' },
+  conversaciones: { total: 2, cerradas: 1 },
+  mensajes: { total: 3, comprador: 1, agente_ia: 2, sistema: 0, tokens_entrada: '1000000', tokens_salida: 500000 },
+  incidentes_limite: 3,
+}
 
-      const metricas = await consultarMetricasEmbudo(clienteMock as unknown as SupabaseClient)
+function cliente(data: unknown, error: unknown = null) {
+  const rpc = vi.fn().mockResolvedValue({ data, error })
+  const from = vi.fn()
+  return { db: { rpc, from } as unknown as SupabaseClient, rpc, from }
+}
 
-      expect(metricas.propiedades.total).toBe(0)
-      expect(metricas.leads.total).toBe(0)
-      expect(metricas.leads.tasaConversion).toBe(0)
-      expect(metricas.citas.total).toBe(0)
-      expect(metricas.citas.tasaAgendamiento).toBe(0)
-      expect(metricas.posicionamiento.montoRecaudadoCOP).toBe(0)
-    })
-
-    it('calcula correctamente tasas de conversión y totales con datos poblados', async () => {
-      const clienteMock = {
-        from: vi.fn().mockImplementation((tabla: string) => {
-          if (tabla === 'propiedades') {
-            return {
-              select: vi.fn().mockResolvedValue({
-                data: [
-                  { estado: 'publicada', destacada: true },
-                  { estado: 'publicada', destacada: false },
-                  { estado: 'borrador', destacada: false },
-                  { estado: 'rechazada', destacada: false },
-                ],
-                error: null,
-              }),
-            }
-          }
-          if (tabla === 'leads') {
-            return {
-              select: vi.fn().mockResolvedValue({
-                data: [
-                  { estado: 'aceptado' },
-                  { estado: 'aceptado' },
-                  { estado: 'descartado' },
-                  { estado: 'nuevo' },
-                ],
-                error: null,
-              }),
-            }
-          }
-          if (tabla === 'citas') {
-            return {
-              select: vi.fn().mockResolvedValue({
-                data: [
-                  { estado: 'confirmada' },
-                  { estado: 'cancelada' },
-                ],
-                error: null,
-              }),
-            }
-          }
-          if (tabla === 'pagos_posicionamiento') {
-            return {
-              select: vi.fn().mockResolvedValue({
-                data: [
-                  { monto: 100000, estado: 'activo' },
-                  { monto: 50000, estado: 'expirado' },
-                ],
-                error: null,
-              }),
-            }
-          }
-          return { select: vi.fn().mockResolvedValue({ data: [], error: null }) }
-        }),
-      }
-
-      const metricas = await consultarMetricasEmbudo(clienteMock as unknown as SupabaseClient)
-
-      expect(metricas.propiedades.total).toBe(4)
-      expect(metricas.propiedades.publicadas).toBe(2)
-      expect(metricas.propiedades.destacadas).toBe(1)
-
-      expect(metricas.leads.total).toBe(4)
-      expect(metricas.leads.aceptados).toBe(2)
-      // 2 aceptados de 4 totales = 50.0%
-      expect(metricas.leads.tasaConversion).toBe(50.0)
-
-      expect(metricas.citas.total).toBe(2)
-      expect(metricas.citas.confirmadas).toBe(1)
-      // 1 confirmada de 2 aceptados = 50.0%
-      expect(metricas.citas.tasaAgendamiento).toBe(50.0)
-
-      expect(metricas.posicionamiento.acuerdosTotales).toBe(2)
-      expect(metricas.posicionamiento.acuerdosActivos).toBe(1)
-      expect(metricas.posicionamiento.montoRecaudadoCOP).toBe(150000)
-    })
+describe('Métricas del panel de control (agregadas en la base)', () => {
+  it('una sola llamada a metricas_panel_control para embudo e IA, sin leer tablas', async () => {
+    const { db, rpc, from } = cliente(AGREGADOS)
+    await Promise.all([consultarMetricasEmbudo(db), consultarMetricasIA(db)])
+    expect(rpc).toHaveBeenCalledTimes(1)
+    expect(rpc).toHaveBeenCalledWith('metricas_panel_control')
+    expect(from).not.toHaveBeenCalled()
   })
 
-  describe('consultarMetricasIA', () => {
-    it('computa turnos de conversación, estimación de tokens y costo', async () => {
-      const clienteMock = {
-        from: vi.fn().mockImplementation((tabla: string) => {
-          if (tabla === 'conversaciones_ia') {
-            return {
-              select: vi.fn().mockResolvedValue({
-                data: [{ estado: 'activa' }, { estado: 'cerrada' }],
-                error: null,
-              }),
-            }
-          }
-          if (tabla === 'mensajes_ia') {
-            return {
-              select: vi.fn().mockResolvedValue({
-                data: [
-                  { rol: 'usuario', contenido: 'Hola, deseo visitar este apartamento en El Golf.' }, // 48 chars = 12 tokens in
-                  { rol: 'asistente', contenido: 'Con gusto. ¿Deseas agendar para este sábado?' }, // 44 chars = 11 tokens out
-                ],
-                error: null,
-              }),
-            }
-          }
-          if (tabla === 'registro_auditoria') {
-            return {
-              select: vi.fn().mockReturnValue({
-                in: vi.fn().mockResolvedValue({ count: 2, error: null }),
-              }),
-            }
-          }
-          return { select: vi.fn().mockResolvedValue({ data: [], error: null }) }
-        }),
-      }
+  it('calcula tasas y convierte los numeric que llegan como texto', async () => {
+    const m = await consultarMetricasEmbudo(cliente(AGREGADOS).db)
+    expect(m.leads.tasaConversion).toBe(50)
+    expect(m.citas.tasaAgendamiento).toBe(50)
+    expect(m.citas.completadas).toBe(1)
+    expect(m.propiedades.rechazadas).toBe(1)
+    expect(m.posicionamiento.montoRecaudadoCOP).toBe(150000)
+  })
 
-      const metricas = await consultarMetricasIA(clienteMock as unknown as SupabaseClient)
+  it('sin datos no divide por cero', async () => {
+    const vacio = {
+      ...AGREGADOS,
+      leads: { total: 0, nuevos: 0, aceptados: 0, descartados: 0 },
+      citas: { total: 0, confirmadas: 0, canceladas: 0, realizadas: 0 },
+    }
+    const m = await consultarMetricasEmbudo(cliente(vacio).db)
+    expect(m.leads.tasaConversion).toBe(0)
+    expect(m.citas.tasaAgendamiento).toBe(0)
+  })
 
-      expect(metricas.conversacionesTotales).toBe(2)
-      expect(metricas.conversacionesCerradas).toBe(1)
-      expect(metricas.mensajesTotales).toBe(2)
-      expect(metricas.mensajesPorRol.usuario).toBe(1)
-      expect(metricas.mensajesPorRol.asistente).toBe(1)
-      expect(metricas.tokensEstimados.entrada).toBe(12)
-      expect(metricas.tokensEstimados.salida).toBe(11)
-      expect(metricas.tokensEstimados.total).toBe(23)
-      expect(metricas.costoEstimadoUSD).toBeGreaterThanOrEqual(0)
-      expect(metricas.incidentesRateLimit).toBe(2)
-    })
+  it('la IA usa los tokens reales y su costo', async () => {
+    const ia = await consultarMetricasIA(cliente(AGREGADOS).db)
+    expect(ia.tokensEstimados).toEqual({ entrada: 1_000_000, salida: 500_000, total: 1_500_000 })
+    expect(ia.costoEstimadoUSD).toBe(0.6)
+    expect(ia.mensajesPorRol).toEqual({ usuario: 1, asistente: 2, sistema: 0 })
+    expect(ia.conversacionesCerradas).toBe(1)
+    expect(ia.incidentesRateLimit).toBe(3)
+  })
+
+  it('un fallo de la base no se disfraza de ceros', async () => {
+    await expect(consultarMetricasEmbudo(cliente(null, { message: 'caida' }).db)).rejects.toThrow(/metricas/)
   })
 })
