@@ -107,7 +107,7 @@ export default async function PaginaInicio() {
         className="relative isolate overflow-hidden bg-[#1F1B14] bg-cover bg-center"
         style={{
           backgroundImage:
-            'linear-gradient(to bottom, rgb(31 27 20 / 0.6), rgb(31 27 20 / 0.4) 55%, rgb(31 27 20 / 0.2)), url(/portada.jpg)',
+            'linear-gradient(to bottom, rgb(31 27 20 / 0.65), rgb(31 27 20 / 0.55) 55%, rgb(31 27 20 / 0.35)), url(/portada.jpg)',
         }}
       >
         <div className="mx-auto flex min-h-[580px] max-w-7xl flex-col items-center justify-center px-4 py-20 text-center sm:min-h-[640px] sm:px-6">
