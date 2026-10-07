@@ -88,6 +88,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
             tipo: filtros.tipo,
             precio_min: filtros.precioMin,
             precio_max: filtros.precioMax,
+            q: filtros.texto,
           }}
         />
       </div>

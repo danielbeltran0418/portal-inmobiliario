@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import Link from 'next/link';
-import { BusquedaGuardada, construirQueryStringBusqueda } from '@/lib/comprador/busquedas';
+import { BusquedaGuardada, construirQueryStringBusqueda, ETIQUETA_FILTRO } from '@/lib/comprador/busquedas';
 import { eliminarBusquedaAction } from '@/lib/comprador/acciones-busquedas';
 
 export function TarjetaBusquedaGuardada({ busqueda }: { busqueda: BusquedaGuardada }) {
@@ -47,7 +47,7 @@ export function TarjetaBusquedaGuardada({ busqueda }: { busqueda: BusquedaGuarda
               key={k}
               className="rounded-md bg-superficie-alt px-2 py-0.5 text-xs text-tinta-suave border border-linea"
             >
-              {k}: <strong className="text-tinta">{String(v)}</strong>
+              {ETIQUETA_FILTRO[k] ?? k}: <strong className="text-tinta">{String(v)}</strong>
             </span>
           ))}
           {filtrosLista.length === 0 && !barrioSlug && (

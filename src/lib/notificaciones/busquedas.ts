@@ -1,5 +1,7 @@
 import 'server-only';
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin';
+import { leerFiltros } from '@/lib/catalogo/filtros';
+import { filtroTextoLibre } from '@/lib/catalogo/consultas';
 
 export interface FiltrosBusquedaGuardada {
   barrio: string;
@@ -7,6 +9,7 @@ export interface FiltrosBusquedaGuardada {
   tipo?: string;
   precio_min?: number;
   precio_max?: number;
+  q?: string;
 }
 
 export interface PropiedadCoincidente {
@@ -89,6 +92,10 @@ export async function obtenerBusquedasParaNotificar(): Promise<BusquedaConCoinci
     if (filtros.tipo) consulta = consulta.eq('tipo_inmueble', filtros.tipo);
     if (filtros.precio_min !== undefined) consulta = consulta.gte('precio', filtros.precio_min);
     if (filtros.precio_max !== undefined) consulta = consulta.lte('precio', filtros.precio_max);
+    // Se vuelve a sanear al leer: filas guardadas antes de normalizarFiltrosGuardados
+    // pueden traer cualquier texto, y este va dentro de un or() de PostgREST.
+    const palabras = leerFiltros({ q: typeof filtros.q === 'string' ? filtros.q : undefined }).texto;
+    if (palabras) consulta = consulta.or(filtroTextoLibre(palabras));
 
     const { data: propiedades, error: errorPropiedades } = await consulta;
 

@@ -43,7 +43,7 @@ export function BotonGuardarBusqueda({
       <button
         type="button"
         onClick={() => setModalAbierto(true)}
-        className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-marca/30 bg-marca-suave text-marca hover:bg-marca-suave transition-colors ${className}`}
+        className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-marca/30 bg-marca-suave text-marca hover:border-marca transition-colors ${className}`}
         data-testid="boton-guardar-busqueda"
       >
         <svg
