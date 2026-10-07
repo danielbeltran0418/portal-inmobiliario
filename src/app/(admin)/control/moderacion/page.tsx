@@ -57,7 +57,7 @@ export default async function PaginaModeracion() {
       </div>
 
       {error && (
-        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
+        <div className="rounded-lg bg-peligro-suave p-4 text-sm text-peligro">
           Error al cargar propiedades: {error.message}
         </div>
       )}
@@ -84,10 +84,10 @@ export default async function PaginaModeracion() {
               lista.map((prop) => {
                 const badgeColor =
                   prop.estado === 'publicada'
-                    ? 'bg-emerald-100 text-emerald-800'
+                    ? 'bg-exito-suave text-exito'
                     : prop.estado === 'borrador'
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-red-100 text-red-800'
+                    ? 'bg-aviso-suave text-aviso'
+                    : 'bg-peligro-suave text-peligro'
 
                 return (
                   <tr key={prop.id} className="hover:bg-superficie-alt/50 transition-colors">
@@ -96,7 +96,7 @@ export default async function PaginaModeracion() {
                       <div className="text-xs text-tinta-tenue">
                         {prop.barrios?.nombre ?? 'Sin barrio'} • {prop.operacion}
                         {prop.destacada && (
-                          <span className="ml-2 rounded-sm bg-realce-suave px-1.5 py-0.5 text-2xs font-bold text-realce">
+                          <span className="ml-2 rounded-lg bg-realce-suave px-1.5 py-0.5 text-2xs font-bold text-realce">
                             ★ DESTACADA
                           </span>
                         )}

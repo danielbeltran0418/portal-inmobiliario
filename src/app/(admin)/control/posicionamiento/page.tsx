@@ -51,10 +51,10 @@ export default async function PaginaPosicionamiento() {
               acuerdos.map((acuerdo) => {
                 const badgeColor =
                   acuerdo.estado === 'activo'
-                    ? 'bg-emerald-100 text-emerald-800'
+                    ? 'bg-exito-suave text-exito'
                     : acuerdo.estado === 'expirado'
-                    ? 'bg-neutral-100 text-neutral-700'
-                    : 'bg-red-100 text-red-800'
+                    ? 'bg-superficie-alt text-tinta-suave'
+                    : 'bg-peligro-suave text-peligro'
 
                 const inicio = new Date(acuerdo.fecha_inicio).toLocaleDateString('es-CO')
                 const fin = new Date(acuerdo.fecha_fin).toLocaleDateString('es-CO')

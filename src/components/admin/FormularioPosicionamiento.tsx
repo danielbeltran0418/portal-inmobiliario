@@ -33,7 +33,7 @@ export function FormularioPosicionamiento({
   return (
     <form action={formAction} className="space-y-6">
       {estado.error && (
-        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
+        <div className="rounded-lg bg-peligro-suave p-4 text-sm text-peligro">
           {estado.error}
         </div>
       )}
