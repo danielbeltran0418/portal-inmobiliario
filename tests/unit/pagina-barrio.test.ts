@@ -16,3 +16,15 @@ it('devuelve notFound para barrios inexistentes', async () => {
   respuesta.mockResolvedValue({ data: null, error: null })
   await expect(Barrio({ params: Promise.resolve({ barrio: 'inexistente' }), searchParams: Promise.resolve({}) })).rejects.toThrow('NOT_FOUND')
 })
+it('[diseño Figma Make] filtros en columna lateral: operacion con radios, Filtrar y Limpiar filtros', async () => {
+  respuesta.mockResolvedValue({ data: { id: 'id', nombre: 'El Prado', slug: 'el-prado' }, error: null })
+  const html = renderToStaticMarkup(await Barrio({ params: Promise.resolve({ barrio: 'el-prado' }), searchParams: Promise.resolve({ operacion: 'arriendo' }) }))
+  const lateral = html.match(/<aside[\s\S]*?<\/aside>/)?.[0] ?? ''
+  expect(lateral).toContain('method="get"')
+  expect(lateral).toMatch(/type="radio"[^>]*name="operacion"[^>]*value=""|name="operacion"[^>]*value=""[^>]*type="radio"/)
+  expect(lateral).toMatch(/value="arriendo"[^>]*checked=""|checked=""[^>]*value="arriendo"/)
+  expect(lateral).toMatch(/<button[^>]*type="submit"[^>]*>Filtrar<\/button>/)
+  expect(lateral).toContain('Limpiar filtros')
+  expect(lateral).toMatch(/<label[^>]*>[^<]*Precio mínimo/)
+  expect(lateral).toMatch(/<label[^>]*>[^<]*Precio máximo/)
+})

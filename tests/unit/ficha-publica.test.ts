@@ -269,3 +269,17 @@ it('[comportamiento] un lead real de OTRO comprador no hace que el vendedor vea 
   expect(html).not.toContain('Contactar al vendedor')
   expect(html).not.toContain('Entra o crea cuenta')
 })
+
+it('[diseño Figma Make] miga de pan hasta el barrio, descripcion y aviso de la direccion', async () => {
+  resultado.mockResolvedValue({ data: PROPIEDAD, error: null })
+  getUser.mockResolvedValue({ data: { user: null } })
+
+  const html = renderToStaticMarkup(await Ficha({ params }))
+
+  expect(html).toMatch(/<nav[^>]*aria-label="Miga de pan"/)
+  expect(html).toContain('href="/prado"')
+  expect(html).toMatch(/<h2[^>]*>Descripción<\/h2>/)
+  expect(html).toContain('La dirección exacta')
+  // El portal es nacional: la ficha no fija una ciudad.
+  expect(html).not.toContain('Barranquilla')
+})

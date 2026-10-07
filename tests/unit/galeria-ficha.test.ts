@@ -9,33 +9,39 @@ const fotos = (n: number) =>
 const pintar = (n: number) =>
   renderToStaticMarkup(createElement(GaleriaFicha, { fotos: fotos(n), titulo: 'Casa del Prado' }))
 
-describe('GaleriaFicha', () => {
+const imagenes = (html: string) => html.match(/<img[^>]*>/g) ?? []
+const miniaturas = (html: string) => html.match(/<button[^>]*aria-label="Ver foto \d+"[^>]*>/g) ?? []
+
+describe('GaleriaFicha (diseño de Figma Make: foto principal y miniaturas)', () => {
   it('sin fotos muestra un marcador honesto, sin imagenes', () => {
     const html = pintar(0)
     expect(html).toContain('Sin fotografías')
-    expect(html).not.toContain('<img')
+    expect(imagenes(html)).toHaveLength(0)
   })
 
-  it('con una foto la muestra grande y sin desplegable', () => {
+  it('con una foto la muestra grande, sin miniaturas', () => {
     const html = pintar(1)
-    expect(html.match(/<img/g)).toHaveLength(1)
+    expect(imagenes(html)).toHaveLength(1)
     expect(html).toContain('/imagen/foto-1')
-    expect(html).not.toContain('<details')
+    expect(miniaturas(html)).toHaveLength(0)
   })
 
-  it('hasta cinco fotos van todas visibles, la primera como destacada', () => {
-    const html = pintar(5)
-    expect(html.match(/<img/g)).toHaveLength(5)
-    expect(html).not.toContain('<details')
-    expect(html.indexOf('/imagen/foto-1')).toBeLessThan(html.indexOf('/imagen/foto-2'))
+  it('con varias: la principal es la primera y hay una miniatura por foto, la primera marcada', () => {
+    const html = pintar(3)
+    const botones = miniaturas(html)
+    expect(botones).toHaveLength(3)
+    expect(botones[0]).toContain('aria-pressed="true"')
+    expect(botones[1]).toContain('aria-pressed="false"')
+    // La principal va antes que las miniaturas y es la foto 1.
+    expect(imagenes(html)[0]).toContain('/imagen/foto-1')
   })
 
-  it('mas de cinco: las cinco primeras visibles y el resto tras un desplegable con el total', () => {
-    const html = pintar(8)
-    const [visibles, resto] = html.split('<details')
-    expect(visibles.match(/<img/g)).toHaveLength(5)
-    expect(resto.match(/<img/g)).toHaveLength(3)
-    expect(resto).toContain('Ver las 8 fotos')
+  it('solo la foto principal se pide con prioridad: es la que pinta el LCP', () => {
+    const html = pintar(3)
+    const imgs = imagenes(html)
+    expect(imgs.filter((t) => t.includes('fetchPriority="high"'))).toHaveLength(1)
+    expect(imgs[0]).toContain('fetchPriority="high"')
+    expect(imgs.slice(1).every((t) => t.includes('loading="lazy"'))).toBe(true)
   })
 
   it('ordena por orden aunque lleguen desordenadas', () => {
@@ -44,7 +50,7 @@ describe('GaleriaFicha', () => {
       { id: 'a', alt_text: 'A', orden: 0 },
     ]
     const html = renderToStaticMarkup(createElement(GaleriaFicha, { fotos: desordenadas, titulo: 'T' }))
-    expect(html.indexOf('/imagen/a')).toBeLessThan(html.indexOf('/imagen/b'))
+    expect(imagenes(html)[0]).toContain('/imagen/a')
   })
 
   it('usa el titulo como alt si la foto no tiene texto alternativo', () => {
@@ -52,16 +58,5 @@ describe('GaleriaFicha', () => {
       createElement(GaleriaFicha, { fotos: [{ id: 'x', alt_text: '', orden: 0 }], titulo: 'Casa del Prado' }),
     )
     expect(html).toContain('alt="Casa del Prado"')
-  })
-
-  it('solo la primera foto se precarga: es la que pinta el LCP', () => {
-    const html = pintar(3)
-    // Next anade ademas un <link rel="preload"> para la imagen con prioridad:
-    // por eso se cuentan las etiquetas <img>, no la aparicion del atributo.
-    const imagenes = html.match(/<img[^>]*>/g) ?? []
-    expect(imagenes.filter((t) => t.includes('fetchPriority="high"'))).toHaveLength(1)
-    expect(imagenes[0]).toContain('fetchPriority="high"')
-    expect(imagenes[0]).toContain('loading="eager"')
-    expect(imagenes.slice(1).every((t) => t.includes('loading="lazy"'))).toBe(true)
   })
 })
