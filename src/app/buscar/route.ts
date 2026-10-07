@@ -1,4 +1,4 @@
-import { leerFiltros } from '@/lib/catalogo/filtros'
+import { leerFiltros, parametrosDeFiltros } from '@/lib/catalogo/filtros'
 
 /**
  * Puente del buscador de la portada: el catalogo de un barrio vive en
@@ -22,21 +22,11 @@ export function GET(peticion: Request): Response {
   if (barrio.length > 80 || !SLUG.test(barrio)) return redirigir('/')
 
   // leerFiltros descarta lo que no reconoce: lo que no pasa no llega a la URL.
-  const filtros = leerFiltros({
-    operacion: parametros.get('operacion') ?? undefined,
-    tipo: parametros.get('tipo') ?? undefined,
-    precio_min: parametros.get('precio_min') ?? undefined,
-    precio_max: parametros.get('precio_max') ?? undefined,
-    q: parametros.get('q') ?? undefined,
-  })
-
-  const consulta = new URLSearchParams()
-  if (filtros.operacion) consulta.set('operacion', filtros.operacion)
-  if (filtros.tipo) consulta.set('tipo', filtros.tipo)
-  if (filtros.precioMin !== undefined) consulta.set('precio_min', String(filtros.precioMin))
-  if (filtros.precioMax !== undefined) consulta.set('precio_max', String(filtros.precioMax))
-  if (filtros.texto) consulta.set('q', filtros.texto)
-
-  const texto = consulta.toString()
+  // Primer valor de cada clave, como hacia .get(): un parametro repetido no
+  // decide nada por su cuenta.
+  const crudos: Record<string, string> = {}
+  for (const [clave, valor] of parametros) if (!(clave in crudos)) crudos[clave] = valor
+  // Sin pagina: una busqueda nueva siempre empieza en la primera.
+  const texto = parametrosDeFiltros({ ...leerFiltros(crudos), pagina: undefined }).toString()
   return redirigir(texto ? `/${barrio}?${texto}` : `/${barrio}`)
 }

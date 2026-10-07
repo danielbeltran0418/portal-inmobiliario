@@ -45,3 +45,8 @@ describe('/buscar: puente del buscador de la portada hacia el catalogo de un bar
     expect(r.headers.get('location')).not.toMatch(/^\/\//)
   })
 })
+
+it('[campos colombianos] /buscar conserva estrato y habitaciones validos', async () => {
+  const r = await GET(new Request('http://localhost/buscar?barrio=riomar&estrato_min=3&habitaciones_min=2&estrato_max=9'))
+  expect(r.headers.get('location')).toBe('/riomar?estrato_min=3&habitaciones_min=2')
+})

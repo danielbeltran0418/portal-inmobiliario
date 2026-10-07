@@ -322,3 +322,14 @@ it('[mapa] sin coordenadas, o si la consulta falla, queda el aviso del barrio si
   expect(html).not.toContain('Mapa de la zona aproximada')
   expect(html).toContain('Barrio Prado')
 })
+
+it('[campos colombianos] la ficha muestra estrato, administracion, parqueaderos, antigüedad y piso', async () => {
+  resultado.mockResolvedValue({ data: { ...PROPIEDAD, estrato: 4, administracion: 350000, parqueaderos: 2, anio_construccion: 2015, piso: 8 }, error: null })
+  getUser.mockResolvedValue({ data: { user: null } })
+  const html = renderToStaticMarkup(await Ficha({ params }))
+  expect(html).toContain('Estrato')
+  expect(html).toMatch(/Administración[\s\S]*350\.000/)
+  expect(html).toContain('Parqueaderos')
+  expect(html).toMatch(/Construido en[\s\S]*2015/)
+  expect(html).toContain('Piso')
+})

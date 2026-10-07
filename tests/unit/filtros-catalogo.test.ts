@@ -37,4 +37,15 @@ describe('filtros del catalogo', () => {
   it('corta el texto a 60 caracteres', () => {
     expect(leerFiltros({ q: 'a'.repeat(100) }).texto).toHaveLength(60)
   })
+  it('[campos colombianos] estrato, habitaciones, parqueaderos y administracion', () => {
+    expect(leerFiltros({ estrato_min: '3', estrato_max: '5', habitaciones_min: '2', banos_min: '2', parqueaderos_min: '1', administracion_max: '400000' }))
+      .toMatchObject({ estratoMin: 3, estratoMax: 5, habitacionesMin: 2, banosMin: 2, parqueaderosMin: 1, administracionMax: 400000 })
+  })
+  it.each([['estrato_min', '0'], ['estrato_min', '7'], ['estrato_max', '3.5'], ['habitaciones_min', '-1'], ['parqueaderos_min', 'x'], ['habitaciones_min', '99']])(
+    'ignora %s=%s', (clave, valor) => {
+      expect(leerFiltros({ [clave]: valor })).toEqual({ pagina: 1 })
+    })
+  it('ignora un rango de estrato invertido', () => {
+    expect(leerFiltros({ estrato_min: '5', estrato_max: '2' })).toEqual({ pagina: 1 })
+  })
 })

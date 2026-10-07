@@ -10,7 +10,7 @@ import Link from 'next/link'
 import { Search } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
-import { leerFiltros, type ParametrosCatalogo } from '@/lib/catalogo/filtros'
+import { leerFiltros, parametrosDeFiltros, type ParametrosCatalogo } from '@/lib/catalogo/filtros'
 import { listarPropiedadesPublicas, TAMANO_PAGINA } from '@/lib/catalogo/consultas'
 
 const CAMPO =
@@ -28,6 +28,21 @@ const cargarBarrio = cache(async (slug: string) => {
   if (error) throw new Error('No se pudo cargar el barrio')
   return data
 })
+
+const ESTRATOS = [1, 2, 3, 4, 5, 6] as const
+
+/** "Al menos N": cualquiera, 1+, 2+, 3+, 4+. */
+function SelectorMinimo({ nombre, etiqueta, valor }: { nombre: string; etiqueta: string; valor?: number }) {
+  return (
+    <label className="block text-xs text-tinta-suave">
+      {etiqueta}
+      <select className={`${CAMPO} mt-1`} name={nombre} defaultValue={valor ?? ''}>
+        <option value="">Cualquiera</option>
+        {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}+</option>)}
+      </select>
+    </label>
+  )
+}
 
 export default async function PaginaBarrio({ params, searchParams }: Entrada) {
   const [{ barrio: slug }, parametros] = await Promise.all([params, searchParams])
@@ -48,14 +63,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
     : new Set<string>()
 
   function pagina(numero: number | null) {
-    const p = new URLSearchParams()
-    if (filtros.operacion) p.set('operacion', filtros.operacion)
-    if (filtros.tipo) p.set('tipo', filtros.tipo)
-    if (filtros.precioMin !== undefined) p.set('precio_min', String(filtros.precioMin))
-    if (filtros.precioMax !== undefined) p.set('precio_max', String(filtros.precioMax))
-    if (filtros.texto) p.set('q', filtros.texto)
-    if (numero !== null) p.set('pagina', String(numero))
-    const query = p.toString()
+    const query = parametrosDeFiltros({ ...filtros, pagina: numero ?? undefined }).toString()
     return query ? `/${barrio!.slug}?${query}` : `/${barrio!.slug}`
   }
 
@@ -89,6 +97,12 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
             precio_min: filtros.precioMin,
             precio_max: filtros.precioMax,
             q: filtros.texto,
+            estrato_min: filtros.estratoMin,
+            estrato_max: filtros.estratoMax,
+            habitaciones_min: filtros.habitacionesMin,
+            banos_min: filtros.banosMin,
+            parqueaderos_min: filtros.parqueaderosMin,
+            administracion_max: filtros.administracionMax,
           }}
         />
       </div>
@@ -167,6 +181,46 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
                     defaultValue={filtros.precioMax}
                     placeholder="Máximo"
                   />
+                </label>
+              </div>
+            </fieldset>
+
+            {/* Lo que el comprador colombiano filtra siempre (migracion 20261012000100). */}
+            <div className="grid grid-cols-2 gap-3">
+              <SelectorMinimo nombre="habitaciones_min" etiqueta="Habitaciones" valor={filtros.habitacionesMin} />
+              <SelectorMinimo nombre="banos_min" etiqueta="Baños" valor={filtros.banosMin} />
+              <SelectorMinimo nombre="parqueaderos_min" etiqueta="Parqueaderos" valor={filtros.parqueaderosMin} />
+              <label className="block text-xs text-tinta-suave">
+                Administración máx.
+                <input
+                  className={`${CAMPO} cifra mt-1`}
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputMode="numeric"
+                  name="administracion_max"
+                  defaultValue={filtros.administracionMax}
+                  placeholder="Sin tope"
+                />
+              </label>
+            </div>
+
+            <fieldset>
+              <legend className={ETIQUETA_GRUPO}>Estrato</legend>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block text-xs text-tinta-suave">
+                  Desde
+                  <select className={`${CAMPO} mt-1`} name="estrato_min" defaultValue={filtros.estratoMin ?? ''}>
+                    <option value="">Cualquiera</option>
+                    {ESTRATOS.map((e) => <option key={e} value={e}>{e}</option>)}
+                  </select>
+                </label>
+                <label className="block text-xs text-tinta-suave">
+                  Hasta
+                  <select className={`${CAMPO} mt-1`} name="estrato_max" defaultValue={filtros.estratoMax ?? ''}>
+                    <option value="">Cualquiera</option>
+                    {ESTRATOS.map((e) => <option key={e} value={e}>{e}</option>)}
+                  </select>
                 </label>
               </div>
             </fieldset>

@@ -39,6 +39,11 @@ interface PropiedadCruda {
   area_m2: number | null
   barrio_id: string | null
   estado: string
+  estrato?: number | null
+  administracion?: number | null
+  parqueaderos?: number | null
+  anio_construccion?: number | null
+  piso?: number | null
   imagenes_propiedad: readonly ImagenCruda[] | null
 }
 
@@ -105,7 +110,8 @@ export default async function PaginaEditarPropiedad({
       .from('propiedades')
       .select(
         'id, titulo, descripcion, operacion, tipo_inmueble, precio, habitaciones, banos, ' +
-        'area_m2, barrio_id, estado, imagenes_propiedad(id, ruta_storage, alt_text, orden)',
+        'area_m2, barrio_id, estado, estrato, administracion, parqueaderos, anio_construccion, piso, ' +
+        'imagenes_propiedad(id, ruta_storage, alt_text, orden)',
       )
       .eq('id', id)
       .eq('vendedor_id', usuario.user.id)
@@ -158,6 +164,11 @@ export default async function PaginaEditarPropiedad({
     banos: p.banos,
     area_m2: p.area_m2,
     barrio_id: p.barrio_id,
+    estrato: p.estrato ?? null,
+    administracion: p.administracion ?? null,
+    parqueaderos: p.parqueaderos ?? null,
+    anio_construccion: p.anio_construccion ?? null,
+    piso: p.piso ?? null,
     direccion: ubicacion?.direccion ?? null,
     coordenadas:
       ubicacion?.latitud != null && ubicacion?.longitud != null
