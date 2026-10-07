@@ -23,6 +23,9 @@ it.each([
   ['precio minimo', { pagina: 1, precioMin: 100 }, false],
   ['precio maximo', { pagina: 1, precioMax: 100 }, false],
   ['pagina 2', { pagina: 2 }, false],
+  ['palabras clave', { pagina: 1, texto: 'patio' }, false],
+  ['estrato', { pagina: 1, estratoMin: 3 }, false],
+  ['habitaciones', { pagina: 1, habitacionesMin: 2 }, false],
 ])('catalogoIndexable: %s', (_caso, filtros, esperado) => {
   expect(catalogoIndexable(filtros)).toBe(esperado)
 })

@@ -56,6 +56,25 @@ describe('RLS de barrios', () => {
     expect(sinCiudad?.code).toBe('23502')
   })
 
+  it('[ciudades] ciudad_slug lo calcula la base: tildes, mayusculas y espacios dan el mismo slug', async () => {
+    const admin = clienteAdmin()
+    const slug = `ciudad-prueba-${Date.now()}`
+    const { data, error } = await admin.from('barrios')
+      .insert({ nombre: 'Prueba', slug, ciudad: '  BOGOTÁ ', ciudad_slug: 'intento-manual' })
+      .select('ciudad, ciudad_slug').single()
+    expect(error).toBeNull()
+    expect(data).toEqual({ ciudad: 'BOGOTÁ', ciudad_slug: 'bogota' })
+    const { data: cambiado } = await admin.from('barrios').update({ ciudad: 'San Andrés' }).eq('slug', slug)
+      .select('ciudad_slug').single()
+    expect(cambiado?.ciudad_slug).toBe('san-andres')
+    await admin.from('barrios').delete().eq('slug', slug)
+  })
+
+  it('[ciudades] "ciudad" es una ruta del portal: ningun barrio puede llamarse asi', async () => {
+    const { error } = await clienteAdmin().from('barrios').insert({ nombre: 'Ciudad', slug: 'ciudad', ciudad: 'Cali' })
+    expect(error?.code).toBe('23514')
+  })
+
   it('un vendedor NO puede crear barrios', async () => {
     const cliente = await clienteComo(VENDEDOR.correo, VENDEDOR.password)
     const { error } = await cliente.from('barrios')

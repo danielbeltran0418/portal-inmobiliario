@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 const sesion = vi.fn()
 const panel = vi.fn()
 const recientes = vi.fn()
-const barrios = vi.fn()
+const ciudades = vi.fn()
 const favoritos = vi.fn()
 
 vi.mock('@/lib/auth/sesion', () => ({ sesionActual: () => sesion() }))
@@ -13,9 +13,8 @@ vi.mock('@/lib/catalogo/consultas', () => ({ listarRecientes: () => recientes() 
 vi.mock('@/lib/comprador/favoritos', () => ({ idsFavoritos: (...a: unknown[]) => favoritos(...a) }))
 vi.mock('@/lib/supabase/cliente-servidor', () => ({ crearClienteServidor: async () => ({}) }))
 vi.mock('@/lib/comprador/acciones-favoritos', () => ({ conmutarFavoritoAction: vi.fn() }))
-vi.mock('@/lib/supabase/cliente-publico', () => ({
-  crearClientePublico: () => ({ from: () => ({ select: () => ({ eq: () => ({ order: () => barrios() }) }) }) }),
-}))
+vi.mock('@/lib/catalogo/ciudades', () => ({ listarCiudades: () => ciudades() }))
+vi.mock('@/lib/supabase/cliente-publico', () => ({ crearClientePublico: () => ({}) }))
 
 const { default: PaginaInicio } = await import('@/app/page')
 
@@ -35,10 +34,10 @@ beforeEach(() => {
   panel.mockReturnValue(null)
   favoritos.mockReset().mockResolvedValue(new Set())
   recientes.mockResolvedValue([PROPIEDAD])
-  barrios.mockResolvedValue({
-    data: [{ nombre: 'El Prado', slug: 'el-prado' }, { nombre: 'Riomar', slug: 'riomar' }],
-    error: null,
-  })
+  ciudades.mockResolvedValue([
+    { nombre: 'Barranquilla', slug: 'barranquilla', barrios: 2 },
+    { nombre: 'Bogotá', slug: 'bogota', barrios: 1 },
+  ])
 })
 
 describe('portada (diseño de Figma Make)', () => {
@@ -58,13 +57,14 @@ describe('portada (diseño de Figma Make)', () => {
     expect(await pintar()).toContain('action="/buscar"')
   })
 
-  it('cada barrio enlaza a su catalogo y su nombre accesible es solo el del barrio', async () => {
+  it('[alcance nacional] cada ciudad enlaza a su catalogo y su nombre accesible es solo el de la ciudad', async () => {
     const html = await pintar()
     const enlaces = html.match(/<a [^>]*>/g) ?? []
     // El orden de los atributos lo decide next/link: se comprueban por separado.
     const enlace = (href: string) => enlaces.find((a) => a.includes(`href="${href}"`)) ?? ''
-    expect(enlace('/el-prado')).toContain('aria-label="El Prado"')
-    expect(enlace('/riomar')).toContain('aria-label="Riomar"')
+    expect(enlace('/ciudad/barranquilla')).toContain('aria-label="Barranquilla"')
+    expect(enlace('/ciudad/bogota')).toContain('aria-label="Bogotá"')
+    expect(html).toContain('Explora por ciudad')
   })
 
   it('muestra propiedades reales publicadas, enlazadas a su ficha', async () => {
@@ -95,7 +95,7 @@ describe('portada (diseño de Figma Make)', () => {
   })
 
   it('sin barrios mantiene el aviso y no pinta un buscador inutil', async () => {
-    barrios.mockResolvedValue({ data: [], error: null })
+    ciudades.mockResolvedValue([])
     const html = await pintar()
     expect(html).toContain('Todavía no hay barrios disponibles')
     expect(html).not.toContain('action="/buscar"')

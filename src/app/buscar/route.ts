@@ -18,8 +18,14 @@ function redirigir(ruta: string): Response {
 
 export function GET(peticion: Request): Response {
   const parametros = new URL(peticion.url).searchParams
+  // La portada busca por ciudad (/ciudad/{slug}); el puente sigue aceptando
+  // barrio para enlaces y busquedas guardadas antiguas.
+  const ciudad = parametros.get('ciudad') ?? ''
   const barrio = parametros.get('barrio') ?? ''
-  if (barrio.length > 80 || !SLUG.test(barrio)) return redirigir('/')
+  const destino = ciudad
+    ? (ciudad.length <= 80 && SLUG.test(ciudad) ? `/ciudad/${ciudad}` : null)
+    : (barrio.length <= 80 && SLUG.test(barrio) ? `/${barrio}` : null)
+  if (!destino) return redirigir('/')
 
   // leerFiltros descarta lo que no reconoce: lo que no pasa no llega a la URL.
   // Primer valor de cada clave, como hacia .get(): un parametro repetido no
@@ -28,5 +34,5 @@ export function GET(peticion: Request): Response {
   for (const [clave, valor] of parametros) if (!(clave in crudos)) crudos[clave] = valor
   // Sin pagina: una busqueda nueva siempre empieza en la primera.
   const texto = parametrosDeFiltros({ ...leerFiltros(crudos), pagina: undefined }).toString()
-  return redirigir(texto ? `/${barrio}?${texto}` : `/${barrio}`)
+  return redirigir(texto ? `${destino}?${texto}` : destino)
 }

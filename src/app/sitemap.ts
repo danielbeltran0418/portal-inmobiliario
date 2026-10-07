@@ -5,16 +5,22 @@ import { urlPublica } from '@/lib/catalogo/seo'
 export const dynamic = 'force-dynamic'
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const db = crearClientePublico()
-  const { data: barrios, error: errorBarrios } = await db.from('barrios').select('slug').eq('activo', true).order('slug')
+  const { data: barrios, error: errorBarrios } = await db.from('barrios').select('slug,ciudad_slug').eq('activo', true).order('slug')
   if (errorBarrios) throw new Error('No se pudo generar el sitemap')
   // Un barrio sin propiedades publicadas es una pagina fina: no se lista.
   const barriosConAnuncios = new Set<string>()
   const entradas: MetadataRoute.Sitemap = []
-  const fichas = (): MetadataRoute.Sitemap => [
-    { url: urlPublica('/') },
-    ...(barrios ?? []).filter(b => barriosConAnuncios.has(b.slug)).map(b => ({ url: urlPublica(`/${b.slug}`) })),
-    ...entradas,
-  ]
+  const fichas = (): MetadataRoute.Sitemap => {
+    const conAnuncios = (barrios ?? []).filter(b => barriosConAnuncios.has(b.slug))
+    // Una ciudad entra si al menos uno de sus barrios tiene anuncios.
+    const ciudades = [...new Set(conAnuncios.map(b => b.ciudad_slug).filter(Boolean))].sort()
+    return [
+      { url: urlPublica('/') },
+      ...ciudades.map(c => ({ url: urlPublica(`/ciudad/${c}`) })),
+      ...conAnuncios.map(b => ({ url: urlPublica(`/${b.slug}`) })),
+      ...entradas,
+    ]
+  }
   for (let inicio = 0; ; inicio += 500) {
     const { data, error } = await db.from('propiedades')
       .select('id,slug,actualizado_en,barrios!inner(slug),imagenes_propiedad!inner(id)')
