@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Download } from 'lucide-react'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { BotonModeracion } from '@/components/admin/BotonModeracion'
 
@@ -54,6 +55,16 @@ export default async function PaginaModeracion() {
             Supervisa inmuebles publicados, aplica suspensiones con registro de auditoría o reactiva anuncios.
           </p>
         </div>
+        {/* <a> y no <Link>: es una descarga de un route handler, no una
+            navegacion, y Link la prefetchearia. */}
+        <a
+          href="/control/moderacion/exportar"
+          download
+          className="inline-flex items-center gap-2 rounded-xl border border-linea bg-superficie px-4 py-2 text-sm font-medium text-tinta transition-colors hover:border-marca hover:text-marca"
+        >
+          <Download aria-hidden="true" className="h-4 w-4" />
+          Exportar CSV
+        </a>
       </div>
 
       {error && (
