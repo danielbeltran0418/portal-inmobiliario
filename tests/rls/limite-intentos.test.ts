@@ -297,3 +297,39 @@ describe('limite de registro', () => {
     expect(bloqueado).toBe(true)
   })
 })
+
+// 'recuperar' cuenta PETICIONES (todas se registran como exitosas) por correo:
+// lo que se frena es el bombardeo de correos de recuperacion contra una
+// victima. Por IP, ademas, para que un solo origen no recorra muchos correos.
+describe('limite de recuperacion de contrasena', () => {
+  const correo = 'recupera@prueba.test'
+  const ip = '203.0.113.90'
+  const admin = clienteAdmin()
+  const registrar = (clave: string, p_ip: string | null) => admin.rpc('registrar_intento_accion', {
+    p_accion: 'recuperar', p_clave: clave, p_ip, p_exitoso: true,
+  })
+  const bloqueado = async (clave: string, p_ip: string | null) =>
+    (await admin.rpc('accion_bloqueada', { p_accion: 'recuperar', p_clave: clave, p_ip })).data
+
+  beforeEach(async () => {
+    await admin.from('intentos_accion').delete().eq('accion', 'recuperar')
+  })
+
+  it('bloquea el cuarto envio al mismo correo en una hora, desde cualquier IP', async () => {
+    for (let i = 0; i < 3; i++) await registrar(correo, `203.0.113.${100 + i}`)
+    expect(await bloqueado(correo, '198.51.100.1')).toBe(true)
+    expect(await bloqueado('otro-correo@prueba.test', '198.51.100.1')).toBe(false)
+  })
+
+  it('sin ip de confianza sigue limitando por correo', async () => {
+    for (let i = 0; i < 2; i++) await registrar(correo, null)
+    expect(await bloqueado(correo, null)).toBe(false)
+    await registrar(correo, null)
+    expect(await bloqueado(correo, null)).toBe(true)
+  })
+
+  it('una misma IP no puede recorrer mas de 10 correos por hora', async () => {
+    for (let i = 0; i < 10; i++) await registrar(`victima-${i}@prueba.test`, ip)
+    expect(await bloqueado('nueva@prueba.test', ip)).toBe(true)
+  })
+})
