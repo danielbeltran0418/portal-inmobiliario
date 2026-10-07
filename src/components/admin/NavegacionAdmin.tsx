@@ -40,7 +40,7 @@ export function NavegacionAdmin() {
               <Link
                 key={enlace.href}
                 href={enlace.href}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                   activo
                     ? 'bg-marca text-white shadow-xs'
                     : 'text-tinta-suave hover:bg-superficie-alt hover:text-tinta'

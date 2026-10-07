@@ -53,7 +53,7 @@ export function TablaAuditoria({
             placeholder="Ej: propiedad_moderada, login_fallido..."
             value={accionFiltro}
             onChange={(e) => setAccionFiltro(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-linea p-2 text-xs text-tinta focus:border-marca focus:outline-hidden"
+            className="mt-1 block w-full rounded-lg border border-linea p-2 text-xs text-tinta focus:border-marca focus:outline-hidden"
           />
         </div>
 
@@ -67,14 +67,14 @@ export function TablaAuditoria({
             placeholder="Ej: propiedades, sesion, pagos_posicionamiento..."
             value={entidadFiltro}
             onChange={(e) => setEntidadFiltro(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-linea p-2 text-xs text-tinta focus:border-marca focus:outline-hidden"
+            className="mt-1 block w-full rounded-lg border border-linea p-2 text-xs text-tinta focus:border-marca focus:outline-hidden"
           />
         </div>
 
         <div className="flex items-end gap-2">
           <button
             type="submit"
-            className="rounded-md bg-marca px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-marca-fuerte"
+            className="rounded-lg bg-marca px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-marca-fuerte"
           >
             Filtrar
           </button>
@@ -85,7 +85,7 @@ export function TablaAuditoria({
               setEntidadFiltro('')
               router.push('/control/auditoria')
             }}
-            className="rounded-md border border-linea px-3 py-2 text-xs font-medium text-tinta hover:bg-superficie-alt"
+            className="rounded-lg border border-linea px-3 py-2 text-xs font-medium text-tinta hover:bg-superficie-alt"
           >
             Limpiar
           </button>
@@ -164,7 +164,7 @@ export function TablaAuditoria({
             type="button"
             disabled={pagina <= 1}
             onClick={() => cambiarPagina(pagina - 1)}
-            className="rounded-md border border-linea px-3 py-1 text-xs font-medium text-tinta hover:bg-superficie-alt disabled:opacity-40"
+            className="rounded-lg border border-linea px-3 py-1 text-xs font-medium text-tinta hover:bg-superficie-alt disabled:opacity-40"
           >
             &larr; Anterior
           </button>
@@ -175,7 +175,7 @@ export function TablaAuditoria({
             type="button"
             disabled={pagina >= totalPaginas}
             onClick={() => cambiarPagina(pagina + 1)}
-            className="rounded-md border border-linea px-3 py-1 text-xs font-medium text-tinta hover:bg-superficie-alt disabled:opacity-40"
+            className="rounded-lg border border-linea px-3 py-1 text-xs font-medium text-tinta hover:bg-superficie-alt disabled:opacity-40"
           >
             Siguiente &rarr;
           </button>

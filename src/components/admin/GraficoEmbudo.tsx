@@ -16,21 +16,21 @@ export function GraficoEmbudo({ embudo }: { embudo: MetricasEmbudo }) {
       etiqueta: '2. Leads Aceptados',
       valor: leads.aceptados,
       porcentaje: leads.total > 0 ? (leads.aceptados / maximo) * 100 : 0,
-      color: 'bg-emerald-600',
+      color: 'bg-exito',
       descripcion: `${leads.tasaConversion}% de conversión sobre leads`,
     },
     {
       etiqueta: '3. Citas Confirmadas',
       valor: citas.confirmadas,
       porcentaje: leads.total > 0 ? (citas.confirmadas / maximo) * 100 : 0,
-      color: 'bg-amber-600',
+      color: 'bg-realce',
       descripcion: `${citas.tasaAgendamiento}% de agendamiento sobre aceptados`,
     },
     {
       etiqueta: '4. Citas Completadas',
       valor: citas.completadas,
       porcentaje: leads.total > 0 ? (citas.completadas / maximo) * 100 : 0,
-      color: 'bg-indigo-600',
+      color: 'bg-marca-fuerte',
       descripcion: 'Visitas presenciales realizadas',
     },
   ]
@@ -43,7 +43,7 @@ export function GraficoEmbudo({ embudo }: { embudo: MetricasEmbudo }) {
             <span>{paso.etiqueta}</span>
             <span className="font-bold">{paso.valor} ({paso.porcentaje.toFixed(1)}%)</span>
           </div>
-          <div className="h-6 w-full overflow-hidden rounded-md bg-superficie-alt border border-linea-suave">
+          <div className="h-6 w-full overflow-hidden rounded-lg bg-superficie-alt border border-linea-suave">
             <div
               className={`h-full ${paso.color} transition-all duration-500 rounded-r-md`}
               style={{ width: `${Math.max(paso.porcentaje, 2)}%` }}

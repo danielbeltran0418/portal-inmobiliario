@@ -67,14 +67,14 @@ export function BotonModeracion({ propiedadId, estadoActual }: BotonModeracionPr
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {error && <span className="text-xs text-red-600 w-full">{error}</span>}
+      {error && <span className="text-xs text-peligro w-full">{error}</span>}
 
       {estadoActual === 'publicada' && (
         <button
           type="button"
           disabled={pendiente}
           onClick={() => setModalSuspender(true)}
-          className="rounded bg-amber-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+          className="rounded bg-realce px-2.5 py-1 text-xs font-semibold text-white hover:bg-realce/90 disabled:opacity-50"
         >
           {pendiente ? 'Procesando...' : 'Suspender'}
         </button>
@@ -95,14 +95,14 @@ export function BotonModeracion({ propiedadId, estadoActual }: BotonModeracionPr
         type="button"
         disabled={pendiente}
         onClick={() => setModalEliminar(true)}
-        className="rounded bg-red-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+        className="rounded bg-peligro px-2.5 py-1 text-xs font-semibold text-white hover:bg-peligro/90 disabled:opacity-50"
       >
         Eliminar
       </button>
 
       {/* Modal / Dialogo de suspensión */}
       {modalSuspender && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F1B14]/50 p-4">
           <div role="dialog" aria-modal="true" aria-labelledby="dialogo-suspender-publicacion" className="w-full max-w-md rounded-xl bg-superficie p-6 shadow-xl border border-linea">
             <h3 id="dialogo-suspender-publicacion" className="text-lg font-bold text-tinta">Suspender Publicación</h3>
             <p className="mt-1 text-xs text-tinta-suave">
@@ -116,7 +116,7 @@ export function BotonModeracion({ propiedadId, estadoActual }: BotonModeracionPr
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
             />
-            {error && <p role="alert" className="mt-2 text-xs text-red-600">{error}</p>}
+            {error && <p role="alert" className="mt-2 text-xs text-peligro">{error}</p>}
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
@@ -129,7 +129,7 @@ export function BotonModeracion({ propiedadId, estadoActual }: BotonModeracionPr
                 type="button"
                 disabled={pendiente}
                 onClick={manejarSuspension}
-                className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                className="rounded-lg bg-realce px-3 py-1.5 text-xs font-semibold text-white hover:bg-realce/90 disabled:opacity-50"
               >
                 Confirmar Suspensión
               </button>
@@ -140,21 +140,21 @@ export function BotonModeracion({ propiedadId, estadoActual }: BotonModeracionPr
 
       {/* Modal / Dialogo de eliminación definitiva */}
       {modalEliminar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1F1B14]/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-superficie p-6 shadow-xl border border-linea">
-            <h3 className="text-lg font-bold text-red-600">Eliminar Propiedad Definitivamente</h3>
+            <h3 className="text-lg font-bold text-peligro">Eliminar Propiedad Definitivamente</h3>
             <p className="mt-1 text-xs text-tinta-suave">
               Esta acción borrará la ficha, sus imágenes y acuerdos asociados en cascada. Ingresa el motivo:
             </p>
             <textarea
               aria-label="Motivo de la moderación"
-              className="mt-3 w-full rounded-lg border border-linea p-2 text-sm text-tinta focus:border-red-600 focus:outline-hidden"
+              className="mt-3 w-full rounded-lg border border-linea p-2 text-sm text-tinta focus:border-peligro focus:outline-hidden"
               rows={3}
               placeholder="Ej: Anuncio fraudulento / suplantación de identidad"
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
             />
-            {error && <p role="alert" className="mt-2 text-xs text-red-600">{error}</p>}
+            {error && <p role="alert" className="mt-2 text-xs text-peligro">{error}</p>}
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
@@ -167,7 +167,7 @@ export function BotonModeracion({ propiedadId, estadoActual }: BotonModeracionPr
                 type="button"
                 disabled={pendiente}
                 onClick={manejarEliminacion}
-                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                className="rounded-lg bg-peligro px-3 py-1.5 text-xs font-semibold text-white hover:bg-peligro/90 disabled:opacity-50"
               >
                 Confirmar Eliminación
               </button>
