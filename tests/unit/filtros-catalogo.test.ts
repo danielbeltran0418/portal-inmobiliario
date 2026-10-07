@@ -27,4 +27,14 @@ describe('filtros del catalogo', () => {
   it('ignora enums desconocidos', () => {
     expect(leerFiltros({ operacion: 'borrar', tipo: 'castillo' })).toEqual({ pagina: 1 })
   })
+  it('texto libre: recorta, colapsa espacios y quita lo que no es letra o numero', () => {
+    expect(leerFiltros({ q: '  Balcón   con vista ' }).texto).toBe('Balcón con vista')
+    expect(leerFiltros({ q: 'casa,(a).b*%_"x\\' }).texto).toBe('casa a b x')
+  })
+  it.each(['', ' ', 'a', '%%', '()', ['casa', 'lote']])('ignora el texto inutil o repetido %j', q => {
+    expect(leerFiltros({ q }).texto).toBeUndefined()
+  })
+  it('corta el texto a 60 caracteres', () => {
+    expect(leerFiltros({ q: 'a'.repeat(100) }).texto).toHaveLength(60)
+  })
 })

@@ -32,6 +32,11 @@ describe('BuscadorPortada', () => {
     expect(html).not.toContain('name="precio_max"')
   })
 
+  it('tiene un campo de texto libre con etiqueta accesible', () => {
+    expect(html).toMatch(/<input[^>]*name="q"/)
+    expect(html).toMatch(/<label[^>]*>[^<]*Palabras clave/)
+  })
+
   it('no se pinta sin barrios: un formulario que no puede buscar nada confunde', () => {
     expect(renderToStaticMarkup(createElement(BuscadorPortada, { barrios: [] }))).toBe('')
   })

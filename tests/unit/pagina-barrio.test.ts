@@ -54,3 +54,10 @@ it('con sesion marca los favoritos del usuario', async () => {
   const html = renderToStaticMarkup(await Barrio({ params: Promise.resolve({ barrio: 'el-prado' }), searchParams: Promise.resolve({}) }))
   expect(html).toContain('aria-label="Eliminar de favoritos"')
 })
+it('el lateral tiene el campo de palabras clave con el texto de la URL', async () => {
+  respuesta.mockResolvedValue({ data: { id: 'id', nombre: 'El Prado', slug: 'el-prado' }, error: null })
+  const html = renderToStaticMarkup(await Barrio({ params: Promise.resolve({ barrio: 'el-prado' }), searchParams: Promise.resolve({ q: 'patio' }) }))
+  const lateral = html.match(/<aside[\s\S]*?<\/aside>/)?.[0] ?? ''
+  expect(lateral).toMatch(/<input[^>]*name="q"[^>]*value="patio"|value="patio"[^>]*name="q"/)
+  expect(lateral).toMatch(/<label[^>]*><span[^>]*>Palabras clave<\/span><input/)
+})

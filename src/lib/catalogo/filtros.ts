@@ -7,6 +7,8 @@ export interface FiltrosCatalogo {
   tipo?: typeof TIPOS[number]
   precioMin?: number
   precioMax?: number
+  /** Palabras clave ya saneadas: solo letras, numeros y espacios simples. */
+  texto?: string
   pagina: number
 }
 
@@ -14,6 +16,20 @@ function precio(valor: string | string[] | undefined): number | undefined {
   if (typeof valor !== 'string' || !/^\d+(?:\.\d{1,2})?$/.test(valor)) return undefined
   const numero = Number(valor)
   return numero > 0 && numero <= 999_999_999_999.99 ? numero : undefined
+}
+
+const LARGO_MAXIMO_TEXTO = 60
+
+/**
+ * Texto libre de la URL. Se queda SOLO con letras, numeros y espacios: el valor
+ * acaba dentro de un filtro or() de PostgREST, donde comas, parentesis, puntos,
+ * comillas y comodines (* % _) cambiarian la consulta. Menos de 2 caracteres
+ * no filtra nada util.
+ */
+function texto(valor: string | string[] | undefined): string | undefined {
+  if (typeof valor !== 'string') return undefined
+  const limpio = valor.replace(/[^\p{L}\p{N}]+/gu, ' ').trim().slice(0, LARGO_MAXIMO_TEXTO).trim()
+  return limpio.length >= 2 ? limpio : undefined
 }
 
 /** Normaliza filtros GET sin trasladar valores arbitrarios a la consulta. */
@@ -29,6 +45,8 @@ export function leerFiltros(parametros: ParametrosCatalogo): FiltrosCatalogo {
     if (minimo !== undefined) filtros.precioMin = minimo
     if (maximo !== undefined) filtros.precioMax = maximo
   }
+  const palabras = texto(parametros.q)
+  if (palabras) filtros.texto = palabras
   const pagina = parametros.pagina
   if (typeof pagina === 'string' && /^\d+$/.test(pagina)) {
     const numero = Number(pagina)

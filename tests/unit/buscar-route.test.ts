@@ -10,6 +10,11 @@ describe('/buscar: puente del buscador de la portada hacia el catalogo de un bar
     expect(r.headers.get('location')).toBe('/el-prado?operacion=venta&tipo=casa&precio_max=500000000')
   })
 
+  it('conserva el texto libre ya saneado', async () => {
+    const r = await pedir('?barrio=el-prado&q=' + encodeURIComponent('casa (patio)'))
+    expect(r.headers.get('location')).toBe('/el-prado?q=casa+patio')
+  })
+
   it('sin filtros va al catalogo base del barrio', async () => {
     const r = await pedir('?barrio=riomar')
     expect(r.headers.get('location')).toBe('/riomar')

@@ -17,6 +17,11 @@ export async function listarPropiedadesPublicas(cliente: SupabaseClient, barrioI
   if (filtros.tipo) consulta = consulta.eq('tipo_inmueble', filtros.tipo)
   if (filtros.precioMin !== undefined) consulta = consulta.gte('precio', filtros.precioMin)
   if (filtros.precioMax !== undefined) consulta = consulta.lte('precio', filtros.precioMax)
+  // filtros.texto ya viene saneado (leerFiltros): solo letras, numeros y espacios.
+  if (filtros.texto) {
+    const patron = `"*${filtros.texto}*"`
+    consulta = consulta.or(`titulo.ilike.${patron},descripcion.ilike.${patron}`)
+  }
   const { data, error, count } = await consulta
     .order('actualizado_en', { ascending: false }).order('id', { ascending: false })
     .range(inicio, inicio + TAMANO_PAGINA - 1)

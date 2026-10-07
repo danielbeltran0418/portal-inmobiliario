@@ -53,6 +53,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
     if (filtros.tipo) p.set('tipo', filtros.tipo)
     if (filtros.precioMin !== undefined) p.set('precio_min', String(filtros.precioMin))
     if (filtros.precioMax !== undefined) p.set('precio_max', String(filtros.precioMax))
+    if (filtros.texto) p.set('q', filtros.texto)
     if (numero !== null) p.set('pagina', String(numero))
     const query = p.toString()
     return query ? `/${barrio!.slug}?${query}` : `/${barrio!.slug}`
@@ -96,6 +97,17 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
             formulario GET: la URL es la fuente de verdad del catalogo. */}
         <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:w-64">
           <form method="get" className="flex flex-col gap-6 rounded-2xl border border-linea bg-superficie p-5">
+            <label className="block">
+              <span className={ETIQUETA_GRUPO}>Palabras clave</span>
+              <input
+                className={CAMPO}
+                type="search"
+                name="q"
+                maxLength={60}
+                defaultValue={filtros.texto}
+                placeholder="Balcón, piscina…"
+              />
+            </label>
             <fieldset>
               <legend className={ETIQUETA_GRUPO}>Operación</legend>
               <div className="flex flex-col gap-1">
