@@ -263,7 +263,7 @@ export function FormularioDatos({
 
 /**
  * Punto del inmueble para el mapa de la ficha. Privado: el publico solo ve un
- * circulo de ~500 m alrededor de un centro redondeado (src/lib/mapa/zona.ts).
+ * circulo de ~500 m alrededor de un centro redondeado (src/lib/mapa/google.ts).
  * Se pega desde Google Maps o se toma del GPS si el vendedor esta en el sitio.
  */
 function CampoCoordenadas({ inicial, error }: { inicial: string; error?: string }) {

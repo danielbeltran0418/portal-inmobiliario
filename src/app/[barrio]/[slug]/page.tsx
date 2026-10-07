@@ -7,6 +7,7 @@ import { Bath, BedDouble, MapPin, Maximize2 } from 'lucide-react'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
 import { MapaZona } from '@/components/mapa-zona'
+import { mapaDisponible } from '@/lib/mapa/google'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { sesionActual } from '@/lib/auth/sesion'
 import { FormularioLead } from './formulario-lead'
@@ -28,6 +29,8 @@ export async function generateMetadata({ params }: { params: Promise<{ barrio: s
 }
 /** Centro aproximado de la zona (migracion 20261011000100), o null. */
 async function cargarZona(propiedadId: string): Promise<{ latitud: number; longitud: number } | null> {
+  // Sin clave de Google no hay imagen que mostrar: ni se consulta la zona.
+  if (!mapaDisponible()) return null
   try {
     const { data, error } = await crearClientePublico().rpc('zona_aproximada_propiedad', { p_propiedad_id: propiedadId })
     const fila = (data as { latitud: number; longitud: number }[] | null)?.[0]
@@ -154,7 +157,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
         {zona ? (
           <section aria-labelledby="titulo-ubicacion">
             <h2 id="titulo-ubicacion" className="mb-3 font-titulo text-xl font-semibold text-tinta">Ubicación</h2>
-            <MapaZona latitud={zona.latitud} longitud={zona.longitud} barrio={barrio.nombre} />
+            <MapaZona propiedadId={p.id} zona={zona} barrio={barrio.nombre} />
           </section>
         ) : (
           <div className="flex items-start gap-4 rounded-2xl bg-marca-suave p-5">

@@ -9,8 +9,6 @@ const ORIGENES_CONEXION = [
   'https://challenges.cloudflare.com',
 ]
 
-import { origenTeselas } from '@/lib/mapa/zona'
-
 // Sin Buffer: este modulo lo importa el middleware, que corre en el runtime
 // Edge, donde Buffer no existe. crypto.getRandomValues y btoa si estan.
 export function generarNonce(): string {
@@ -48,16 +46,11 @@ export function construirCabeceras(nonce: string): Record<string, string> {
     }
   })()
 
-  // Teselas del mapa de la zona (src/lib/mapa/zona.ts): solo el origen de la
-  // plantilla configurada, nunca un comodin.
-  const mapa = origenTeselas()
-  const origenMapa = mapa ? ` ${mapa}` : ''
-
   const csp = [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${evalDeDesarrollo} ${ORIGENES_SCRIPT.join(' ')}`,
     `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' data: blob: https://*.supabase.co${origenSupabaseLocal}${origenMapa}`,
+    `img-src 'self' data: blob: https://*.supabase.co${origenSupabaseLocal}`,
     `font-src 'self'`,
     `connect-src 'self' ${ORIGENES_CONEXION.join(' ')}`,
     `frame-src https://challenges.cloudflare.com`,

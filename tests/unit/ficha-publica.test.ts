@@ -106,6 +106,7 @@ const PROPIEDAD = {
 }
 
 beforeEach(() => {
+  delete process.env.GOOGLE_MAPS_API_KEY
   zonaRpc.mockReset().mockResolvedValue({ data: [], error: null })
   getUser.mockReset()
   getSession.mockReset().mockResolvedValue({ data: { session: null } })
@@ -290,17 +291,32 @@ it('[mapa] con zona aproximada muestra el mapa del area y nunca pide el punto ex
   resultado.mockResolvedValue({ data: PROPIEDAD, error: null })
   getUser.mockResolvedValue({ data: { user: null } })
   zonaRpc.mockResolvedValue({ data: [{ latitud: 10.9875, longitud: -74.8125 }], error: null })
+  process.env.GOOGLE_MAPS_API_KEY = 'CLAVE'
 
   const html = renderToStaticMarkup(await Ficha({ params }))
+  delete process.env.GOOGLE_MAPS_API_KEY
   expect(zonaRpc).toHaveBeenCalledWith('zona_aproximada_propiedad', { p_propiedad_id: PROPIEDAD.id })
-  expect(html).toContain('aria-label="Mapa de la zona aproximada del inmueble en Prado"')
-  expect(html).toContain('tile.openstreetmap.org/15/')
+  expect(html).toContain('alt="Mapa de la zona aproximada del inmueble en Prado"')
+  expect(html).toContain(`src="/imagen/zona/${PROPIEDAD.id}"`)
+  expect(html).not.toContain('CLAVE')
+})
+
+it('[mapa] sin clave de Google no hay mapa ni consulta de la zona', async () => {
+  resultado.mockResolvedValue({ data: PROPIEDAD, error: null })
+  getUser.mockResolvedValue({ data: { user: null } })
+  delete process.env.GOOGLE_MAPS_API_KEY
+
+  const html = renderToStaticMarkup(await Ficha({ params }))
+  delete process.env.GOOGLE_MAPS_API_KEY
+  expect(zonaRpc).not.toHaveBeenCalled()
+  expect(html).toContain('Barrio Prado')
 })
 
 it('[mapa] sin coordenadas, o si la consulta falla, queda el aviso del barrio sin mapa', async () => {
   resultado.mockResolvedValue({ data: PROPIEDAD, error: null })
   getUser.mockResolvedValue({ data: { user: null } })
   zonaRpc.mockResolvedValue({ data: null, error: { message: 'caida' } })
+  process.env.GOOGLE_MAPS_API_KEY = 'CLAVE'
 
   const html = renderToStaticMarkup(await Ficha({ params }))
   expect(html).not.toContain('Mapa de la zona aproximada')

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { leerCoordenadas } from '@/lib/mapa/zona'
+import { leerCoordenadas } from '@/lib/mapa/coordenadas'
 
 export const esquemaRegistro = z.object({
   nombre: z.string().trim().min(2, 'Escribe tu nombre').max(80),

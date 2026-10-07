@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { leerCoordenadas } from '@/lib/mapa/zona'
+import { leerCoordenadas } from '@/lib/mapa/coordenadas'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin'
 import { esquemaPropiedad, esquemaPropiedadNueva, type DatosPropiedad } from '@/lib/validacion/esquemas'
