@@ -93,6 +93,7 @@ export async function crearBorrador(
 // `direccion ?? null`.
 const CAMPOS_OPCIONALES_ANULABLES: readonly (keyof Omit<DatosPropiedad, 'direccion'>)[] = [
   'precio', 'habitaciones', 'banos', 'area_m2', 'barrio_id',
+  'estrato', 'administracion', 'parqueaderos', 'anio_construccion', 'piso',
 ]
 
 /**
@@ -145,6 +146,11 @@ export async function actualizarPropiedad(
     area_m2: formData.get('area_m2'),
     barrio_id: formData.get('barrio_id'),
     direccion: formData.get('direccion'),
+    estrato: formData.get('estrato'),
+    administracion: formData.get('administracion'),
+    parqueaderos: formData.get('parqueaderos'),
+    anio_construccion: formData.get('anio_construccion'),
+    piso: formData.get('piso'),
   })
 
   if (!analisis.success) {

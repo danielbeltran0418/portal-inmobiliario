@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { leerFiltros } from '@/lib/catalogo/filtros';
+import { leerFiltros, parametrosDeFiltros } from '@/lib/catalogo/filtros';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -9,24 +9,22 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  * guardaba el objeto que mandara el cliente tal cual, en un jsonb sin tope.
  */
 export function normalizarFiltrosGuardados(entrada: Record<string, unknown>): Record<string, string | number> {
-  const texto = (v: unknown) => (typeof v === 'string' || typeof v === 'number' ? String(v) : undefined);
-  const filtros = leerFiltros({
-    operacion: texto(entrada.operacion),
-    tipo: texto(entrada.tipo),
-    precio_min: texto(entrada.precio_min),
-    precio_max: texto(entrada.precio_max),
-    q: texto(entrada.q),
-  });
+  const crudos: Record<string, string | undefined> = {};
+  for (const [clave, valor] of Object.entries(entrada)) {
+    if (typeof valor === 'string' || typeof valor === 'number') crudos[clave] = String(valor);
+  }
   const salida: Record<string, string | number> = {};
-  const barrio = texto(entrada.barrio);
+  const barrio = crudos.barrio;
   if (barrio && barrio.length <= 80 && SLUG.test(barrio)) salida.barrio = barrio;
-  if (filtros.operacion) salida.operacion = filtros.operacion;
-  if (filtros.tipo) salida.tipo = filtros.tipo;
-  if (filtros.precioMin !== undefined) salida.precio_min = filtros.precioMin;
-  if (filtros.precioMax !== undefined) salida.precio_max = filtros.precioMax;
-  if (filtros.texto) salida.q = filtros.texto;
+  // Mismos nombres y valores que la URL del catalogo (parametrosDeFiltros):
+  // la tarjeta de Mis busquedas los vuelve a convertir en un enlace tal cual.
+  for (const [clave, valor] of parametrosDeFiltros({ ...leerFiltros(crudos), pagina: undefined })) {
+    salida[clave] = CLAVES_DE_TEXTO.has(clave) ? valor : Number(valor);
+  }
   return salida;
 }
+
+const CLAVES_DE_TEXTO = new Set(['operacion', 'tipo', 'q']);
 
 /** Nombre legible de cada filtro guardado, para la tarjeta de Mis busquedas. */
 export const ETIQUETA_FILTRO: Record<string, string> = {
@@ -35,6 +33,12 @@ export const ETIQUETA_FILTRO: Record<string, string> = {
   precio_min: 'Precio mínimo',
   precio_max: 'Precio máximo',
   q: 'Palabras clave',
+  estrato_min: 'Estrato desde',
+  estrato_max: 'Estrato hasta',
+  habitaciones_min: 'Habitaciones (mín.)',
+  banos_min: 'Baños (mín.)',
+  parqueaderos_min: 'Parqueaderos (mín.)',
+  administracion_max: 'Administración máx.',
 };
 
 export interface BusquedaGuardada {

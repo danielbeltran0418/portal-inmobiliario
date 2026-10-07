@@ -283,3 +283,14 @@ it('[diseño Figma Make] miga de pan hasta el barrio, descripcion y aviso de la 
   // El portal es nacional: la ficha no fija una ciudad.
   expect(html).not.toContain('Barranquilla')
 })
+
+it('[campos colombianos] la ficha muestra estrato, administracion, parqueaderos, antigüedad y piso', async () => {
+  resultado.mockResolvedValue({ data: { ...PROPIEDAD, estrato: 4, administracion: 350000, parqueaderos: 2, anio_construccion: 2015, piso: 8 }, error: null })
+  getUser.mockResolvedValue({ data: { user: null } })
+  const html = renderToStaticMarkup(await Ficha({ params }))
+  expect(html).toContain('Estrato')
+  expect(html).toMatch(/Administración[\s\S]*350\.000/)
+  expect(html).toContain('Parqueaderos')
+  expect(html).toMatch(/Construido en[\s\S]*2015/)
+  expect(html).toContain('Piso')
+})

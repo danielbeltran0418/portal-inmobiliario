@@ -295,6 +295,29 @@ describe('actualizarPropiedad', () => {
   // -- y PostgREST deja la columna intacta en vez de vaciarla. paraElUpdate()
   // debe convertir cada uno de los SEIS opcionales vaciados en `null`
   // explicito antes de llegar al UPDATE.
+  it('[campos colombianos] estrato, administracion, parqueaderos, año y piso llegan al UPDATE', async () => {
+    const r = await actualizarPropiedad({}, formulario({
+      ...datosValidos, estrato: '4', administracion: '350000', parqueaderos: '2', anio_construccion: '2015', piso: '8',
+    }))
+    expect(r).toEqual({})
+    expect(updateMock.mock.calls[0]![0]).toMatchObject({
+      estrato: 4, administracion: 350000, parqueaderos: 2, anio_construccion: 2015, piso: 8,
+    })
+  })
+
+  it('[campos colombianos] vaciados se escriben como null y un estrato 7 se rechaza', async () => {
+    await actualizarPropiedad({}, formulario({
+      ...datosValidos, estrato: '', administracion: '', parqueaderos: '', anio_construccion: '', piso: '',
+    }))
+    expect(updateMock.mock.calls[0]![0]).toMatchObject({
+      estrato: null, administracion: null, parqueaderos: null, anio_construccion: null, piso: null,
+    })
+    updateMock.mockClear()
+    const r = await actualizarPropiedad({}, formulario({ ...datosValidos, estrato: '7' }))
+    expect(r.errores?.estrato).toBeTruthy()
+    expect(updateMock).not.toHaveBeenCalled()
+  })
+
   it('cada campo opcional vaciado llega al UPDATE como null explicito, no ausente', async () => {
     const r = await actualizarPropiedad({}, formulario({
       ...datosValidos,

@@ -1,7 +1,7 @@
 import 'server-only';
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin';
 import { leerFiltros } from '@/lib/catalogo/filtros';
-import { filtroTextoLibre } from '@/lib/catalogo/consultas';
+import { aplicarFiltros } from '@/lib/catalogo/consultas';
 
 export interface FiltrosBusquedaGuardada {
   barrio: string;
@@ -49,6 +49,15 @@ interface FilaPropiedadCoincidente {
   imagenes_propiedad: { id: string; orden: number }[];
 }
 
+/** El jsonb guardado a la forma de la URL (texto), que es lo que valida leerFiltros. */
+function comoParametros(filtros: Record<string, unknown>): Record<string, string | undefined> {
+  const salida: Record<string, string | undefined> = {};
+  for (const [clave, valor] of Object.entries(filtros)) {
+    if (typeof valor === 'string' || typeof valor === 'number') salida[clave] = String(valor);
+  }
+  return salida;
+}
+
 export async function obtenerBusquedasParaNotificar(): Promise<BusquedaConCoincidencias[]> {
   const admin = crearClienteAdmin();
 
@@ -88,14 +97,11 @@ export async function obtenerBusquedasParaNotificar(): Promise<BusquedaConCoinci
       .eq('barrio_id', barrio.id)
       .gt('creado_en', fila.ultima_notificacion_en);
 
-    if (filtros.operacion) consulta = consulta.eq('operacion', filtros.operacion);
-    if (filtros.tipo) consulta = consulta.eq('tipo_inmueble', filtros.tipo);
-    if (filtros.precio_min !== undefined) consulta = consulta.gte('precio', filtros.precio_min);
-    if (filtros.precio_max !== undefined) consulta = consulta.lte('precio', filtros.precio_max);
-    // Se vuelve a sanear al leer: filas guardadas antes de normalizarFiltrosGuardados
-    // pueden traer cualquier texto, y este va dentro de un or() de PostgREST.
-    const palabras = leerFiltros({ q: typeof filtros.q === 'string' ? filtros.q : undefined }).texto;
-    if (palabras) consulta = consulta.or(filtroTextoLibre(palabras));
+    // Los mismos filtros que el catalogo, re-validados al leer: filas guardadas
+    // antes de normalizarFiltrosGuardados (o editadas por UPDATE directo, que
+    // la columna permite) pueden traer cualquier cosa, y el texto va dentro de
+    // un or() de PostgREST.
+    consulta = aplicarFiltros(consulta, leerFiltros(comoParametros(filtros as unknown as Record<string, unknown>)));
 
     const { data: propiedades, error: errorPropiedades } = await consulta;
 

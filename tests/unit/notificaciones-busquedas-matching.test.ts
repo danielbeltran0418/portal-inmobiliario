@@ -247,4 +247,25 @@ describe('obtenerBusquedasParaNotificar', () => {
       method: 'or', column: '', value: 'titulo.ilike."*patio grande*",descripcion.ilike."*patio grande*"',
     });
   });
+
+  it('[campos colombianos] aplica estrato y habitaciones guardados, y descarta valores invalidos', async () => {
+    let propiedadesQuery: { _getFilterCalls: () => LlamadaFiltro[] } | undefined;
+    fromMock.mockImplementation((tabla: string) => {
+      if (tabla === 'busquedas_guardadas') return tablaBusquedas([{
+        id: 'busq-e', usuario_id: 'u', nombre: 'Estrato 4', filtros: { barrio: 'riomar', estrato_min: 4, habitaciones_min: 3, estrato_max: 99 },
+        ultima_notificacion_en: '2026-09-01T00:00:00Z', token_baja: 't',
+      }]);
+      if (tabla === 'barrios') return tablaBarrios('barrio-riomar-id');
+      if (tabla === 'propiedades') {
+        propiedadesQuery = tablaPropiedadesConstructor([]) as unknown as typeof propiedadesQuery;
+        return propiedadesQuery;
+      }
+      throw new Error(`tabla no mockeada: ${tabla}`);
+    });
+    await obtenerBusquedasParaNotificar();
+    const llamadas = propiedadesQuery!._getFilterCalls();
+    expect(llamadas).toContainEqual({ method: 'gte', column: 'estrato', value: 4 });
+    expect(llamadas).toContainEqual({ method: 'gte', column: 'habitaciones', value: 3 });
+    expect(llamadas.some((l) => l.column === 'estrato' && l.method === 'lte')).toBe(false);
+  });
 });

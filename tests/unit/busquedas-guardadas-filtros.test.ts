@@ -23,6 +23,11 @@ describe('filtros de una busqueda guardada', () => {
     })).toEqual({ barrio: 'el-prado', operacion: 'venta', tipo: 'casa', precio_min: 100, precio_max: 200, q: 'patio grande' })
   })
 
+  it('[campos colombianos] conserva estrato, habitaciones y administracion como numeros', () => {
+    expect(normalizarFiltrosGuardados({ barrio: 'el-prado', estrato_min: '3', habitaciones_min: 2, administracion_max: '400000', estrato_max: 9 }))
+      .toEqual({ barrio: 'el-prado', estrato_min: 3, habitaciones_min: 2, administracion_max: 400000 })
+  })
+
   it('descarta un barrio que no es un slug y valores invalidos', () => {
     expect(normalizarFiltrosGuardados({ barrio: '../panel', operacion: 'trueque', q: 'a' })).toEqual({})
   })
