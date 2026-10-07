@@ -24,7 +24,7 @@ vi.mock('@/lib/supabase/cliente-admin', () => ({
 }))
 
 vi.mock('@/lib/ia/limites', () => ({
-  verificarLimitesConversacion: (...args: unknown[]) => mockVerificarLimites(...args),
+  registrarMensajeComprador: (...args: unknown[]) => mockVerificarLimites(...args),
 }))
 
 vi.mock('@/lib/ia/cliente', () => ({
@@ -149,6 +149,37 @@ describe('Chat Interactivo del Comprador IA', () => {
       expect(res.ok).toBe(false)
       expect(res.error).not.toContain('mensajes_ia')
       consola.mockRestore()
+    })
+
+    it('6. [CN-013] el mensaje se registra con la llamada atomica y nunca con un insert aparte', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'comprador-1' } } })
+      mockFrom.mockReturnValue({
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({
+                data: { id: 'conv-1', comprador_id: 'comprador-1', vendedor_id: 'vendedor-1', propiedad_id: 'p1' },
+                error: null,
+              }),
+            }),
+          }),
+        }),
+      })
+      mockVerificarLimites.mockResolvedValue(undefined)
+      const insert = vi.fn().mockResolvedValue({ error: null })
+      const consulta = {
+        select: () => consulta,
+        eq: () => consulta,
+        order: async () => ({ data: [], error: null }),
+        single: async () => ({ data: null, error: null }),
+        insert,
+      }
+      mockAdminFrom.mockReturnValue(consulta)
+
+      await enviarMensajeComprador('conv-1', '  ¿Tiene parqueadero?  ')
+      expect(mockVerificarLimites).toHaveBeenCalledWith('conv-1', 'comprador-1', '¿Tiene parqueadero?')
+      const emisores = insert.mock.calls.map(([fila]) => (fila as { emisor: string }).emisor)
+      expect(emisores).not.toContain('comprador')
     })
   })
 })

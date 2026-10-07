@@ -57,10 +57,12 @@ export async function enviarMensajeComprador(
     return { ok: false, error: 'Conversación no encontrada' }
   }
 
-  // 2. Comprobar limites de abuso (§10)
+  // 2. Comprobar limites de abuso (§10) e insertar el mensaje del comprador.
+  // Es UNA sola llamada atomica (CN-013): comprobar y luego insertar por
+  // separado dejaba pasar una rafaga de envios simultaneos entera.
   try {
-    const { verificarLimitesConversacion } = await import('@/lib/ia/limites')
-    await verificarLimitesConversacion(conversacionId, usuario.id)
+    const { registrarMensajeComprador } = await import('@/lib/ia/limites')
+    await registrarMensajeComprador(conversacionId, usuario.id, textoLimpio)
   } catch (err: unknown) {
     const errObj = err as { status?: number; codigo?: string; message?: string }
     if (errObj.status === 429) {
@@ -90,18 +92,6 @@ export async function enviarMensajeComprador(
 
   const { crearClienteAdmin } = await import('@/lib/supabase/cliente-admin')
   const admin = crearClienteAdmin()
-
-  // 3. Insertar mensaje del comprador
-  await admin.from('mensajes_ia').insert({
-    conversacion_id: conversacionId,
-    comprador_id: usuario.id,
-    vendedor_id: conv.vendedor_id,
-    emisor: 'comprador',
-    contenido: textoLimpio,
-    tokens_entrada: 0,
-    tokens_salida: 0,
-    modelo: 'usuario',
-  })
 
   // 4. Inferencia con GPT-5.6 Luna
   let respuestaTexto = 'He recibido tu mensaje. Estamos procesando tu solicitud.'
