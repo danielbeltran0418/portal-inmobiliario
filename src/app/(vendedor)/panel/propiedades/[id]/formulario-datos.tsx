@@ -46,6 +46,11 @@ export interface PropiedadFormulario {
   banos: number | null
   area_m2: number | null
   barrio_id: string | null
+  estrato?: number | null
+  administracion?: number | null
+  parqueaderos?: number | null
+  anio_construccion?: number | null
+  piso?: number | null
   direccion: string | null
 }
 
@@ -208,6 +213,23 @@ export function FormularioDatos({
         )}
       </div>
 
+      {/* Lo que el comprador colombiano filtra siempre (migracion 20261012000100). */}
+      <fieldset className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <legend className="mb-2 text-sm font-semibold text-tinta">Detalles del inmueble</legend>
+        <div>
+          <label htmlFor="estrato" className="mb-1.5 block text-sm font-medium text-tinta">Estrato</label>
+          <select id="estrato" name="estrato" defaultValue={propiedad.estrato ?? ''} className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25">
+            <option value="">Sin estrato</option>
+            {[1, 2, 3, 4, 5, 6].map((e) => <option key={e} value={e}>{e}</option>)}
+          </select>
+          {estado.errores?.estrato && <p role="alert" className="mt-1 text-sm text-peligro">{estado.errores.estrato}</p>}
+        </div>
+        <CampoNumero id="administracion" etiqueta="Administración (COP/mes)" valor={propiedad.administracion} error={estado.errores?.administracion} paso="1" />
+        <CampoNumero id="parqueaderos" etiqueta="Parqueaderos" valor={propiedad.parqueaderos} error={estado.errores?.parqueaderos} />
+        <CampoNumero id="anio_construccion" etiqueta="Año de construcción" valor={propiedad.anio_construccion} error={estado.errores?.anio_construccion} minimo="1800" />
+        <CampoNumero id="piso" etiqueta="Piso" valor={propiedad.piso} error={estado.errores?.piso} minimo="-5" />
+      </fieldset>
+
       <div>
         <label htmlFor="barrio_id" className="mb-1.5 block text-sm font-medium text-tinta">Barrio</label>
         <select
@@ -254,5 +276,26 @@ export function FormularioDatos({
         {pendiente ? 'Guardando...' : 'Guardar cambios'}
       </button>
     </form>
+  )
+}
+
+function CampoNumero({
+  id, etiqueta, valor, error, minimo = '0', paso = '1',
+}: { id: string; etiqueta: string; valor?: number | null; error?: string; minimo?: string; paso?: string }) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-tinta">{etiqueta}</label>
+      <input
+        id={id}
+        name={id}
+        type="number"
+        min={minimo}
+        step={paso}
+        inputMode="numeric"
+        defaultValue={valor ?? ''}
+        className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
+      />
+      {error && <p role="alert" className="mt-1 text-sm text-peligro">{error}</p>}
+    </div>
   )
 }

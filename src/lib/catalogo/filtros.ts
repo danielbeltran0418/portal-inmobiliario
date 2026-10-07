@@ -9,6 +9,12 @@ export interface FiltrosCatalogo {
   precioMax?: number
   /** Palabras clave ya saneadas: solo letras, numeros y espacios simples. */
   texto?: string
+  estratoMin?: number
+  estratoMax?: number
+  habitacionesMin?: number
+  banosMin?: number
+  parqueaderosMin?: number
+  administracionMax?: number
   pagina: number
 }
 
@@ -32,6 +38,13 @@ function texto(valor: string | string[] | undefined): string | undefined {
   return limpio.length >= 2 ? limpio : undefined
 }
 
+/** Entero de la URL dentro de [min, max]; cualquier otra cosa se ignora. */
+function entero(valor: string | string[] | undefined, min: number, max: number): number | undefined {
+  if (typeof valor !== 'string' || !/^\d{1,3}$/.test(valor)) return undefined
+  const numero = Number(valor)
+  return numero >= min && numero <= max ? numero : undefined
+}
+
 /** Normaliza filtros GET sin trasladar valores arbitrarios a la consulta. */
 export function leerFiltros(parametros: ParametrosCatalogo): FiltrosCatalogo {
   const filtros: FiltrosCatalogo = { pagina: 1 }
@@ -45,6 +58,20 @@ export function leerFiltros(parametros: ParametrosCatalogo): FiltrosCatalogo {
     if (minimo !== undefined) filtros.precioMin = minimo
     if (maximo !== undefined) filtros.precioMax = maximo
   }
+  const estratoMin = entero(parametros.estrato_min, 1, 6)
+  const estratoMax = entero(parametros.estrato_max, 1, 6)
+  if (!(estratoMin !== undefined && estratoMax !== undefined && estratoMin > estratoMax)) {
+    if (estratoMin !== undefined) filtros.estratoMin = estratoMin
+    if (estratoMax !== undefined) filtros.estratoMax = estratoMax
+  }
+  const habitacionesMin = entero(parametros.habitaciones_min, 1, 20)
+  if (habitacionesMin !== undefined) filtros.habitacionesMin = habitacionesMin
+  const banosMin = entero(parametros.banos_min, 1, 20)
+  if (banosMin !== undefined) filtros.banosMin = banosMin
+  const parqueaderosMin = entero(parametros.parqueaderos_min, 1, 20)
+  if (parqueaderosMin !== undefined) filtros.parqueaderosMin = parqueaderosMin
+  const administracionMax = precio(parametros.administracion_max)
+  if (administracionMax !== undefined) filtros.administracionMax = administracionMax
   const palabras = texto(parametros.q)
   if (palabras) filtros.texto = palabras
   const pagina = parametros.pagina
@@ -53,4 +80,29 @@ export function leerFiltros(parametros: ParametrosCatalogo): FiltrosCatalogo {
     if (Number.isSafeInteger(numero) && numero > 0) filtros.pagina = numero
   }
   return filtros
+}
+
+/**
+ * Filtros a parametros de URL, en un orden fijo. Lo usan la paginacion del
+ * catalogo, /buscar y las busquedas guardadas: un solo sitio que conoce los
+ * nombres de la URL.
+ */
+export function parametrosDeFiltros(filtros: Omit<FiltrosCatalogo, 'pagina'> & { pagina?: number }): URLSearchParams {
+  const p = new URLSearchParams()
+  const poner = (clave: string, valor: string | number | undefined) => {
+    if (valor !== undefined) p.set(clave, String(valor))
+  }
+  poner('operacion', filtros.operacion)
+  poner('tipo', filtros.tipo)
+  poner('precio_min', filtros.precioMin)
+  poner('precio_max', filtros.precioMax)
+  poner('estrato_min', filtros.estratoMin)
+  poner('estrato_max', filtros.estratoMax)
+  poner('habitaciones_min', filtros.habitacionesMin)
+  poner('banos_min', filtros.banosMin)
+  poner('parqueaderos_min', filtros.parqueaderosMin)
+  poner('administracion_max', filtros.administracionMax)
+  poner('q', filtros.texto)
+  if (filtros.pagina !== undefined && filtros.pagina > 1) p.set('pagina', String(filtros.pagina))
+  return p
 }

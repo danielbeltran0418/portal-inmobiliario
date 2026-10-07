@@ -3,7 +3,7 @@ import { BotonFavorito } from '@/components/comprador/BotonFavorito'
 import { cache } from 'react'
 import { metadatosFicha, datosFicha, serializarJsonLd } from '@/lib/catalogo/seo'
 import Link from 'next/link'
-import { Bath, BedDouble, MapPin, Maximize2 } from 'lucide-react'
+import { Bath, BedDouble, Building2, CalendarDays, Car, Layers, MapPin, Maximize2, Receipt } from 'lucide-react'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
@@ -13,7 +13,7 @@ import { BotonAgendar } from './boton-agendar'
 import { rolDesdeToken } from '@/lib/auth/roles'
 const cargarFicha = cache(async (slug: string) => {
   const { data: p, error } = await crearClientePublico().from('propiedades')
-    .select('id,vendedor_id,slug,titulo,descripcion,precio,operacion,tipo_inmueble,habitaciones,banos,area_m2,barrios!inner(nombre,slug,ciudad),imagenes_propiedad(id,alt_text,orden)')
+    .select('id,vendedor_id,slug,titulo,descripcion,precio,operacion,tipo_inmueble,habitaciones,banos,area_m2,estrato,administracion,parqueaderos,anio_construccion,piso,barrios!inner(nombre,slug,ciudad),imagenes_propiedad(id,alt_text,orden)')
     .eq('slug', slug).eq('estado', 'publicada').maybeSingle()
   if (error) throw new Error('No se pudo cargar la propiedad')
   if (!p) notFound()
@@ -85,11 +85,17 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
     esFavorito = fav !== null
   }
 
-  const precio = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p.precio)
+  const formatoCOP = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
+  const precio = formatoCOP.format(p.precio)
   const datosClave = [
     p.habitaciones != null && { etiqueta: 'Habitaciones', valor: String(p.habitaciones), Icono: BedDouble },
     p.banos != null && { etiqueta: 'Baños', valor: String(p.banos), Icono: Bath },
     p.area_m2 != null && { etiqueta: 'Área', valor: `${p.area_m2} m²`, Icono: Maximize2 },
+    p.estrato != null && { etiqueta: 'Estrato', valor: String(p.estrato), Icono: Layers },
+    p.parqueaderos != null && { etiqueta: 'Parqueaderos', valor: String(p.parqueaderos), Icono: Car },
+    p.piso != null && { etiqueta: 'Piso', valor: String(p.piso), Icono: Building2 },
+    p.anio_construccion != null && { etiqueta: 'Construido en', valor: String(p.anio_construccion), Icono: CalendarDays },
+    p.administracion != null && { etiqueta: 'Administración', valor: `${formatoCOP.format(Number(p.administracion))}/mes`, Icono: Receipt },
   ].filter((d): d is { etiqueta: string; valor: string; Icono: typeof Bath } => Boolean(d))
   const TARJETA = 'rounded-2xl border border-linea bg-superficie p-6'
 

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Bath, BedDouble, Maximize2, type LucideIcon } from 'lucide-react'
+import { Bath, BedDouble, Maximize2, type LucideIcon, Layers } from 'lucide-react'
 
 export interface PropiedadDeTarjeta {
   id: string
@@ -13,6 +13,8 @@ export interface PropiedadDeTarjeta {
   habitaciones: number | null
   banos: number | null
   area_m2: number | null
+  estrato?: number | null
+  parqueaderos?: number | null
   imagenes_propiedad: { id: string; alt_text: string; orden: number }[]
 }
 
@@ -28,6 +30,7 @@ function caracteristicas(p: PropiedadDeTarjeta): { texto: string; Icono: LucideI
   if (p.habitaciones != null) datos.push({ texto: `${p.habitaciones} hab.`, Icono: BedDouble })
   if (p.banos != null) datos.push({ texto: `${p.banos} ${p.banos === 1 ? 'baño' : 'baños'}`, Icono: Bath })
   if (p.area_m2 != null) datos.push({ texto: `${Number(p.area_m2)} m²`, Icono: Maximize2 })
+  if (p.estrato != null) datos.push({ texto: `Estrato ${p.estrato}`, Icono: Layers })
   return datos
 }
 

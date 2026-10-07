@@ -91,6 +91,12 @@ export const esquemaPropiedad = z.object({
   area_m2: opcional(z.coerce.number().positive().max(100000)),
   barrio_id: opcional(z.string().uuid('Elige un barrio')),
   direccion: opcional(z.string().trim().max(200)),
+  // Campos colombianos (migracion 20261012000100): mismos limites que los CHECK.
+  estrato: opcional(z.coerce.number().int('El estrato es un numero del 1 al 6').min(1, 'El estrato va del 1 al 6').max(6, 'El estrato va del 1 al 6')),
+  administracion: opcional(z.coerce.number().min(0, 'La administracion no puede ser negativa').max(99999999, 'Valor de administracion demasiado alto')),
+  parqueaderos: opcional(z.coerce.number().int().min(0).max(50)),
+  anio_construccion: opcional(z.coerce.number().int('Escribe el año, por ejemplo 2015').min(1800, 'Escribe el año, por ejemplo 2015').max(new Date().getFullYear() + 5, 'Ese año todavia no llega')),
+  piso: opcional(z.coerce.number().int().min(-5).max(200)),
 })
 
 export type DatosPropiedadNueva = z.infer<typeof esquemaPropiedadNueva>
