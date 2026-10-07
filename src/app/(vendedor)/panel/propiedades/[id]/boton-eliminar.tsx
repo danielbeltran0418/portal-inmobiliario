@@ -62,11 +62,11 @@ export function BotonEliminar({ id }: { id: string }) {
         type="button"
         onClick={manejarClic}
         disabled={pendiente}
-        className="rounded border border-red-600 px-4 py-2 text-sm text-red-600 hover:bg-red-600/10 disabled:opacity-40"
+        className="mt-4 min-h-10 cursor-pointer rounded-xl border border-peligro px-4 text-sm font-semibold text-peligro transition-colors hover:bg-peligro-suave disabled:opacity-40"
       >
         {pendiente ? 'Eliminando...' : 'Eliminar propiedad'}
       </button>
-      {error && <p role="alert" className="mt-2 text-red-600">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-sm text-peligro">{error}</p>}
     </div>
   )
 }

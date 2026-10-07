@@ -14,7 +14,7 @@ export interface PropiedadCruda {
   precio: number | null
   barrio_id: string | null
   descripcion: string | null
-  imagenes_propiedad: readonly { id: string }[] | null
+  imagenes_propiedad: readonly { id: string; orden?: number }[] | null
 }
 
 export interface FilaPanel {
@@ -24,6 +24,8 @@ export interface FilaPanel {
   estadoTexto: string
   precioTexto: string
   faltantes: string[]
+  /** Primera foto de una publicada (miniatura); null si no esta publicada o no tiene fotos. */
+  portadaId: string | null
 }
 
 const ESTADO_TEXTO: Record<string, string> = {
@@ -81,6 +83,29 @@ export function filasDelPanel(propiedades: readonly PropiedadCruda[]): FilaPanel
       estadoTexto: ESTADO_TEXTO[p.estado] ?? p.estado,
       precioTexto: textoPrecio(p.precio),
       faltantes,
+      // /imagen/[id] solo sirve fotos de anuncios PUBLICADOS: para el resto no
+      // hay miniatura que pedir.
+      portadaId: p.estado === 'publicada'
+        ? ([...(p.imagenes_propiedad ?? [])].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))[0]?.id ?? null)
+        : null,
     }
   })
+}
+
+export interface ResumenPorEstado {
+  publicadas: number
+  borradores: number
+  pausadas: number
+  vendidas: number
+}
+
+/** Contadores del encabezado del panel (diseño de Figma Make). */
+export function contarPorEstado(filas: readonly FilaPanel[]): ResumenPorEstado {
+  const contar = (estado: string) => filas.filter((f) => f.estado === estado).length
+  return {
+    publicadas: contar('publicada'),
+    borradores: contar('borrador'),
+    pausadas: contar('pausada'),
+    vendidas: contar('vendida'),
+  }
 }

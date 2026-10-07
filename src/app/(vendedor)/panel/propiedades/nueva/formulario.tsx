@@ -25,16 +25,16 @@ export function FormularioNuevaPropiedad() {
           required
           minLength={10}
           maxLength={120}
-          className="w-full border p-2"
+          className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
         />
         {estado.errores?.titulo && (
-          <p role="alert" className="mt-1 text-red-600">{estado.errores.titulo}</p>
+          <p role="alert" className="mt-1 text-sm text-peligro">{estado.errores.titulo}</p>
         )}
       </div>
 
-      {estado.error && <p role="alert" className="text-red-600">{estado.error}</p>}
+      {estado.error && <p role="alert" className="text-sm text-peligro">{estado.error}</p>}
 
-      <button type="submit" disabled={pendiente} className="w-full bg-black p-2 text-white">
+      <button type="submit" disabled={pendiente} className="w-full cursor-pointer rounded-xl bg-marca py-3 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte disabled:opacity-60">
         {pendiente ? 'Creando...' : 'Crear borrador'}
       </button>
     </form>

@@ -21,11 +21,11 @@ export function AccionesCita(
     <form action={accion} className="mt-3 flex flex-wrap items-center gap-3">
       <input type="hidden" name="cita_id" value={citaId} />
       <Link href={rutaMover}
-        className="rounded-sm border border-linea px-4 py-1.5 text-sm text-tinta hover:border-marca hover:text-marca">
+        className="inline-flex min-h-9 items-center rounded-lg border border-linea px-4 text-sm text-tinta transition-colors hover:border-marca hover:text-marca">
         Mover
       </Link>
       <button type="submit" disabled={ocupado}
-        className="cursor-pointer rounded-sm border border-linea px-4 py-1.5 text-sm text-tinta-suave hover:border-peligro hover:text-peligro disabled:opacity-60">
+        className="min-h-9 cursor-pointer rounded-lg border border-linea px-4 text-sm text-tinta-suave transition-colors hover:border-peligro hover:text-peligro disabled:opacity-60">
         Cancelar
       </button>
       {tardia && (
