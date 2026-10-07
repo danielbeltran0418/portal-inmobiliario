@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { sesionActual } from '@/lib/auth/sesion'
 import { enlaceDePanel } from '@/lib/navegacion/enlaces'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
+import { BuscadorPortada } from '@/components/buscador-portada'
 
 const urlBase = (process.env.NEXT_PUBLIC_APP_URL || 'http://127.0.0.1:3000').replace(/\/+$/, '')
 const fallbackImg = `${urlBase}/og-fallback.jpg`
@@ -86,6 +87,8 @@ export default async function PaginaInicio() {
           por barrio, precio y tipo de inmueble. Trato 100% directo entre las partes, sin
           comisiones ocultas.
         </p>
+
+        <BuscadorPortada barrios={barrios} />
 
         <div className="mt-6 flex items-center justify-center gap-2 text-xs font-medium text-tinta-tenue">
           <span>✨ El Prado</span>

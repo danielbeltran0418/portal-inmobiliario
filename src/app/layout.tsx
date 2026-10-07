@@ -36,7 +36,21 @@ export const viewport: Viewport = {
   ],
 };
 
+/**
+ * Origen publico para resolver las URLs relativas de metadata (OG, canonicas
+ * de paginas sin metadata propia). Sin la variable no se inventa uno: cada
+ * pagina con metadata propia ya usa urlPublica(), que si exige la variable.
+ */
+function origenPublico(): URL | undefined {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_APP_URL ?? "");
+  } catch {
+    return undefined;
+  }
+}
+
 export const metadata: Metadata = {
+  metadataBase: origenPublico(),
   title: "Portal inmobiliario",
   description: "Publica y encuentra propiedades en venta y en arriendo.",
 };
