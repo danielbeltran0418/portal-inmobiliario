@@ -24,10 +24,21 @@ describe('TarjetaPropiedad', () => {
     expect(pintar()).toContain('href="/el-prado/casa-a123"')
   })
 
-  it('pone el precio antes que el titulo: es lo que se compara al recorrer el catalogo', () => {
+  it('como en el diseño de Figma Make: tipo y barrio, luego el titulo y despues el precio', () => {
+    const html = renderToStaticMarkup(
+      createElement(TarjetaPropiedad, { propiedad: base, barrioSlug: 'el-prado', barrioNombre: 'El Prado' }),
+    )
+    const eyebrow = html.indexOf('El Prado')
+    const titulo = html.indexOf('Casa luminosa con patio')
+    const precio = html.indexOf('420.000.000')
+    expect(eyebrow).toBeGreaterThan(-1)
+    expect(eyebrow).toBeLessThan(titulo)
+    expect(titulo).toBeLessThan(precio)
+  })
+
+  it('sin nombre de barrio la cabecera de la tarjeta queda solo con el tipo', () => {
     const html = pintar()
-    expect(html.indexOf('420.000.000')).toBeGreaterThan(-1)
-    expect(html.indexOf('420.000.000')).toBeLessThan(html.indexOf('Casa luminosa con patio'))
+    expect(html).toMatch(/>\s*casa\s*</i)
   })
 
   it('muestra habitaciones, banos y area cuando existen', () => {

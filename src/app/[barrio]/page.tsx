@@ -3,13 +3,14 @@ import { TarjetaPropiedad } from '@/components/tarjeta-propiedad'
 import { cache } from 'react'
 import { metadatosBarrio, catalogoIndexable } from '@/lib/catalogo/seo'
 import Link from 'next/link'
+import { Search } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
 import { leerFiltros, type ParametrosCatalogo } from '@/lib/catalogo/filtros'
 import { listarPropiedadesPublicas, TAMANO_PAGINA } from '@/lib/catalogo/consultas'
 
 const CAMPO =
-  'block w-full rounded-md border border-linea bg-superficie px-3.5 py-2 text-sm text-tinta shadow-2xs transition-colors focus:border-marca'
+  'block w-full rounded-xl border border-linea bg-fondo px-3 py-2.5 text-base text-tinta transition-colors focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25'
 
 type Entrada = { params: Promise<{ barrio: string }>; searchParams: Promise<ParametrosCatalogo> }
 
@@ -17,7 +18,7 @@ type Entrada = { params: Promise<{ barrio: string }>; searchParams: Promise<Para
 const cargarBarrio = cache(async (slug: string) => {
   const { data, error } = await crearClientePublico()
     .from('barrios')
-    .select('id,nombre,slug')
+    .select('id,nombre,slug,ciudad')
     .eq('slug', slug)
     .maybeSingle()
   if (error) throw new Error('No se pudo cargar el barrio')
@@ -45,179 +46,160 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
     return `/${barrio!.slug}?${p}`
   }
 
+  const ETIQUETA_GRUPO = 'mb-3 block text-xs font-semibold uppercase tracking-wider text-tinta-suave'
+  const BOTON_PAGINA =
+    'inline-flex items-center gap-1.5 rounded-xl border border-linea px-4 py-2 text-sm font-medium text-tinta-suave transition-colors hover:border-marca hover:text-marca'
+
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
-      {/* Miga de pan estilizada */}
-      <nav aria-label="Miga de pan" className="flex flex-wrap items-center gap-2 text-xs font-medium text-tinta-tenue">
-        <Link href="/" className="transition-colors hover:text-marca">
+    <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
+      <nav aria-label="Miga de pan" className="mb-6 flex flex-wrap items-center gap-2 text-sm text-tinta-suave">
+        <Link href="/" className="transition-colors hover:text-tinta">
           Inicio
         </Link>
-        <span>/</span>
-        <span className="text-tinta-suave">{barrio.nombre}</span>
+        <span aria-hidden="true">/</span>
+        <span className="font-medium text-tinta">{barrio.nombre}</span>
       </nav>
 
-      {/* Encabezado del barrio */}
-      <div className="mt-4 flex flex-col justify-between gap-4 border-b border-linea/80 pb-6 sm:flex-row sm:items-end">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-sm bg-marca-suave px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-marca">
-            Barrio · Barranquilla
-          </span>
-          <h1 className="mt-2 break-words font-titulo text-3xl font-bold tracking-tight text-tinta sm:text-4xl">
-            Propiedades en {barrio.nombre}
-          </h1>
-          <p className="mt-1 text-sm text-tinta-suave">
-            Venta y arriendo en Barranquilla · Trato directo sin intermediarios
+          <h1 className="mb-1 break-words font-titulo text-3xl font-semibold text-tinta">Propiedades en {barrio.nombre}</h1>
+          <p className="text-tinta-suave">
+            {total} {total === 1 ? 'inmueble disponible' : 'inmuebles disponibles'}
+            {barrio.ciudad ? ` · ${barrio.ciudad}` : ''}
           </p>
         </div>
-        <div className="flex flex-col items-start gap-3 sm:items-end">
-          <span className="text-xs font-medium text-tinta-tenue">
-            {total} {total === 1 ? 'inmueble disponible' : 'inmuebles disponibles'}
-          </span>
-          <BotonGuardarBusqueda
-                    filtrosActuales={{
-                      barrio: barrio.slug,
-                      operacion: filtros.operacion,
-                      tipo: filtros.tipo,
-                      precio_min: filtros.precioMin,
-                      precio_max: filtros.precioMax,
-                    }}
-                  />
-        </div>
+        <BotonGuardarBusqueda
+          filtrosActuales={{
+            barrio: barrio.slug,
+            operacion: filtros.operacion,
+            tipo: filtros.tipo,
+            precio_min: filtros.precioMin,
+            precio_max: filtros.precioMax,
+          }}
+        />
       </div>
 
-      {/* Formulario de filtros */}
-      <form
-        method="get"
-        className="my-8 rounded-2xl border border-linea/80 bg-superficie p-5 shadow-xs lg:sticky lg:top-20 lg:z-30"
-      >
-        <div className="flex flex-wrap items-end gap-4">
-          <label className="grow-0 text-xs font-semibold text-tinta">
-            Operación
-            <select
-              className={`${CAMPO} mt-1`}
-              name="operacion"
-              defaultValue={filtros.operacion ?? ''}
-            >
-              <option value="">Todas</option>
-              <option value="venta">Venta</option>
-              <option value="arriendo">Arriendo</option>
-            </select>
-          </label>
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
+        {/* Filtros en columna lateral (diseño de Figma Make). Siguen siendo un
+            formulario GET: la URL es la fuente de verdad del catalogo. */}
+        <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:w-64">
+          <form method="get" className="flex flex-col gap-6 rounded-2xl border border-linea bg-superficie p-5">
+            <fieldset>
+              <legend className={ETIQUETA_GRUPO}>Operación</legend>
+              <div className="flex flex-col gap-1">
+                {([['', 'Todas'], ['venta', 'Venta'], ['arriendo', 'Arriendo']] as const).map(([valor, texto]) => (
+                  <label key={texto} className="flex min-h-9 cursor-pointer items-center gap-2.5 text-sm text-tinta">
+                    <input
+                      type="radio"
+                      name="operacion"
+                      value={valor}
+                      defaultChecked={(filtros.operacion ?? '') === valor}
+                      className="h-4 w-4 accent-[var(--marca)]"
+                    />
+                    {texto}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
-          <label className="grow-0 text-xs font-semibold text-tinta">
-            Tipo
-            <select className={`${CAMPO} mt-1`} name="tipo" defaultValue={filtros.tipo ?? ''}>
-              <option value="">Todos</option>
-              {['apartamento', 'casa', 'local', 'lote', 'oficina'].map((t) => (
-                <option key={t} value={t}>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                </option>
+            <label className="block">
+              <span className={ETIQUETA_GRUPO}>Tipo de inmueble</span>
+              <select className={CAMPO} name="tipo" defaultValue={filtros.tipo ?? ''}>
+                <option value="">Todos los tipos</option>
+                {['apartamento', 'casa', 'local', 'lote', 'oficina'].map((t) => (
+                  <option key={t} value={t}>
+                    {t.charAt(0).toUpperCase() + t.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <fieldset>
+              <legend className={ETIQUETA_GRUPO}>Precio (COP)</legend>
+              <div className="flex flex-col gap-2">
+                <label className="block text-xs text-tinta-suave">
+                  Precio mínimo
+                  <input
+                    className={`${CAMPO} cifra mt-1`}
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    inputMode="decimal"
+                    name="precio_min"
+                    defaultValue={filtros.precioMin}
+                    placeholder="Mínimo"
+                  />
+                </label>
+                <label className="block text-xs text-tinta-suave">
+                  Precio máximo
+                  <input
+                    className={`${CAMPO} cifra mt-1`}
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    inputMode="decimal"
+                    name="precio_max"
+                    defaultValue={filtros.precioMax}
+                    placeholder="Máximo"
+                  />
+                </label>
+              </div>
+            </fieldset>
+
+            <div className="flex flex-col gap-2">
+              <button
+                type="submit"
+                className="w-full cursor-pointer rounded-xl bg-marca py-2.5 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte"
+              >
+                Filtrar
+              </button>
+              <Link
+                href={`/${barrio.slug}`}
+                className="block w-full rounded-xl border border-linea py-2 text-center text-sm text-tinta-suave transition-colors hover:border-marca hover:text-marca"
+              >
+                Limpiar filtros
+              </Link>
+            </div>
+          </form>
+        </aside>
+
+        <div className="min-w-0 flex-1">
+          {propiedades.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-marca-suave">
+                <Search aria-hidden="true" className="h-8 w-8 text-marca" strokeWidth={1.5} />
+              </span>
+              <h2 className="mb-2 font-titulo text-xl text-tinta">No hay propiedades que coincidan con estos filtros</h2>
+              <p className="text-sm text-tinta-suave">Prueba ajustando el rango de precio o cambiando el tipo de inmueble.</p>
+              <Link href={`/${barrio.slug}`} className="mt-4 text-sm font-semibold text-marca hover:underline">
+                Ver todas las de {barrio.nombre}
+              </Link>
+            </div>
+          ) : (
+            <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {propiedades.map((p) => (
+                <TarjetaPropiedad key={p.id} propiedad={p} barrioSlug={barrio.slug} barrioNombre={barrio.nombre} />
               ))}
-            </select>
-          </label>
-
-          <label className="grow-0 text-xs font-semibold text-tinta">
-            Precio mínimo
-            <input
-              className={`${CAMPO} mt-1 w-36 cifra sm:w-44`}
-              type="number"
-              min="0.01"
-              step="0.01"
-              name="precio_min"
-              defaultValue={filtros.precioMin}
-              placeholder="$ Mín"
-            />
-          </label>
-
-          <label className="grow-0 text-xs font-semibold text-tinta">
-            Precio máximo
-            <input
-              className={`${CAMPO} mt-1 w-36 cifra sm:w-44`}
-              type="number"
-              min="0.01"
-              step="0.01"
-              name="precio_max"
-              defaultValue={filtros.precioMax}
-              placeholder="$ Máx"
-            />
-          </label>
-
-          <button
-            type="submit"
-            className="cursor-pointer rounded-md bg-marca px-5 py-2 text-sm font-semibold text-marca-contraste shadow-xs transition-colors hover:bg-marca-fuerte"
-          >
-            Filtrar
-          </button>
-
-          <Link
-            href={`/${barrio.slug}`}
-            className="py-2 text-xs font-medium text-tinta-tenue transition-colors hover:text-marca hover:underline"
-          >
-            Limpiar filtros
-          </Link>
-        </div>
-      </form>
-
-      {/* Lista de propiedades */}
-      {propiedades.length === 0 ? (
-        <div className="rounded-xl border border-linea bg-superficie p-12 text-center">
-          <span className="text-3xl">🔍</span>
-          <h3 className="mt-3 font-titulo text-lg font-semibold text-tinta">
-            No hay propiedades que coincidan con estos filtros
-          </h3>
-          <p className="mt-1 text-sm text-tinta-suave">
-            Prueba ajustando el rango de precio o cambiando el tipo de inmueble.
-          </p>
-          <Link
-            href={`/${barrio.slug}`}
-            className="mt-4 inline-block text-xs font-semibold text-marca hover:underline"
-          >
-            Ver todas las de {barrio.nombre}
-          </Link>
-        </div>
-      ) : (
-        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {propiedades.map((p) => (
-            <TarjetaPropiedad key={p.id} propiedad={p} barrioSlug={barrio.slug} />
-          ))}
-        </ul>
-      )}
-
-      {/* Paginación */}
-      <nav
-        aria-label="Paginación"
-        className="mt-12 flex items-center justify-between border-t border-linea/80 pt-6 text-sm"
-      >
-        <div>
-          {filtros.pagina > 1 ? (
-            <Link
-              href={pagina(filtros.pagina - 1)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-linea px-3 py-1.5 font-medium text-tinta-suave transition-colors hover:border-marca hover:text-marca"
-            >
-              ← Anterior
-            </Link>
-          ) : (
-            <span />
+            </ul>
           )}
-        </div>
 
-        <span className="text-xs font-medium text-tinta-tenue">
-          Página {filtros.pagina} de {Math.max(1, Math.ceil(total / TAMANO_PAGINA))}
-        </span>
-
-        <div>
-          {filtros.pagina * TAMANO_PAGINA < total ? (
-            <Link
-              href={pagina(filtros.pagina + 1)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-linea px-3 py-1.5 font-medium text-tinta-suave transition-colors hover:border-marca hover:text-marca"
-            >
-              Siguiente →
-            </Link>
-          ) : (
-            <span />
-          )}
+          <nav aria-label="Paginación" className="mt-10 flex items-center justify-center gap-3 text-sm">
+            {filtros.pagina > 1 && (
+              <Link href={pagina(filtros.pagina - 1)} className={BOTON_PAGINA}>
+                ← Anterior
+              </Link>
+            )}
+            <span className="font-medium text-tinta-tenue">
+              Página {filtros.pagina} de {Math.max(1, Math.ceil(total / TAMANO_PAGINA))}
+            </span>
+            {filtros.pagina * TAMANO_PAGINA < total && (
+              <Link href={pagina(filtros.pagina + 1)} className={BOTON_PAGINA}>
+                Siguiente →
+              </Link>
+            )}
+          </nav>
         </div>
-      </nav>
+      </div>
     </main>
   )
 }

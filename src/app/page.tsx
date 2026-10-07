@@ -92,9 +92,14 @@ export default async function PaginaInicio() {
   // Sin tipos generados, supabase-js tipa la relacion como lista aunque llegue
   // un objeto (es N:1): se normaliza como en la ficha, y sin barrio no hay enlace.
   const propiedades = (
-    recientes as unknown as (PropiedadDeTarjeta & { barrios: { slug: string } | { slug: string }[] | null })[]
+    recientes as unknown as (PropiedadDeTarjeta & {
+      barrios: { slug: string; nombre: string } | { slug: string; nombre: string }[] | null
+    })[]
   )
-    .map((p) => ({ ...p, barrioSlug: (Array.isArray(p.barrios) ? p.barrios[0] : p.barrios)?.slug }))
+    .map((p) => {
+      const barrio = Array.isArray(p.barrios) ? p.barrios[0] : p.barrios
+      return { ...p, barrioSlug: barrio?.slug, barrioNombre: barrio?.nombre }
+    })
     .filter((p): p is typeof p & { barrioSlug: string } => Boolean(p.barrioSlug))
 
   return (
@@ -165,7 +170,7 @@ export default async function PaginaInicio() {
             </div>
             <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {propiedades.map((p) => (
-                <TarjetaPropiedad key={p.id} propiedad={p} barrioSlug={p.barrioSlug} />
+                <TarjetaPropiedad key={p.id} propiedad={p} barrioSlug={p.barrioSlug} barrioNombre={p.barrioNombre} />
               ))}
             </ul>
           </div>

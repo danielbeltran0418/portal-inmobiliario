@@ -3,6 +3,7 @@ import { BotonFavorito } from '@/components/comprador/BotonFavorito'
 import { cache } from 'react'
 import { metadatosFicha, datosFicha, serializarJsonLd } from '@/lib/catalogo/seo'
 import Link from 'next/link'
+import { Bath, BedDouble, MapPin, Maximize2 } from 'lucide-react'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
@@ -12,7 +13,7 @@ import { BotonAgendar } from './boton-agendar'
 import { rolDesdeToken } from '@/lib/auth/roles'
 const cargarFicha = cache(async (slug: string) => {
   const { data: p, error } = await crearClientePublico().from('propiedades')
-    .select('id,vendedor_id,slug,titulo,descripcion,precio,operacion,tipo_inmueble,habitaciones,banos,area_m2,barrios!inner(nombre,slug),imagenes_propiedad(id,alt_text,orden)')
+    .select('id,vendedor_id,slug,titulo,descripcion,precio,operacion,tipo_inmueble,habitaciones,banos,area_m2,barrios!inner(nombre,slug,ciudad),imagenes_propiedad(id,alt_text,orden)')
     .eq('slug', slug).eq('estado', 'publicada').maybeSingle()
   if (error) throw new Error('No se pudo cargar la propiedad')
   if (!p) notFound()
@@ -84,52 +85,91 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
     esFavorito = fav !== null
   }
 
-  return <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 sm:py-14">
+  const precio = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p.precio)
+  const datosClave = [
+    p.habitaciones != null && { etiqueta: 'Habitaciones', valor: String(p.habitaciones), Icono: BedDouble },
+    p.banos != null && { etiqueta: 'Baños', valor: String(p.banos), Icono: Bath },
+    p.area_m2 != null && { etiqueta: 'Área', valor: `${p.area_m2} m²`, Icono: Maximize2 },
+  ].filter((d): d is { etiqueta: string; valor: string; Icono: typeof Bath } => Boolean(d))
+  const TARJETA = 'rounded-2xl border border-linea bg-superficie p-6'
+
+  return <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializarJsonLd(datosFicha(p, barrio)) }} />
-    <Link href={`/${barrio.slug}`} className="inline-flex items-center gap-2 text-sm font-semibold text-tinta-suave transition-colors hover:text-marca">
-      <span aria-hidden="true">←</span> Volver a propiedades de {barrio.nombre}
-    </Link>
-    <div className="mt-6"><GaleriaFicha fotos={fotos} titulo={p.titulo} /></div>
-    <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-      <div>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wider text-marca">
-              <span className="rounded-sm bg-marca-suave px-2.5 py-1">{p.operacion}</span>
-              <span className="text-tinta-tenue">{p.tipo_inmueble || 'Inmueble'} · {barrio.nombre}</span>
-            </div>
-            <h1 className="mt-3 break-words font-titulo text-3xl font-bold tracking-tight text-tinta sm:text-4xl">{p.titulo}</h1>
-            <p className="cifra mt-3 font-titulo text-2xl font-bold text-tinta">{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(p.precio)}</p>
+    <nav aria-label="Miga de pan" className="mb-6 flex flex-wrap items-center gap-2 text-sm text-tinta-suave">
+      <Link href="/" className="transition-colors hover:text-tinta">Inicio</Link>
+      <span aria-hidden="true">/</span>
+      <Link href={`/${barrio.slug}`} className="transition-colors hover:text-tinta">{barrio.nombre}</Link>
+      <span aria-hidden="true">/</span>
+      <span className="line-clamp-1 font-medium text-tinta">{p.titulo}</span>
+    </nav>
+
+    <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
+      <div className="min-w-0 flex-1">
+        <GaleriaFicha fotos={fotos} titulo={p.titulo} />
+
+        <div className="mt-8 mb-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-tinta-tenue">
+              {p.operacion} · {p.tipo_inmueble || 'Inmueble'} · {barrio.nombre}
+            </p>
+            <h1 className="break-words font-titulo text-2xl font-semibold text-tinta sm:text-3xl">{p.titulo}</h1>
           </div>
           {sesion.hayUsuario && <BotonFavorito propiedadId={p.id} inicialEsFavorito={esFavorito} mostrarTexto />}
         </div>
-        <section className="mt-10 border-t border-linea pt-8">
-          <dl className="mb-8 grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-3">
-            {p.habitaciones != null && <div className="rounded-xl border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Habitaciones</dt><dd className="mt-1 font-titulo text-2xl font-bold text-tinta">{p.habitaciones}</dd></div>}
-            {p.banos != null && <div className="rounded-xl border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Baños</dt><dd className="mt-1 font-titulo text-2xl font-bold text-tinta">{p.banos}</dd></div>}
-            {p.area_m2 != null && <div className="rounded-xl border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Área</dt><dd className="mt-1 font-titulo text-2xl font-bold text-tinta">{p.area_m2} m²</dd></div>}
-          </dl>
-          <h2 className="font-titulo text-xl font-bold text-tinta">Acerca de esta propiedad</h2>
-          <p className="mt-4 whitespace-pre-wrap break-words leading-relaxed text-tinta-suave">{p.descripcion}</p>
 
+        <p className="cifra mb-6 text-2xl font-bold text-tinta">{precio}</p>
+
+        {datosClave.length > 0 && (
+          <dl className="mb-8 grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-3">
+            {datosClave.map(({ etiqueta, valor, Icono }) => (
+              <div key={etiqueta} className="flex flex-col-reverse items-center rounded-2xl border border-linea bg-fondo p-4 text-center">
+                <dt className="text-xs text-tinta-suave">{etiqueta}</dt>
+                <dd className="text-lg font-semibold text-tinta">{valor}</dd>
+                <Icono aria-hidden="true" className="mb-1 h-6 w-6 text-marca" strokeWidth={1.5} />
+              </div>
+            ))}
+          </dl>
+        )}
+
+        <section className="mb-8">
+          <h2 className="mb-3 font-titulo text-xl font-semibold text-tinta">Descripción</h2>
+          <p className="whitespace-pre-wrap break-words leading-relaxed text-tinta-suave">{p.descripcion}</p>
         </section>
+
+        <div className="flex items-start gap-4 rounded-2xl bg-marca-suave p-5">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-marca/10">
+            <MapPin aria-hidden="true" className="h-5 w-5 text-marca" strokeWidth={1.5} />
+          </span>
+          <div>
+            <h3 className="mb-0.5 font-medium text-marca">Barrio {barrio.nombre}</h3>
+            <p className="text-sm text-tinta-suave">
+              La dirección exacta se comparte 2 horas antes de la visita agendada, para proteger la privacidad del propietario.
+            </p>
+          </div>
+        </div>
       </div>
-      <aside className="lg:sticky lg:top-24">
+
+      <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:w-80 xl:w-96">
         {!sesion.hayUsuario ? (
-          <div className="rounded-xl border border-linea bg-superficie p-6 shadow-xs">
-            <h2 className="font-titulo text-xl font-bold text-tinta">¿Te interesa esta propiedad?</h2>
+          <div className={TARJETA}>
+            <h2 className="font-titulo text-xl font-semibold text-tinta">¿Te interesa esta propiedad?</h2>
             <p className="mt-2 text-sm leading-relaxed text-tinta-suave">Entra o crea tu cuenta para contactar directamente al propietario y agendar una visita.</p>
-            <Link href={`/login?volver=${encodeURIComponent(rutaFicha)}`} className="mt-5 inline-flex w-full items-center justify-center rounded-md bg-marca px-4 py-3 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte">Entra o crea cuenta para contactar</Link>
+            <Link href={`/login?volver=${encodeURIComponent(rutaFicha)}`} className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-marca px-4 py-3 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte">Entra o crea cuenta para contactar</Link>
           </div>
         ) : yaContacto ? (
-          <div className="rounded-xl border border-linea bg-superficie p-6 shadow-xs">
+          <div className={TARJETA}>
             <p className="text-sm font-medium text-tinta">Ya contactaste sobre esta propiedad.</p>
             {esComprador && <div className="mt-4"><BotonAgendar propiedadId={p.id} rutaFicha={rutaFicha} texto="Abrir el chat para agendar tu visita" /></div>}
           </div>
         ) : esDelVendedor ? null : (
-          <div className="flex flex-col gap-6">
-            {esComprador && <div className="rounded-xl border border-marca/40 bg-superficie p-6 shadow-xs"><h2 className="font-titulo text-xl font-bold text-tinta">Agendar una visita</h2><p className="mt-2 text-sm leading-relaxed text-tinta-suave">Consulta los horarios disponibles y agenda tu visita con el asistente.</p><div className="mt-5"><BotonAgendar propiedadId={p.id} rutaFicha={rutaFicha} texto="Agendar visita con el asistente" /></div></div>}
-            <div className="rounded-xl border border-linea bg-superficie p-6 shadow-xs"><h2 className="font-titulo text-xl font-bold text-tinta">Contactar al propietario</h2><p className="mt-2 text-sm text-tinta-suave">Escribe tu mensaje y recibe respuesta directamente.</p><div className="mt-4"><FormularioLead propiedadId={p.id} telefonoPrevio={telefonoPrevio} /></div></div>
+          <div className={TARJETA}>
+            <FormularioLead propiedadId={p.id} telefonoPrevio={telefonoPrevio} />
+            {esComprador && (
+              <div className="mt-5 border-t border-linea pt-5">
+                <p className="mb-3 text-center text-xs text-tinta-suave">¿Prefieres hablar con el asistente de IA?</p>
+                <BotonAgendar propiedadId={p.id} rutaFicha={rutaFicha} texto="Agendar visita con el asistente" />
+              </div>
+            )}
           </div>
         )}
       </aside>

@@ -1,6 +1,13 @@
 import type { Metadata } from 'next'
 
-export type BarrioSeo = { nombre: string; slug: string }
+// ciudad es opcional: el portal es nacional y la ciudad sale del barrio
+// (columna barrios.ciudad). Sin ella no se inventa ninguna.
+export type BarrioSeo = { nombre: string; slug: string; ciudad?: string | null }
+
+/** "Barrio, Ciudad" si se conoce la ciudad; si no, solo el barrio. */
+function lugar(barrio: BarrioSeo): string {
+  return barrio.ciudad ? `${barrio.nombre}, ${barrio.ciudad}` : barrio.nombre
+}
 export type FichaSeo = {
   titulo: string
   slug: string
@@ -61,11 +68,11 @@ export function catalogoIndexable(filtros: {
 }
 
 export function metadatosBarrio(barrio: BarrioSeo, opciones: { indexable?: boolean } = {}): Metadata {
-  const titulo = `Propiedades en ${barrio.nombre}, Barranquilla`
-  const descripcion = `Encuentra propiedades en venta y arriendo en ${barrio.nombre}, Barranquilla. Consulta precios, características y fotos.`
+  const titulo = `Propiedades en ${lugar(barrio)}`
+  const descripcion = `Encuentra propiedades en venta y arriendo en ${lugar(barrio)}. Consulta precios, características y fotos.`
   const url = urlPublica(`/${barrio.slug}`)
   const imagenUrl = urlPublica(IMAGEN_FALLBACK)
-  const images = [{ url: imagenUrl, alt: `Propiedades en ${barrio.nombre}, Barranquilla` }]
+  const images = [{ url: imagenUrl, alt: `Propiedades en ${lugar(barrio)}` }]
 
   return {
     title: titulo,
@@ -91,10 +98,10 @@ export function metadatosBarrio(barrio: BarrioSeo, opciones: { indexable?: boole
 }
 
 export function metadatosFicha(p: FichaSeo, barrio: BarrioSeo): Metadata {
-  const titulo = `${p.titulo} · ${barrio.nombre}, Barranquilla`
+  const titulo = `${p.titulo} · ${lugar(barrio)}`
   const descripcion =
     descripcionCorta(p.descripcion) ||
-    `${p.titulo} en ${p.operacion} en ${barrio.nombre}, Barranquilla. Consulta precio y características.`
+    `${p.titulo} en ${p.operacion} en ${lugar(barrio)}. Consulta precio y características.`
   const url = urlPublica(`/${barrio.slug}/${p.slug}`)
 
   const fotos = [...p.imagenes_propiedad].sort((a, b) => a.orden - b.orden)
@@ -161,11 +168,10 @@ export function datosFicha(p: FichaSeo, barrio: BarrioSeo) {
     image: [...p.imagenes_propiedad].sort((a, b) => a.orden - b.orden).map((f) => urlPublica(`/imagen/${f.id}`)),
     contentLocation: {
       '@type': 'Place',
-      name: `${barrio.nombre}, Barranquilla`,
+      name: lugar(barrio),
       address: {
         '@type': 'PostalAddress',
-        addressLocality: 'Barranquilla',
-        addressRegion: 'Atlántico',
+        ...(barrio.ciudad ? { addressLocality: barrio.ciudad } : {}),
         addressCountry: 'CO',
       },
     },
