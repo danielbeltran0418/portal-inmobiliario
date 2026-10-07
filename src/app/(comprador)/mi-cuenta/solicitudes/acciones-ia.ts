@@ -65,6 +65,12 @@ export async function enviarMensajeComprador(
     await registrarMensajeComprador(conversacionId, usuario.id, textoLimpio)
   } catch (err: unknown) {
     const errObj = err as { status?: number; codigo?: string; message?: string }
+    // Antes que el 429 generico: "espera un momento" no es verdad aqui, la
+    // conversacion queda en pausa hasta que se cierre otra o pasen 24 h.
+    if (errObj.codigo === 'IA_CONCURRENCIA') {
+      const { MENSAJE_CONCURRENCIA } = await import('@/lib/ia/limites')
+      return { ok: false, error: MENSAJE_CONCURRENCIA, codigo: 'IA_CONCURRENCIA', status: 429 }
+    }
     if (errObj.status === 429) {
       return {
         ok: false,
