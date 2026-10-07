@@ -203,3 +203,73 @@ export async function consultarMetricasIA(
     incidentesRateLimit: incidentes ?? 0,
   }
 }
+
+export interface MesSerie {
+  /** AAAA-MM, en hora de Colombia. */
+  clave: string
+  /** Mes abreviado para el eje, p. ej. "oct". */
+  etiqueta: string
+  leads: number
+  citas: number
+}
+
+// Colombia no tiene horario de verano: UTC-5 todo el año. Un lead creado el
+// 1 de octubre a las 03:00 UTC es del 30 de septiembre para quien lo mira.
+const DESFASE_COLOMBIA_MS = 5 * 60 * 60 * 1000
+
+function claveMes(anio: number, mes0: number): string {
+  return `${anio}-${String(mes0 + 1).padStart(2, '0')}`
+}
+
+function ventana(meses: number, hoy: Date) {
+  const local = new Date(hoy.getTime() - DESFASE_COLOMBIA_MS)
+  const lista: { clave: string; etiqueta: string }[] = []
+  for (let i = meses - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth() - i, 1))
+    lista.push({
+      clave: claveMes(d.getUTCFullYear(), d.getUTCMonth()),
+      etiqueta: d.toLocaleDateString('es-CO', { month: 'short', timeZone: 'UTC' }).replace('.', ''),
+    })
+  }
+  const primero = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth() - (meses - 1), 1))
+  return { lista, desde: new Date(primero.getTime() + DESFASE_COLOMBIA_MS) }
+}
+
+/** Leads y citas creados por mes en los ultimos `meses` meses (incluido el actual). */
+export function agruparPorMes(
+  fechasLeads: readonly string[],
+  fechasCitas: readonly string[],
+  meses: number,
+  hoy: Date = new Date(),
+): MesSerie[] {
+  const serie = ventana(meses, hoy).lista.map((m) => ({ ...m, leads: 0, citas: 0 }))
+  const indice = new Map(serie.map((m) => [m.clave, m]))
+  const contar = (fechas: readonly string[], campo: 'leads' | 'citas') => {
+    for (const f of fechas) {
+      const local = new Date(new Date(f).getTime() - DESFASE_COLOMBIA_MS)
+      const mes = indice.get(claveMes(local.getUTCFullYear(), local.getUTCMonth()))
+      if (mes) mes[campo]++
+    }
+  }
+  contar(fechasLeads, 'leads')
+  contar(fechasCitas, 'citas')
+  return serie
+}
+
+/**
+ * Serie del grafico "Leads y citas por mes". Solo se trae `creado_en` y solo
+ * desde el inicio de la ventana: no se cargan las tablas enteras.
+ */
+export async function consultarSerieMensual(
+  cliente: SupabaseClient,
+  meses = 6,
+  hoy: Date = new Date(),
+): Promise<MesSerie[]> {
+  const desde = ventana(meses, hoy).desde.toISOString()
+  const [leads, citas] = await Promise.all([
+    cliente.from('leads').select('creado_en').gte('creado_en', desde),
+    cliente.from('citas').select('creado_en').gte('creado_en', desde),
+  ])
+  const fechas = (r: { data: { creado_en: string }[] | null }) => (r.data ?? []).map((f) => f.creado_en)
+  return agruparPorMes(fechas(leads), fechas(citas), meses, hoy)
+}

@@ -1,14 +1,16 @@
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
-import { consultarMetricasEmbudo, consultarMetricasIA } from '@/lib/admin/metricas'
+import { consultarMetricasEmbudo, consultarMetricasIA, consultarSerieMensual } from '@/lib/admin/metricas'
 import { GraficoEmbudo } from '@/components/admin/GraficoEmbudo'
+import { GraficoMensual } from '@/components/admin/GraficoMensual'
 
 export const dynamic = 'force-dynamic'
 
 export default async function PaginaMetricas() {
   const supabase = await crearClienteServidor()
-  const [embudo, ia] = await Promise.all([
+  const [embudo, ia, serie] = await Promise.all([
     consultarMetricasEmbudo(supabase),
     consultarMetricasIA(supabase),
+    consultarSerieMensual(supabase, 6),
   ])
 
   return (
@@ -20,6 +22,15 @@ export default async function PaginaMetricas() {
         <p className="mt-1 text-sm text-tinta-suave">
           Supervisión cuantitativa de la tasa de conversión comercial y monitoreo del consumo de agentes autónomos.
         </p>
+      </div>
+
+      {/* Sección 0: Evolución mensual (diseño de Figma Make) */}
+      <div className="rounded-xl border border-linea bg-superficie p-6 shadow-xs">
+        <h2 className="text-base font-bold text-tinta">Leads y citas por mes</h2>
+        <p className="mt-1 mb-6 text-xs text-tinta-suave">
+          Solicitudes recibidas y visitas agendadas en los últimos 6 meses (hora de Colombia).
+        </p>
+        <GraficoMensual serie={serie} />
       </div>
 
       {/* Sección 1: Embudo Comercial */}
