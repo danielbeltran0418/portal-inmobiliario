@@ -21,19 +21,19 @@ describe('RLS de barrios', () => {
     expect(slugs).toContain('el-paraiso')
   })
 
-  it('los slugs son limpios: minusculas, sin numeros ni guiones bajos', async () => {
+  it('los slugs son limpios: minusculas, digitos y guiones simples', async () => {
     const { data } = await clienteAnonimo().from('barrios').select('slug')
-    for (const b of data!) expect(b.slug).toMatch(/^[a-z]+(-[a-z]+)*$/)
+    for (const b of data!) expect(b.slug).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/)
   })
 
-  it('el CHECK de la base rechaza slugs con numero, guion bajo o mayuscula', async () => {
+  it('el CHECK de la base rechaza slugs con guion bajo, mayuscula o una ruta del portal', async () => {
     const admin = clienteAdmin()
-    const invalidos = ['villa-2', 'villa_carolina', 'Villa-Carolina']
+    const invalidos = ['villa_carolina', 'Villa-Carolina', 'panel', 'recuperar']
 
     for (const slug of invalidos) {
       const { error } = await admin
         .from('barrios')
-        .insert({ nombre: 'Invalido', slug, ciudad: 'Barranquilla' })
+        .insert({ nombre: 'Invalido', slug, ciudad: 'Medellín' })
 
       if (!error) {
         // No deberia insertarse nunca; si el CHECK fallara, limpiar antes de fallar la prueba.
@@ -43,6 +43,17 @@ describe('RLS de barrios', () => {
       expect(error).not.toBeNull()
       expect(error?.code).toBe('23514')
     }
+  })
+
+  it('[alcance nacional] admite digitos y exige la ciudad: ya no cae en Barranquilla por defecto', async () => {
+    const admin = clienteAdmin()
+    const slug = `la-70-prueba-${Date.now()}`
+    const { error: conDigitos } = await admin.from('barrios').insert({ nombre: 'La 70', slug, ciudad: 'Medellín' })
+    expect(conDigitos).toBeNull()
+    await admin.from('barrios').delete().eq('slug', slug)
+
+    const { error: sinCiudad } = await admin.from('barrios').insert({ nombre: 'Sin ciudad', slug: `sin-ciudad-${Date.now()}` })
+    expect(sinCiudad?.code).toBe('23502')
   })
 
   it('un vendedor NO puede crear barrios', async () => {

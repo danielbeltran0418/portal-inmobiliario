@@ -1,6 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-const RESERVADAS = new Set(['panel', 'mi-cuenta', 'control', 'imagen', 'catalogo', 'login', 'registro', 'confirmar', 'verificar-correo'])
+/**
+ * Primer segmento de cada ruta propia de la app. Un barrio con uno de estos
+ * slugs quedaria tapado por la ruta (o la taparia), asi que la base tambien
+ * los prohibe (migracion 20261011000200). tests/unit/rutas-reservadas.test.ts
+ * comprueba que la lista cubre todas las carpetas de src/app.
+ */
+export const RUTAS_RESERVADAS = [
+  'api', 'buscar', 'catalogo', 'confirmar', 'control', 'imagen', 'login', 'mi-cuenta',
+  'notificaciones', 'panel', 'recuperar', 'registro', 'restablecer', 'verificar-correo',
+] as const
+const RESERVADAS = new Set<string>(RUTAS_RESERVADAS)
 
 export function esRutaFicha(ruta: string): boolean {
   const partes = ruta.split('/')
