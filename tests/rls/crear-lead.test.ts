@@ -138,7 +138,7 @@ describe('crear_lead: el unico camino de escritura de un lead', () => {
     // comprobaciones que compartieran codigo no se podrian mapear sin leer
     // el mensaje, que es texto de interfaz y no un contrato estable.
     expect(error?.code).toBe('LD002')
-    expect(error?.message).toMatch(/no esta publicada/i)
+    expect(error?.message).toMatch(/no esta disponible/i)
 
     // Caso positivo en la misma prueba: el mismo comprador, sobre la
     // propiedad PUBLICADA de la misma fixtura, si puede crear el lead. Sin
@@ -150,6 +150,22 @@ describe('crear_lead: el unico camino de escritura de un lead', () => {
     })
     expect(errorPositivo).toBeNull()
     expect(leadId).toBeTruthy()
+  })
+
+  // Oraculo LD001/LD002 (migracion 20261009000200): un id que no existe y un
+  // borrador tienen que ser indistinguibles para quien llama, o crear_lead
+  // confirmaria que un id es una propiedad real oculta del catalogo.
+  it('un id inexistente y un borrador responden exactamente igual', async () => {
+    const { compradorCorreo, password, borradorId } = await fixtura()
+    const cliente = await clienteComo(compradorCorreo, password)
+    const intento = (id: string) => cliente.rpc('crear_lead', {
+      p_propiedad_id: id, p_telefono: '3001234567', p_mensaje: MENSAJE,
+    })
+    const { error: deBorrador } = await intento(borradorId)
+    const { error: deInexistente } = await intento(randomUUID())
+    expect(deInexistente?.code).toBe(deBorrador?.code)
+    expect(deInexistente?.message).toBe(deBorrador?.message)
+    expect(deInexistente?.code).toBe('LD002')
   })
 
   it('rechaza que un vendedor se deje un lead en su propia propiedad', async () => {
