@@ -6,7 +6,7 @@ import { FormularioRegistro } from './formulario'
 export const metadata: Metadata = {
   title: 'Crear cuenta | Portal Inmobiliario',
   description:
-    'Crea tu cuenta en el Portal Inmobiliario de Barranquilla, como comprador para buscar ' +
+    'Crea tu cuenta en el Portal Inmobiliario, como comprador para buscar ' +
     'vivienda o como vendedor para publicar tus propiedades.',
 }
 

@@ -28,7 +28,7 @@ export function PieDePagina() {
               <span>{NOMBRE_DEL_SITIO}</span>
             </div>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-tinta-suave">
-              La plataforma de vivienda en Barranquilla pensada para conectar directamente a
+              La plataforma de vivienda en Colombia pensada para conectar directamente a
               compradores y propietarios, sin comisiones de intermediación ni costos ocultos.
             </p>
           </div>
@@ -50,10 +50,10 @@ export function PieDePagina() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-tinta">Ciudad y confianza</h4>
+            <h4 className="font-semibold text-tinta">Cobertura y confianza</h4>
             <ul className="mt-3 space-y-2 text-sm">
               <li className="flex items-center gap-1.5 text-tinta-suave">
-                <span>📍</span> Barranquilla, Atlántico
+                <span>📍</span> Colombia
               </li>
               <li className="flex items-center gap-1.5 text-tinta-suave">
                 <span>🔒</span> Habeas Data Ley 1581
@@ -66,7 +66,7 @@ export function PieDePagina() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-linea/60 pt-6 text-xs text-tinta-tenue sm:flex-row">
-          <p>© {anio} {NOMBRE_DEL_SITIO}. Diseñado para el mercado inmobiliario de Barranquilla.</p>
+          <p>© {anio} {NOMBRE_DEL_SITIO}. Hecho para el mercado inmobiliario colombiano.</p>
           <p>Ubicación exacta protegida por protocolo de seguridad.</p>
         </div>
       </div>
