@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { Heart } from 'lucide-react';
 import { conmutarFavoritoAction } from '@/lib/comprador/acciones-favoritos';
 
 interface BotonFavoritoProps {
@@ -8,63 +9,78 @@ interface BotonFavoritoProps {
   inicialEsFavorito?: boolean;
   className?: string;
   mostrarTexto?: boolean;
+  /** 'icono': circulo blanco sobre la foto de una tarjeta (diseño de Figma Make). */
+  variante?: 'boton' | 'icono';
 }
+
+export const CLASE_CORAZON_ICONO =
+  'inline-flex h-9 w-9 items-center justify-center rounded-full bg-superficie/90 shadow-sm backdrop-blur-sm transition-[color,background-color,transform] hover:bg-superficie active:scale-90';
 
 export function BotonFavorito({
   propiedadId,
   inicialEsFavorito = false,
   className = '',
   mostrarTexto = false,
+  variante = 'boton',
 }: BotonFavoritoProps) {
   const [esFavorito, setEsFavorito] = useState(inicialEsFavorito);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleToggle = () => {
     // Actualización optimista
     const nuevoEstado = !esFavorito;
     setEsFavorito(nuevoEstado);
+    setError(null);
 
     startTransition(async () => {
       const res = await conmutarFavoritoAction(propiedadId);
       if (!res.exito) {
         // Revertir en caso de error
         setEsFavorito(!nuevoEstado);
-        alert(res.error ?? 'No se pudo actualizar el favorito');
+        setError(res.error ?? 'No se pudo actualizar el favorito');
       } else if (res.favorito !== undefined) {
         setEsFavorito(res.favorito);
       }
     });
   };
 
+  const clase =
+    variante === 'icono'
+      ? `${CLASE_CORAZON_ICONO} ${esFavorito ? 'text-peligro' : 'text-tinta-suave hover:text-peligro'}`
+      : `inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-[color,background-color,border-color,transform] active:scale-[0.97] ${
+          esFavorito
+            ? 'border-peligro/30 bg-peligro-suave text-peligro'
+            : 'border-linea bg-superficie text-tinta-suave hover:border-peligro/40 hover:text-peligro'
+        }`;
+
   return (
-    <button
-      type="button"
-      onClick={handleToggle}
-      disabled={isPending}
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-[color,background-color,border-color,box-shadow,transform] active:scale-[0.97] text-sm font-medium ${
-        esFavorito
-          ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/30 dark:border-rose-900 dark:text-rose-400'
-          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300'
-      } ${className}`}
-      aria-label={esFavorito ? 'Eliminar de favoritos' : 'Agregar a favoritos'}
-      data-testid="boton-favorito"
-    >
-      <svg
-        className={`w-5 h-5 transition-transform ${isPending ? 'scale-90' : 'scale-100'}`}
-        fill={esFavorito ? 'currentColor' : 'none'}
-        stroke="currentColor"
-        viewBox="0 0 24 24"
+    <>
+      <button
+        type="button"
+        onClick={handleToggle}
+        disabled={isPending}
+        className={`${clase} ${className}`}
+        aria-label={esFavorito ? 'Eliminar de favoritos' : 'Agregar a favoritos'}
+        aria-pressed={esFavorito}
+        title={error ?? undefined}
+        data-testid="boton-favorito"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={esFavorito ? 0 : 1.8}
-          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+        <Heart
+          aria-hidden="true"
+          className={`h-5 w-5 transition-transform ${isPending ? 'scale-90' : 'scale-100'}`}
+          fill={esFavorito ? 'currentColor' : 'none'}
+          strokeWidth={1.8}
         />
-      </svg>
-      {mostrarTexto && (
-        <span>{esFavorito ? 'En favoritos' : 'Guardar en favoritos'}</span>
+        {mostrarTexto && (
+          <span>{esFavorito ? 'En favoritos' : 'Guardar en favoritos'}</span>
+        )}
+      </button>
+      {error && (
+        <span role="alert" className="sr-only">
+          {error}
+        </span>
       )}
-    </button>
+    </>
   );
 }

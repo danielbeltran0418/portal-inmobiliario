@@ -5,10 +5,14 @@ const sesion = vi.fn()
 const panel = vi.fn()
 const recientes = vi.fn()
 const barrios = vi.fn()
+const favoritos = vi.fn()
 
 vi.mock('@/lib/auth/sesion', () => ({ sesionActual: () => sesion() }))
 vi.mock('@/lib/navegacion/enlaces', () => ({ enlaceDePanel: (s: unknown) => panel(s) }))
 vi.mock('@/lib/catalogo/consultas', () => ({ listarRecientes: () => recientes() }))
+vi.mock('@/lib/comprador/favoritos', () => ({ idsFavoritos: (...a: unknown[]) => favoritos(...a) }))
+vi.mock('@/lib/supabase/cliente-servidor', () => ({ crearClienteServidor: async () => ({}) }))
+vi.mock('@/lib/comprador/acciones-favoritos', () => ({ conmutarFavoritoAction: vi.fn() }))
 vi.mock('@/lib/supabase/cliente-publico', () => ({
   crearClientePublico: () => ({ from: () => ({ select: () => ({ eq: () => ({ order: () => barrios() }) }) }) }),
 }))
@@ -29,6 +33,7 @@ async function pintar() {
 beforeEach(() => {
   sesion.mockResolvedValue({ hayUsuario: false, accessToken: null, idUsuario: null })
   panel.mockReturnValue(null)
+  favoritos.mockReset().mockResolvedValue(new Set())
   recientes.mockResolvedValue([PROPIEDAD])
   barrios.mockResolvedValue({
     data: [{ nombre: 'El Prado', slug: 'el-prado' }, { nombre: 'Riomar', slug: 'riomar' }],
@@ -94,5 +99,19 @@ describe('portada (diseño de Figma Make)', () => {
     const html = await pintar()
     expect(html).toContain('Todavía no hay barrios disponibles')
     expect(html).not.toContain('action="/buscar"')
+  })
+
+  it('[diseño Figma Make] cada tarjeta lleva su corazon: al anonimo lo manda a entrar', async () => {
+    const html = await pintar()
+    expect(html).toContain('aria-label="Inicia sesión para guardar en favoritos"')
+    expect(favoritos).not.toHaveBeenCalled()
+  })
+
+  it('con sesion el corazon refleja los favoritos del usuario', async () => {
+    sesion.mockResolvedValue({ hayUsuario: true, accessToken: 'x', idUsuario: 'u1' })
+    favoritos.mockResolvedValue(new Set(['p1']))
+    const html = await pintar()
+    expect(favoritos).toHaveBeenCalledWith(expect.anything(), 'u1', ['p1'])
+    expect(html).toContain('aria-label="Eliminar de favoritos"')
   })
 })

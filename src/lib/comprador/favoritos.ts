@@ -75,3 +75,29 @@ export async function esFavorito(
 
   return !!data;
 }
+
+/**
+ * Cuales de las propiedades listadas (una pagina del catalogo) tiene el usuario
+ * en favoritos. Una sola consulta acotada a esos ids; un fallo no rompe el
+ * catalogo: los corazones salen vacios y el clic los corrige.
+ */
+export async function idsFavoritos(
+  supabase: SupabaseClient,
+  usuarioId: string,
+  propiedadIds: readonly string[]
+): Promise<Set<string>> {
+  if (propiedadIds.length === 0) return new Set();
+
+  const { data, error } = await supabase
+    .from('favoritos')
+    .select('propiedad_id')
+    .eq('usuario_id', usuarioId)
+    .in('propiedad_id', [...propiedadIds]);
+
+  if (error) {
+    console.error('[favoritos] No se pudieron leer los favoritos del listado:', error);
+    return new Set();
+  }
+
+  return new Set((data ?? []).map((f: { propiedad_id: string }) => f.propiedad_id));
+}

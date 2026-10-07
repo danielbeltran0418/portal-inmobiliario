@@ -4,6 +4,9 @@ import { CalendarCheck, MessageCircle, Search } from 'lucide-react'
 import { BuscadorPortada } from '@/components/buscador-portada'
 import { TarjetaPropiedad, type PropiedadDeTarjeta } from '@/components/tarjeta-propiedad'
 import { sesionActual } from '@/lib/auth/sesion'
+import { CorazonTarjeta } from '@/components/comprador/corazon-tarjeta'
+import { idsFavoritos } from '@/lib/comprador/favoritos'
+import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { listarRecientes } from '@/lib/catalogo/consultas'
 import { enlaceDePanel } from '@/lib/navegacion/enlaces'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
@@ -87,7 +90,8 @@ export default async function PaginaInicio() {
     db.from('barrios').select('nombre,slug').eq('activo', true).order('nombre'),
     listarRecientes(db),
   ])
-  const panel = enlaceDePanel(await sesionPendiente)
+  const sesion = await sesionPendiente
+  const panel = enlaceDePanel(sesion)
   const barrios = barriosCrudos ?? []
   // Sin tipos generados, supabase-js tipa la relacion como lista aunque llegue
   // un objeto (es N:1): se normaliza como en la ficha, y sin barrio no hay enlace.
@@ -101,6 +105,10 @@ export default async function PaginaInicio() {
       return { ...p, barrioSlug: barrio?.slug, barrioNombre: barrio?.nombre }
     })
     .filter((p): p is typeof p & { barrioSlug: string } => Boolean(p.barrioSlug))
+  // Los favoritos son del usuario: se leen con SU cliente (RLS), no con el publico.
+  const favoritos = sesion.idUsuario
+    ? await idsFavoritos(await crearClienteServidor(), sesion.idUsuario, propiedades.map((p) => p.id))
+    : new Set<string>()
 
   return (
     <main className="flex-1">
@@ -170,7 +178,13 @@ export default async function PaginaInicio() {
             </div>
             <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {propiedades.map((p) => (
-                <TarjetaPropiedad key={p.id} propiedad={p} barrioSlug={p.barrioSlug} barrioNombre={p.barrioNombre} />
+                <TarjetaPropiedad
+                  key={p.id}
+                  propiedad={p}
+                  barrioSlug={p.barrioSlug}
+                  barrioNombre={p.barrioNombre}
+                  accion={<CorazonTarjeta propiedadId={p.id} conSesion={sesion.hayUsuario} favorito={favoritos.has(p.id)} volver="/" />}
+                />
               ))}
             </ul>
           </div>
