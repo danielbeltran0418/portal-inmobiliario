@@ -43,11 +43,11 @@ export function BotonGuardarBusqueda({
       <button
         type="button"
         onClick={() => setModalAbierto(true)}
-        className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-900/60 dark:bg-indigo-950/40 dark:text-indigo-300 transition-colors ${className}`}
+        className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-marca/30 bg-marca-suave text-marca hover:bg-marca-suave transition-colors ${className}`}
         data-testid="boton-guardar-busqueda"
       >
         <svg
-          className="w-4 h-4 text-indigo-600 dark:text-indigo-400"
+          className="w-4 h-4 text-marca"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -63,34 +63,34 @@ export function BotonGuardarBusqueda({
       </button>
 
       {modalAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" aria-labelledby="dialogo-guardar-busqueda" className="bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 max-w-md w-full p-6 text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-tinta/50 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-labelledby="dialogo-guardar-busqueda" className="bg-superficie rounded-xl shadow-xl border border-linea max-w-md w-full p-6 text-tinta">
             <div className="flex items-center justify-between mb-4">
               <h3 id="dialogo-guardar-busqueda" className="text-lg font-semibold">Guardar criterios de búsqueda</h3>
               <button
                 type="button"
                 onClick={() => setModalAbierto(false)}
                 aria-label="Cerrar"
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="text-tinta-tenue hover:text-tinta-suave"
               >
                 ✕
               </button>
             </div>
 
             {mensajeExito ? (
-              <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 rounded-lg text-sm font-medium text-center">
+              <div className="p-4 bg-exito-suave text-exito rounded-lg text-sm font-medium text-center">
                 {mensajeExito}
               </div>
             ) : (
               <form onSubmit={handleGuardar} className="space-y-4">
                 {error && (
-                  <div className="p-3 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 rounded-lg text-sm">
+                  <div className="p-3 bg-peligro-suave text-peligro rounded-lg text-sm">
                     {error}
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-tinta-suave mb-1">
                     Nombre para esta búsqueda
                   </label>
                   <input
@@ -99,7 +99,7 @@ export function BotonGuardarBusqueda({
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
                     placeholder="Ej. Casas en Chapinero hasta 500M"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-linea rounded-lg bg-superficie text-tinta focus:outline-none focus:ring-2 focus:ring-marca"
                   />
                 </div>
 
@@ -109,9 +109,9 @@ export function BotonGuardarBusqueda({
                     id="notificaciones"
                     checked={notificaciones}
                     onChange={(e) => setNotificaciones(e.target.checked)}
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    className="rounded border-linea text-marca focus:ring-marca"
                   />
-                  <label htmlFor="notificaciones" className="text-sm text-slate-600 dark:text-slate-300">
+                  <label htmlFor="notificaciones" className="text-sm text-tinta-suave">
                     Notificarme cuando se publiquen propiedades similares
                   </label>
                 </div>
@@ -120,7 +120,7 @@ export function BotonGuardarBusqueda({
                   <button
                     type="button"
                     onClick={() => setModalAbierto(false)}
-                    className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                    className="px-4 py-2 text-sm text-tinta-suave hover:bg-superficie-alt rounded-lg"
                   >
                     Cancelar
                   </button>
@@ -128,7 +128,7 @@ export function BotonGuardarBusqueda({
                     type="submit"
                     data-testid="boton-modal-guardar-busqueda"
                     disabled={isPending}
-                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-marca-contraste bg-marca hover:bg-marca-fuerte disabled:opacity-50 rounded-lg transition-colors"
                   >
                     {isPending ? 'Guardando...' : 'Confirmar y guardar'}
                   </button>

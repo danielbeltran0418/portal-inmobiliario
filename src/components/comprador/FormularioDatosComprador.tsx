@@ -79,13 +79,13 @@ export function FormularioDatosComprador({
         </p>
 
         {mensajePerfil && (
-          <div className="mb-4 p-3 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 rounded-lg text-sm">
+          <div className="mb-4 p-3 bg-exito-suave text-exito rounded-lg text-sm">
             {mensajePerfil}
           </div>
         )}
 
         {errorPerfil && (
-          <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 rounded-lg text-sm">
+          <div className="mb-4 p-3 bg-peligro-suave text-peligro rounded-lg text-sm">
             {errorPerfil}
           </div>
         )}
@@ -141,8 +141,8 @@ export function FormularioDatosComprador({
       </div>
 
       {/* Sección 2: Derechos ARCO y Supresión de Cuenta (Habeas Data) */}
-      <div className="p-6 rounded-xl border border-rose-200 dark:border-rose-950/60 bg-rose-50/30 dark:bg-rose-950/10 shadow-xs">
-        <h3 className="text-lg font-semibold text-rose-700 dark:text-rose-400 mb-1">
+      <div className="p-6 rounded-xl border border-peligro/30 bg-peligro-suave/30 shadow-xs">
+        <h3 className="text-lg font-semibold text-peligro mb-1">
           Derecho al Olvido y Supresión de Cuenta (Habeas Data)
         </h3>
         <p className="text-sm text-tinta-suave mb-4">
@@ -160,15 +160,15 @@ export function FormularioDatosComprador({
         </div>
 
         {errorSupresion && (
-          <div className="mb-4 p-3 bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-200 rounded-lg text-sm">
+          <div className="mb-4 p-3 bg-peligro-suave text-peligro rounded-lg text-sm">
             {errorSupresion}
           </div>
         )}
 
         <form onSubmit={handleSuprimir} className="space-y-4 max-w-lg">
           <div>
-            <label className="block text-xs font-semibold text-rose-700 dark:text-rose-400 mb-1">
-              Para confirmar, escribe exactamente: <span className="font-mono bg-white dark:bg-slate-900 px-1 py-0.5 rounded border border-rose-200 dark:border-rose-900">ELIMINAR MI CUENTA</span>
+            <label className="block text-xs font-semibold text-peligro mb-1">
+              Para confirmar, escribe exactamente: <span className="font-mono bg-superficie px-1 py-0.5 rounded border border-peligro/30">ELIMINAR MI CUENTA</span>
             </label>
             <input
               type="text"
@@ -176,7 +176,7 @@ export function FormularioDatosComprador({
               value={textoConfirmacion}
               onChange={(e) => setTextoConfirmacion(e.target.value)}
               placeholder="ELIMINAR MI CUENTA"
-              className="w-full px-3 py-2 border border-rose-300 dark:border-rose-900 rounded-lg bg-white dark:bg-slate-900 text-tinta focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm"
+              className="w-full px-3 py-2 border border-peligro/30 rounded-lg bg-superficie text-tinta focus:outline-none focus:ring-2 focus:ring-peligro text-sm"
               data-testid="input-confirmar-supresion"
             />
           </div>
@@ -184,7 +184,7 @@ export function FormularioDatosComprador({
           <button
             type="submit"
             disabled={isPendingSupresion || textoConfirmacion !== 'ELIMINAR MI CUENTA'}
-            className="px-4 py-2 text-sm font-medium rounded-lg bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-peligro text-marca-contraste hover:bg-peligro/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             data-testid="boton-confirmar-supresion"
           >
             {isPendingSupresion ? 'Procesando supresión...' : 'Suprimir mi cuenta definitivamente'}

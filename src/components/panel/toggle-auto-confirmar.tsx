@@ -38,7 +38,7 @@ export function ToggleAutoConfirmar({ inicial }: Props) {
       </div>
       <div className="flex items-center gap-2">
         {isPending && <span className="text-xs text-tinta-tenue">Guardando...</span>}
-        {mensaje && !isPending && <span className="text-xs text-emerald-600">{mensaje}</span>}
+        {mensaje && !isPending && <span className="text-xs text-exito">{mensaje}</span>}
         <input
           id="switch-auto-confirmar"
           type="checkbox"

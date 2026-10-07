@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('server-only', () => ({}));
 
-import { construirSystemPrompt, formatearPrecioCOP, DatosFichaPropiedad } from '@/lib/ia/prompts';
+import { construirSystemPrompt, formatearPrecioCOP, DatosFichaPropiedad, lugarDeBarrio } from '@/lib/ia/prompts';
 import { ZONA_HORARIA } from '@/lib/fechas/formato';
 
 describe('Generador de System Prompt Blindado con Ficha de Inmueble', () => {
@@ -51,5 +51,17 @@ describe('Generador de System Prompt Blindado con Ficha de Inmueble', () => {
     expect(prompt).toContain(ZONA_HORARIA);
     expect(prompt).toContain('10:00');
     expect(prompt).toContain('septiembre');
+  });
+
+  it('[alcance nacional] no ata el prompt a una ciudad fija', () => {
+    const prompt = construirSystemPrompt(fichaEjemplo);
+    expect(prompt).not.toMatch(/Bogotá|Barranquilla/);
+    expect(prompt).toContain('Colombia');
+  });
+
+  it('[alcance nacional] el lugar es barrio y ciudad cuando la ciudad se conoce', () => {
+    expect(lugarDeBarrio({ nombre: 'El Prado', ciudad: 'Barranquilla' })).toBe('El Prado, Barranquilla');
+    expect(lugarDeBarrio({ nombre: 'El Poblado', ciudad: null })).toBe('El Poblado');
+    expect(lugarDeBarrio(null)).toBeUndefined();
   });
 });

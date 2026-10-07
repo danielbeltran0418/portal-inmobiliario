@@ -106,19 +106,19 @@ export async function enviarMensajeComprador(
   // 4. Inferencia con GPT-5.6 Luna
   let respuestaTexto = 'He recibido tu mensaje. Estamos procesando tu solicitud.'
   try {
-    const { construirSystemPrompt } = await import('@/lib/ia/prompts')
+    const { construirSystemPrompt, lugarDeBarrio } = await import('@/lib/ia/prompts')
     const { ejecutarInferenciaIA } = await import('@/lib/ia/cliente')
     const { HERRAMIENTAS_IA } = await import('@/lib/ia/tipos')
 
     // Obtener propiedad
     const { data: prop } = await admin
       .from('propiedades')
-      .select('titulo, tipo_inmueble, operacion, precio, moneda, habitaciones, banos, area_m2, descripcion, barrio:barrios(nombre)')
+      .select('titulo, tipo_inmueble, operacion, precio, moneda, habitaciones, banos, area_m2, descripcion, barrio:barrios(nombre, ciudad)')
       .eq('id', conv.propiedad_id)
       .single()
 
     const ficha = {
-      titulo: prop?.titulo ?? 'Inmueble en Bogotá',
+      titulo: prop?.titulo ?? 'Inmueble',
       tipo_inmueble: prop?.tipo_inmueble ?? 'apartamento',
       operacion: prop?.operacion ?? 'venta',
       precio: prop?.precio ?? 0,
@@ -127,7 +127,7 @@ export async function enviarMensajeComprador(
       banos: prop?.banos,
       area_m2: prop?.area_m2,
       descripcion: prop?.descripcion,
-      barrio: (prop?.barrio as unknown as { nombre: string } | null)?.nombre,
+      barrio: lugarDeBarrio(prop?.barrio as unknown as { nombre: string; ciudad?: string | null } | null),
     }
 
     const systemPrompt = construirSystemPrompt(ficha)
