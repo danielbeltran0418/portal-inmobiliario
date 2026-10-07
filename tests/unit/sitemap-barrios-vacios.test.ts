@@ -5,7 +5,7 @@ for (const m of ['select', 'eq', 'order'] as const) q[m].mockReturnValue(q)
 vi.mock('@/lib/supabase/cliente-publico', () => ({
   crearClientePublico: () => ({
     from: (tabla: string) => tabla === 'barrios'
-      ? { select: () => ({ eq: () => ({ order: async () => ({ data: [{ slug: 'prado' }, { slug: 'vacio' }], error: null }) }) }) }
+      ? { select: () => ({ eq: () => ({ order: async () => ({ data: [{ slug: 'prado', ciudad_slug: 'barranquilla' }, { slug: 'vacio', ciudad_slug: 'medellin' }], error: null }) }) }) }
       : q,
   }),
 }))
@@ -22,4 +22,7 @@ it('no lista barrios sin ninguna propiedad publicada (paginas finas)', async () 
   expect(urls).toContain('https://portal.example/prado/casa-1')
   expect(urls).not.toContain('https://portal.example/vacio')
   expect(urls).toContain('https://portal.example/')
+  // [ciudades] la ciudad con anuncios entra; la que solo tiene barrios vacios, no.
+  expect(urls).toContain('https://portal.example/ciudad/barranquilla')
+  expect(urls).not.toContain('https://portal.example/ciudad/medellin')
 })

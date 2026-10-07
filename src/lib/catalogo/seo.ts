@@ -1,3 +1,4 @@
+import { parametrosDeFiltros, type FiltrosCatalogo } from './filtros'
 import type { Metadata } from 'next'
 
 // ciudad es opcional: el portal es nacional y la ciudad sale del barrio
@@ -51,20 +52,14 @@ export function descripcionCorta(texto: string, maximo = 160): string {
  * cada combinacion de filtros o pagina es otra URL con contenido casi igual
  * (todas declaran la misma canonica) y multiplica lo que el rastreador visita.
  */
-export function catalogoIndexable(filtros: {
-  operacion?: string
-  tipo?: string
-  precioMin?: number
-  precioMax?: number
-  pagina: number
-}): boolean {
-  return (
-    filtros.operacion === undefined &&
-    filtros.tipo === undefined &&
-    filtros.precioMin === undefined &&
-    filtros.precioMax === undefined &&
-    filtros.pagina <= 1
-  )
+/**
+ * Solo se indexa la vista base de un catalogo (sin ningun filtro y en la
+ * primera pagina): las combinaciones de filtros son paginas casi duplicadas.
+ * Mira TODOS los filtros a traves de parametrosDeFiltros, para que uno nuevo
+ * no quede indexable por olvido.
+ */
+export function catalogoIndexable(filtros: FiltrosCatalogo): boolean {
+  return parametrosDeFiltros(filtros).toString() === ''
 }
 
 export function metadatosBarrio(barrio: BarrioSeo, opciones: { indexable?: boolean } = {}): Metadata {
@@ -94,6 +89,21 @@ export function metadatosBarrio(barrio: BarrioSeo, opciones: { indexable?: boole
       description: descripcion,
       images: [imagenUrl],
     },
+  }
+}
+
+export function metadatosCiudad(ciudad: { nombre: string; slug: string }, opciones: { indexable?: boolean } = {}): Metadata {
+  const titulo = `Propiedades en ${ciudad.nombre}`
+  const descripcion = `Casas, apartamentos y locales en venta y arriendo en ${ciudad.nombre}, por barrio. Consulta precios, estrato, características y fotos.`
+  const url = urlPublica(`/ciudad/${ciudad.slug}`)
+  const imagenUrl = urlPublica(IMAGEN_FALLBACK)
+  return {
+    title: titulo,
+    description: descripcion,
+    alternates: { canonical: url },
+    ...(opciones.indexable === false ? { robots: { index: false, follow: true } } : {}),
+    openGraph: { title: titulo, description: descripcion, url, siteName: NOMBRE_SITIO, locale: LOCALE_SITIO, type: 'website', images: [{ url: imagenUrl, alt: titulo }] },
+    twitter: { card: 'summary_large_image', title: titulo, description: descripcion, images: [imagenUrl] },
   }
 }
 

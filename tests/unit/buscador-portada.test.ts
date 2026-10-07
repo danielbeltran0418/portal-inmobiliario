@@ -3,30 +3,31 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement } from 'react'
 import { BuscadorPortada } from '@/components/buscador-portada'
 
-const barrios = [
-  { nombre: 'El Prado', slug: 'el-prado' },
-  { nombre: 'Riomar', slug: 'riomar' },
+const ciudades = [
+  { nombre: 'Bogotá', slug: 'bogota' },
+  { nombre: 'Barranquilla', slug: 'barranquilla' },
 ]
 
 describe('BuscadorPortada', () => {
-  const html = renderToStaticMarkup(createElement(BuscadorPortada, { barrios }))
+  const html = renderToStaticMarkup(createElement(BuscadorPortada, { ciudades }))
 
   it('envia por GET al puente /buscar', () => {
     expect(html).toContain('action="/buscar"')
     expect(html).toContain('method="get"')
   })
 
-  it('lista cada barrio con su slug como valor', () => {
-    expect(html).toContain('<option value="el-prado">El Prado</option>')
-    expect(html).toContain('<option value="riomar">Riomar</option>')
+  it('[alcance nacional] busca por ciudad, no por una lista de todos los barrios', () => {
+    expect(html).toMatch(/<select[^>]*name="ciudad"/)
+    expect(html).toContain('<option value="bogota">Bogotá</option>')
+    expect(html).not.toContain('name="barrio"')
   })
 
-  it('como en el diseño: operacion y barrio en una fila, con etiquetas accesibles', () => {
+  it('como en el diseño: operacion y ciudad en una fila, con etiquetas accesibles', () => {
     expect(html).toMatch(/<select[^>]*name="operacion"/)
     expect(html).toContain('value="venta"')
     expect(html).toContain('value="arriendo"')
     expect(html).toMatch(/<label[^>]*>[^<]*Operación/)
-    expect(html).toMatch(/<label[^>]*>[^<]*Barrio/)
+    expect(html).toMatch(/<label[^>]*>[^<]*Ciudad/)
     // Tipo y precio se filtran ya en el catalogo del barrio.
     expect(html).not.toContain('name="tipo"')
     expect(html).not.toContain('name="precio_max"')
@@ -37,7 +38,7 @@ describe('BuscadorPortada', () => {
     expect(html).toMatch(/<label[^>]*>[^<]*Palabras clave/)
   })
 
-  it('no se pinta sin barrios: un formulario que no puede buscar nada confunde', () => {
-    expect(renderToStaticMarkup(createElement(BuscadorPortada, { barrios: [] }))).toBe('')
+  it('no se pinta sin ciudades: un formulario que no puede buscar nada confunde', () => {
+    expect(renderToStaticMarkup(createElement(BuscadorPortada, { ciudades: [] }))).toBe('')
   })
 })

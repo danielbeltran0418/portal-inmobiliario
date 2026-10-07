@@ -5,15 +5,15 @@ const CAMPO =
 
 /**
  * Buscador del hero de la portada (diseño de Figma Make): operacion, palabras
- * clave y barrio en una sola fila. Envia por GET a /buscar, que valida y redirige al catalogo del
- * barrio (src/app/buscar/route.ts); tipo y precio se filtran ya alli. Sin
- * barrios no se pinta: un formulario que no puede buscar nada solo confunde.
+ * clave y ciudad en una sola fila. Envia por GET a /buscar, que valida y redirige al catalogo de la
+ * ciudad (src/app/buscar/route.ts); tipo y precio se filtran ya alli. Sin
+ * ciudades no se pinta: un formulario que no puede buscar nada solo confunde.
  *
  * Las etiquetas existen para lectores de pantalla aunque el diseño no las
  * muestre: un select sin nombre accesible es una barrera.
  */
-export function BuscadorPortada({ barrios }: { barrios: { nombre: string; slug: string }[] }) {
-  if (barrios.length === 0) return null
+export function BuscadorPortada({ ciudades }: { ciudades: { nombre: string; slug: string }[] }) {
+  if (ciudades.length === 0) return null
 
   return (
     <form
@@ -41,13 +41,13 @@ export function BuscadorPortada({ barrios }: { barrios: { nombre: string; slug: 
         className={`${CAMPO} sm:flex-1`}
       />
 
-      <label htmlFor="buscador-barrio" className="sr-only">
-        Barrio
+      <label htmlFor="buscador-ciudad" className="sr-only">
+        Ciudad
       </label>
-      <select id="buscador-barrio" name="barrio" required className={`${CAMPO} sm:w-44`}>
-        {barrios.map((barrio) => (
-          <option key={barrio.slug} value={barrio.slug}>
-            {barrio.nombre}
+      <select id="buscador-ciudad" name="ciudad" required className={`${CAMPO} sm:w-44`}>
+        {ciudades.map((ciudad) => (
+          <option key={ciudad.slug} value={ciudad.slug}>
+            {ciudad.nombre}
           </option>
         ))}
       </select>

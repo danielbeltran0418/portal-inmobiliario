@@ -7,6 +7,7 @@ const ENLACES_ADMIN = [
   { href: '/control', etiqueta: 'Resumen' },
   { href: '/control/moderacion', etiqueta: 'Moderación' },
   { href: '/control/posicionamiento', etiqueta: 'Posicionamiento' },
+  { href: '/control/barrios', etiqueta: 'Barrios' },
   { href: '/control/metricas', etiqueta: 'Métricas e IA' },
   { href: '/control/auditoria', etiqueta: 'Auditoría' },
 ]
