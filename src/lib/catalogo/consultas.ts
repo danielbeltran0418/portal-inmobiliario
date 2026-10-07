@@ -23,3 +23,22 @@ export async function listarPropiedadesPublicas(cliente: SupabaseClient, barrioI
   if (error) throw new Error('No se pudo cargar el catálogo')
   return { propiedades: data ?? [], total: count ?? 0 }
 }
+
+const LIMITE_RECIENTES = 6
+
+/**
+ * Propiedades para la portada: publicadas, con al menos una foto y con su
+ * barrio (la tarjeta enlaza a /{barrio}/{slug}). Las destacadas (posicionamiento
+ * pagado) van primero; despues, las mas nuevas. Un fallo no tumba la portada:
+ * devuelve lista vacia y la seccion simplemente no se pinta.
+ */
+export async function listarRecientes(cliente: SupabaseClient, limite = LIMITE_RECIENTES) {
+  const { data, error } = await cliente.from('propiedades')
+    .select(`${COLUMNAS_LISTADO},barrios!inner(slug,nombre)`)
+    .eq('estado', 'publicada')
+    .order('destacada', { ascending: false })
+    .order('actualizado_en', { ascending: false })
+    .limit(limite)
+  if (error) return []
+  return data ?? []
+}

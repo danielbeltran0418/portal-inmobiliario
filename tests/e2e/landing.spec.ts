@@ -11,7 +11,8 @@ test('la landing invita a registrarse al anonimo y ofrece su panel a quien ya en
   await page.goto('/')
   const principal = page.getByRole('main')
 
-  await expect(page.getByRole('heading', { level: 1 })).toContainText(/Barranquilla/i)
+  // El portal es nacional: el titular no nombra una ciudad.
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/hogar/i)
   await expect(principal.getByRole('link', { name: /Crear cuenta de comprador/i })).toHaveAttribute(
     'href',
     '/registro',

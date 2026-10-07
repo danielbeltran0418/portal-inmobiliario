@@ -21,14 +21,15 @@ describe('BuscadorPortada', () => {
     expect(html).toContain('<option value="riomar">Riomar</option>')
   })
 
-  it('ofrece venta y arriendo, tipo y precio maximo con etiquetas', () => {
-    expect(html).toContain('name="operacion"')
+  it('como en el diseño: operacion y barrio en una fila, con etiquetas accesibles', () => {
+    expect(html).toMatch(/<select[^>]*name="operacion"/)
     expect(html).toContain('value="venta"')
     expect(html).toContain('value="arriendo"')
-    expect(html).toContain('name="tipo"')
-    expect(html).toContain('name="precio_max"')
-    expect(html).toContain('inputMode="numeric"')
+    expect(html).toMatch(/<label[^>]*>[^<]*Operación/)
     expect(html).toMatch(/<label[^>]*>[^<]*Barrio/)
+    // Tipo y precio se filtran ya en el catalogo del barrio.
+    expect(html).not.toContain('name="tipo"')
+    expect(html).not.toContain('name="precio_max"')
   })
 
   it('no se pinta sin barrios: un formulario que no puede buscar nada confunde', () => {
