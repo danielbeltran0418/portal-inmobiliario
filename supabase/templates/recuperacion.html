@@ -1,0 +1,8 @@
+<h2>Crea una contraseña nueva</h2>
+<p>Alguien pidió restablecer la contraseña de tu cuenta en el portal. Si fuiste tú, abre este enlace:</p>
+<p>
+  <a href="{{ .SiteURL }}/confirmar/recuperacion?token_hash={{ .TokenHash }}&type=recovery">
+    Crear una contraseña nueva
+  </a>
+</p>
+<p>El enlace caduca en una hora. Si no lo pediste, ignora este mensaje: tu contraseña no cambia.</p>

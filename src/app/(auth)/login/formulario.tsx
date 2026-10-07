@@ -40,7 +40,10 @@ export function FormularioLogin(
           <input id="correo" name="correo" type="email" placeholder="tu@correo.com" required autoComplete="email" className={CAMPO_ACCESO} />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="password" className="text-sm font-medium text-tinta">Contraseña</label>
+          <div className="flex items-baseline justify-between gap-3">
+            <label htmlFor="password" className="text-sm font-medium text-tinta">Contraseña</label>
+            <Link href="/recuperar" className="text-xs font-medium text-marca hover:underline">¿Olvidaste tu contraseña?</Link>
+          </div>
           <input id="password" name="password" type="password" placeholder="Tu contraseña" required autoComplete="current-password" className={CAMPO_ACCESO} />
         </div>
         <WidgetTurnstile clave={claveTurnstile} reiniciarCon={estado} />

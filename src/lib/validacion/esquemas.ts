@@ -14,6 +14,19 @@ export const esquemaLogin = z.object({
   password: z.string().min(1, 'Escribe tu contrasena'),
 })
 
+export const esquemaRecuperacion = z.object({
+  correo: z.string().trim().toLowerCase().email('Correo invalido'),
+})
+
+// Misma regla que el registro (12-72): 72 es el tope de bcrypt en Supabase.
+export const esquemaNuevaContrasena = z.object({
+  password: z.string().min(12, 'La contraseña necesita al menos 12 caracteres.').max(72, 'Máximo 72 caracteres.'),
+  confirmacion: z.string(),
+}).refine((d) => d.password === d.confirmacion, {
+  message: 'Las contraseñas no coinciden.',
+  path: ['confirmacion'],
+})
+
 export type DatosRegistro = z.infer<typeof esquemaRegistro>
 export type DatosLogin = z.infer<typeof esquemaLogin>
 

@@ -1,6 +1,4 @@
 import 'server-only'
-import type { NextRequest } from 'next/server'
-
 /**
  * Origen absoluto para construir redirecciones.
  *
@@ -17,8 +15,11 @@ import type { NextRequest } from 'next/server'
  * No se usa x-forwarded-host aqui: en desarrollo no hay proxy delante, asi que
  * Host solo es correcto y mas simple, y una entrada menos controlada por el
  * cliente es una cosa menos de la que hay que cuidarse.
+ *
+ * Recibe cualquier cosa con cabeceras: una NextRequest en rutas y middleware,
+ * o `{ headers: await headers() }` en una server action.
  */
-export function origenReal(peticion: NextRequest): string {
+export function origenReal(peticion: { headers: Pick<Headers, 'get'> }): string {
   const configurado = process.env.NEXT_PUBLIC_APP_URL
 
   if (process.env.NODE_ENV === 'production') {
