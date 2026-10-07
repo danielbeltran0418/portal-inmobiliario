@@ -3,6 +3,7 @@ import { crearClienteAdmin } from '@/lib/supabase/cliente-admin';
 import { construirSystemPrompt, DatosFichaPropiedad, lugarDeBarrio } from './prompts';
 import { ejecutarInferenciaIA } from './cliente';
 import { HERRAMIENTAS_IA, MensajeHistorial } from './tipos';
+import { MENSAJE_CONCURRENCIA } from './limites';
 
 export interface ResultadoDespacho {
   conversacionId: string;
@@ -84,6 +85,26 @@ export async function procesarLeadIndividual(leadId: string): Promise<ResultadoD
     tokens_salida: 0,
     modelo: 'usuario',
   });
+
+  // 4b. Limite de 3 conversaciones activas en 24 h (migracion 20261010000100):
+  // la cuarta se crea igual -- el lead ya le llego al vendedor --, pero no se
+  // paga una inferencia para una conversacion que no podria continuar.
+  const { data: excede } = await admin.rpc('conversacion_excede_concurrencia', {
+    p_conversacion_id: conv.id,
+  });
+  if (excede === true) {
+    await admin.from('mensajes_ia').insert({
+      conversacion_id: conv.id,
+      comprador_id: lead.comprador_id,
+      vendedor_id: lead.vendedor_id,
+      emisor: 'agente_ia',
+      contenido: MENSAJE_CONCURRENCIA,
+      tokens_entrada: 0,
+      tokens_salida: 0,
+      modelo: 'sistema',
+    });
+    return { conversacionId: conv.id, respuestaAgente: MENSAJE_CONCURRENCIA };
+  }
 
   // 5. Inferencia inicial de atencion con GPT-5.6 Luna
   const prop = (lead.propiedades as unknown) as {

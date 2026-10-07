@@ -25,6 +25,7 @@ vi.mock('@/lib/supabase/cliente-admin', () => ({
 
 vi.mock('@/lib/ia/limites', () => ({
   registrarMensajeComprador: (...args: unknown[]) => mockVerificarLimites(...args),
+  MENSAJE_CONCURRENCIA: 'Ya tienes 3 conversaciones activas con el asistente en las últimas 24 horas.',
 }))
 
 vi.mock('@/lib/ia/cliente', () => ({
@@ -180,6 +181,22 @@ describe('Chat Interactivo del Comprador IA', () => {
       expect(mockVerificarLimites).toHaveBeenCalledWith('conv-1', 'comprador-1', '¿Tiene parqueadero?')
       const emisores = insert.mock.calls.map(([fila]) => (fila as { emisor: string }).emisor)
       expect(emisores).not.toContain('comprador')
+    })
+
+    it('7. con la cuarta conversacion en pausa explica el motivo, no "espera un momento"', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'comprador-1' } } })
+      mockFrom.mockReturnValue({
+        select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({
+          data: { id: 'conv-4', comprador_id: 'comprador-1', vendedor_id: 'vendedor-1' }, error: null,
+        }) }) }) }),
+      })
+      const err = Object.assign(new Error('x'), { codigo: 'IA_CONCURRENCIA', status: 429 })
+      mockVerificarLimites.mockRejectedValue(err)
+
+      const res = await enviarMensajeComprador('conv-4', 'Hola')
+      expect(res.ok).toBe(false)
+      expect(res.codigo).toBe('IA_CONCURRENCIA')
+      expect(res.error).toMatch(/3 conversaciones activas/)
     })
   })
 })
