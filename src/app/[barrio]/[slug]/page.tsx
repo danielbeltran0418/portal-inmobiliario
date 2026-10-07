@@ -1,7 +1,7 @@
+import { GaleriaFicha } from '@/components/galeria-ficha'
 import { BotonFavorito } from '@/components/comprador/BotonFavorito'
 import { cache } from 'react'
 import { metadatosFicha, datosFicha, serializarJsonLd } from '@/lib/catalogo/seo'
-import Image from 'next/image'
 import Link from 'next/link'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
@@ -89,7 +89,8 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
     <Link href={`/${barrio.slug}`} className="inline-flex items-center gap-2 text-sm font-semibold text-tinta-suave transition-colors hover:text-marca">
       <span aria-hidden="true">←</span> Volver a propiedades de {barrio.nombre}
     </Link>
-    <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+    <div className="mt-6"><GaleriaFicha fotos={fotos} titulo={p.titulo} /></div>
+    <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
       <div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -102,15 +103,15 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
           </div>
           {sesion.hayUsuario && <BotonFavorito propiedadId={p.id} inicialEsFavorito={esFavorito} mostrarTexto />}
         </div>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">{fotos.map(f => <Image key={f.id} src={`/imagen/${f.id}`} alt={f.alt_text} width={800} height={600} unoptimized className="aspect-[4/3] w-full rounded-xl border border-linea object-cover shadow-xs" />)}</div>
         <section className="mt-10 border-t border-linea pt-8">
+          <dl className="mb-8 grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-3">
+            {p.habitaciones != null && <div className="rounded-xl border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Habitaciones</dt><dd className="mt-1 font-titulo text-2xl font-bold text-tinta">{p.habitaciones}</dd></div>}
+            {p.banos != null && <div className="rounded-xl border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Baños</dt><dd className="mt-1 font-titulo text-2xl font-bold text-tinta">{p.banos}</dd></div>}
+            {p.area_m2 != null && <div className="rounded-xl border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Área</dt><dd className="mt-1 font-titulo text-2xl font-bold text-tinta">{p.area_m2} m²</dd></div>}
+          </dl>
           <h2 className="font-titulo text-xl font-bold text-tinta">Acerca de esta propiedad</h2>
           <p className="mt-4 whitespace-pre-wrap break-words leading-relaxed text-tinta-suave">{p.descripcion}</p>
-          <dl className="mt-7 grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-3">
-            {p.habitaciones != null && <div className="rounded-lg border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Habitaciones</dt><dd className="mt-1 text-lg font-bold text-tinta">{p.habitaciones}</dd></div>}
-            {p.banos != null && <div className="rounded-lg border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Baños</dt><dd className="mt-1 text-lg font-bold text-tinta">{p.banos}</dd></div>}
-            {p.area_m2 != null && <div className="rounded-lg border border-linea bg-superficie p-4"><dt className="text-xs text-tinta-tenue">Área</dt><dd className="mt-1 text-lg font-bold text-tinta">{p.area_m2} m²</dd></div>}
-          </dl>
+
         </section>
       </div>
       <aside className="lg:sticky lg:top-24">
