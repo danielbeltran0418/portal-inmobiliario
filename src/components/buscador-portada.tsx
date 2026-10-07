@@ -4,8 +4,8 @@ const CAMPO =
   'h-12 w-full rounded-xl border border-linea bg-fondo px-4 text-base font-medium text-tinta focus-visible:border-marca focus-visible:outline-2 focus-visible:outline-marca/40'
 
 /**
- * Buscador del hero de la portada (diseño de Figma Make): operacion y barrio en
- * una sola fila. Envia por GET a /buscar, que valida y redirige al catalogo del
+ * Buscador del hero de la portada (diseño de Figma Make): operacion, palabras
+ * clave y barrio en una sola fila. Envia por GET a /buscar, que valida y redirige al catalogo del
  * barrio (src/app/buscar/route.ts); tipo y precio se filtran ya alli. Sin
  * barrios no se pinta: un formulario que no puede buscar nada solo confunde.
  *
@@ -29,10 +29,22 @@ export function BuscadorPortada({ barrios }: { barrios: { nombre: string; slug: 
         <option value="arriendo">Arriendo</option>
       </select>
 
+      <label htmlFor="buscador-texto" className="sr-only">
+        Palabras clave
+      </label>
+      <input
+        id="buscador-texto"
+        name="q"
+        type="search"
+        maxLength={60}
+        placeholder="Balcón, piscina, cerca al parque…"
+        className={`${CAMPO} sm:flex-1`}
+      />
+
       <label htmlFor="buscador-barrio" className="sr-only">
         Barrio
       </label>
-      <select id="buscador-barrio" name="barrio" required className={`${CAMPO} sm:flex-1`}>
+      <select id="buscador-barrio" name="barrio" required className={`${CAMPO} sm:w-44`}>
         {barrios.map((barrio) => (
           <option key={barrio.slug} value={barrio.slug}>
             {barrio.nombre}

@@ -39,4 +39,11 @@ describe('consulta publica del catalogo', () => {
     await expect(listarPropiedadesPublicas(db, 'id', { pagina: Number.MAX_SAFE_INTEGER })).rejects.toThrow()
     expect(q.range).not.toHaveBeenCalled()
   })
+  it('el texto libre busca en titulo y descripcion, entre comillas', async () => {
+    const { db, q } = cliente()
+    const or = vi.fn().mockReturnValue(q)
+    Object.assign(q, { or })
+    await listarPropiedadesPublicas(db, 'barrio-id', { pagina: 1, texto: 'balcón vista' })
+    expect(or).toHaveBeenCalledWith('titulo.ilike."*balcón vista*",descripcion.ilike."*balcón vista*"')
+  })
 })

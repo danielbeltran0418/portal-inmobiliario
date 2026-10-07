@@ -42,6 +42,21 @@ test.afterAll(async () => {
   }
   if (usuario) await admin.auth.admin.deleteUser(usuario)
 })
+test('palabras clave: encuentra la casa por su titulo y no por un texto ajeno', async ({ page }) => {
+  const marca = titulo.split(' ').at(-1)!
+  await page.goto(`/${barrio.slug}`)
+  await page.getByLabel('Palabras clave').fill(marca)
+  await page.getByRole('button', { name: 'Filtrar', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`q=${marca}`))
+  await expect(page.getByRole('link', { name: new RegExp(titulo) })).toBeVisible()
+
+  // Busca tambien en la descripcion.
+  await page.goto(`/${barrio.slug}?q=${encodeURIComponent('luminosa para conocer')}`)
+  await expect(page.getByRole('link', { name: new RegExp(titulo) })).toBeVisible()
+
+  await page.goto(`/${barrio.slug}?q=zzqqnoexiste`)
+  await expect(page.getByRole('link', { name: new RegExp(titulo) })).toHaveCount(0)
+})
 test('visitante explora barrio, filtra, abre ficha y ve la foto sin dirección exacta', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('link', { name: barrio.nombre, exact: true }).click()

@@ -3,7 +3,7 @@ import { leerFiltros } from '@/lib/catalogo/filtros'
 /**
  * Puente del buscador de la portada: el catalogo de un barrio vive en
  * /{barrio}, y un formulario GET no puede poner un campo en la ruta. Esta ruta
- * recibe ?barrio=&operacion=&tipo=&precio_max=, valida y redirige.
+ * recibe ?barrio=&operacion=&tipo=&precio_max=&q=, valida y redirige.
  *
  * La redireccion es RELATIVA y el barrio solo puede ser un slug (letras
  * minusculas, digitos y guiones): nada que venga del cliente puede producir una
@@ -27,6 +27,7 @@ export function GET(peticion: Request): Response {
     tipo: parametros.get('tipo') ?? undefined,
     precio_min: parametros.get('precio_min') ?? undefined,
     precio_max: parametros.get('precio_max') ?? undefined,
+    q: parametros.get('q') ?? undefined,
   })
 
   const consulta = new URLSearchParams()
@@ -34,6 +35,7 @@ export function GET(peticion: Request): Response {
   if (filtros.tipo) consulta.set('tipo', filtros.tipo)
   if (filtros.precioMin !== undefined) consulta.set('precio_min', String(filtros.precioMin))
   if (filtros.precioMax !== undefined) consulta.set('precio_max', String(filtros.precioMax))
+  if (filtros.texto) consulta.set('q', filtros.texto)
 
   const texto = consulta.toString()
   return redirigir(texto ? `/${barrio}?${texto}` : `/${barrio}`)
