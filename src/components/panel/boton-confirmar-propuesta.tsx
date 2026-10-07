@@ -27,7 +27,7 @@ export function BotonConfirmarPropuesta({ conversacionId }: Props) {
 
   if (confirmada) {
     return (
-      <span className="inline-flex items-center text-sm font-medium text-emerald-600 dark:text-emerald-400" data-testid="confirmacion-exitosa">
+      <span className="inline-flex items-center text-sm font-medium text-exito" data-testid="confirmacion-exitosa">
         ✓ Visita confirmada
       </span>
     )
@@ -41,7 +41,7 @@ export function BotonConfirmarPropuesta({ conversacionId }: Props) {
         disabled={isPending}
         aria-busy={isPending}
         data-testid="boton-confirmar-propuesta"
-        className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-50"
+        className="inline-flex items-center justify-center rounded-md bg-exito px-3 py-1.5 text-xs font-semibold text-marca-contraste shadow-sm hover:bg-exito/90 disabled:opacity-50"
       >
         {isPending ? (
           <span className="flex items-center gap-1.5" data-testid="spinner-carga">
@@ -55,7 +55,7 @@ export function BotonConfirmarPropuesta({ conversacionId }: Props) {
           'Aprobar visita en 1 clic'
         )}
       </button>
-      {error && <span className="text-xs text-rose-600" role="alert">{error}</span>}
+      {error && <span className="text-xs text-peligro" role="alert">{error}</span>}
     </div>
   )
 }

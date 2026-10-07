@@ -30,7 +30,7 @@ export function TarjetaBusquedaGuardada({ busqueda }: { busqueda: BusquedaGuarda
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-lg text-tinta">{busqueda.nombre}</h3>
           {busqueda.notificaciones_activas && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900/60">
+            <span className="inline-flex items-center gap-1 rounded-full bg-marca-suave px-2 py-0.5 text-xs font-medium text-marca border border-marca/30">
               🔔 Notificaciones activas
             </span>
           )}
@@ -68,7 +68,7 @@ export function TarjetaBusquedaGuardada({ busqueda }: { busqueda: BusquedaGuarda
           type="button"
           onClick={handleEliminar}
           disabled={isPending}
-          className="px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+          className="px-3 py-1.5 text-sm text-peligro hover:bg-peligro-suave rounded-lg transition-colors"
           aria-label="Eliminar búsqueda"
         >
           {isPending ? 'Borrando...' : 'Eliminar'}

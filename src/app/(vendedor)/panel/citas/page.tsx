@@ -35,7 +35,7 @@ export default async function PaginaCitasVendedor() {
       <h1 className="mt-2 font-titulo text-3xl font-semibold text-tinta">Visitas</h1>
 
       {propuestas.length > 0 && (
-        <section className="mt-8 rounded-lg border-2 border-emerald-500/30 bg-emerald-500/5 p-6" data-testid="seccion-citas-propuestas">
+        <section className="mt-8 rounded-lg border-2 border-exito/30 bg-exito/5 p-6" data-testid="seccion-citas-propuestas">
           <h2 className="text-xl font-semibold text-tinta">Propuestas pendientes de confirmación</h2>
           <p className="mt-1 text-sm text-tinta-suave">
             El asistente virtual coordinó estas visitas con los compradores y están listas para tu confirmación en 1 clic.

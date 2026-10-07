@@ -29,7 +29,7 @@ export function AccionesCita(
         Cancelar
       </button>
       {tardia && (
-        <span className="w-full text-sm text-amber-700">
+        <span className="w-full text-sm text-aviso">
           Faltan menos de 8 horas: si cancelas o mueves la visita ahora se registra una falta
           (3 faltas en 30 días bloquean tus citas durante 7 días).
         </span>

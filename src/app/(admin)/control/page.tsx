@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Control del sistema | Portal Inmobiliario',
-  description: 'Métricas y moderación del Portal Inmobiliario de Barranquilla.',
+  description: 'Métricas y moderación del Portal Inmobiliario.',
   robots: {
     index: false,
     follow: false,

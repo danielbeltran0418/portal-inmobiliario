@@ -1,6 +1,6 @@
 import 'server-only';
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin';
-import { construirSystemPrompt, DatosFichaPropiedad } from './prompts';
+import { construirSystemPrompt, DatosFichaPropiedad, lugarDeBarrio } from './prompts';
 import { ejecutarInferenciaIA } from './cliente';
 import { HERRAMIENTAS_IA, MensajeHistorial } from './tipos';
 
@@ -44,7 +44,7 @@ export async function procesarLeadIndividual(leadId: string): Promise<ResultadoD
         banos,
         area_m2,
         descripcion,
-        barrio:barrios(nombre)
+        barrio:barrios(nombre, ciudad)
       )
     `)
     .eq('id', leadId)
@@ -96,11 +96,11 @@ export async function procesarLeadIndividual(leadId: string): Promise<ResultadoD
     banos?: number | null;
     area_m2?: number | null;
     descripcion?: string | null;
-    barrio?: { nombre: string } | null;
+    barrio?: { nombre: string; ciudad?: string | null } | null;
   };
 
   const ficha: DatosFichaPropiedad = {
-    titulo: prop?.titulo ?? 'Inmueble en Bogotá',
+    titulo: prop?.titulo ?? 'Inmueble',
     tipo_inmueble: prop?.tipo_inmueble ?? 'apartamento',
     operacion: prop?.operacion ?? 'venta',
     precio: prop?.precio ?? 0,
@@ -109,7 +109,7 @@ export async function procesarLeadIndividual(leadId: string): Promise<ResultadoD
     banos: prop?.banos,
     area_m2: prop?.area_m2,
     descripcion: prop?.descripcion,
-    barrio: prop?.barrio?.nombre,
+    barrio: lugarDeBarrio(prop?.barrio),
   };
 
   const systemPrompt = construirSystemPrompt(ficha);

@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { Home, Info, MessageCircle, ShieldAlert, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   Dialog,
@@ -45,11 +43,6 @@ export function Aviso({ variante = 'aviso', titulo, children, className }: { var
 export function BurbujaChat({ rol, children }: { rol: 'comprador' | 'asistente'; children: ReactNode }) {
   const comprador = rol === 'comprador'
   return <div className={cn('flex gap-3', comprador ? 'justify-end' : 'justify-start')}><div className={cn('max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed', comprador ? 'rounded-br-sm bg-marca text-marca-contraste' : 'rounded-bl-sm border border-linea bg-superficie text-tinta')}><span className="sr-only">{comprador ? 'Tú' : 'Asistente'}: </span>{children}</div></div>
-}
-
-export function TarjetaInmueble({ href, titulo, precio, operacion, barrio, imagen, alt = '', habitaciones, banos, area, destacada = false }: { href: string; titulo: string; precio: number; operacion: string; barrio: string; imagen?: string; alt?: string; habitaciones?: number | null; banos?: number | null; area?: number | null; destacada?: boolean }) {
-  const precioTexto = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(precio)
-  return <Card className="tarjeta-interactiva group overflow-hidden border-linea bg-superficie p-0"><Link href={href} className="block"><div className="relative aspect-[4/3] overflow-hidden bg-superficie-alt">{imagen ? <Image src={imagen} alt={alt || titulo} fill unoptimized className="object-cover transition-transform duration-300 group-hover:scale-105" /> : <div className="flex size-full items-center justify-center text-marca/50"><Home aria-hidden="true" className="size-12" /></div>}{destacada && <Badge className="absolute left-3 top-3 bg-realce text-white">Destacada</Badge>}<Badge className="absolute bottom-3 left-3 bg-superficie/90 text-tinta">{operacion}</Badge></div><CardHeader className="gap-1 pb-2"><CardTitle className="line-clamp-2 text-lg">{titulo}</CardTitle><p className="text-sm text-tinta-suave">{barrio}, Barranquilla</p></CardHeader><CardContent className="pb-4"><p className="cifra text-lg font-bold text-marca">{precioTexto}</p>{(habitaciones != null || banos != null || area != null) && <p className="mt-2 text-xs text-tinta-suave">{[habitaciones != null && `${habitaciones} hab.`, banos != null && `${banos} baños`, area != null && `${area} m²`].filter(Boolean).join(' · ')}</p>}</CardContent></Link><CardFooter className="border-t border-linea-suave py-3 text-xs font-semibold text-marca">Ver detalles</CardFooter></Card>
 }
 
 export function EstadoVacio({ titulo, descripcion, children, icono: Icono = Home }: { titulo: string; descripcion: string; children?: ReactNode; icono?: IconoLucide }) {
