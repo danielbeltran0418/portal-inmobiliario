@@ -176,3 +176,62 @@ export async function verificarLimitesConversacion(
     );
   }
 }
+
+/**
+ * CN-013: comprueba los limites e inserta el mensaje del comprador en UNA
+ * transaccion (registrar_mensaje_comprador_ia, migracion 20261009000100), con
+ * la fila de la conversacion bloqueada. verificarLimitesConversacion + insert
+ * por separado dejaban que una rafaga de envios simultaneos pasara entera.
+ * Lanza ErrorLimiteAbuso con los mismos codigos que verificarLimitesConversacion.
+ */
+export async function registrarMensajeComprador(
+  conversacionId: string,
+  compradorId: string,
+  contenido: string
+): Promise<void> {
+  const { data, error } = await crearClienteAdmin().rpc('registrar_mensaje_comprador_ia', {
+    p_conversacion_id: conversacionId,
+    p_comprador_id: compradorId,
+    p_contenido: contenido,
+  });
+  if (error) {
+    throw new Error(`Error al registrar el mensaje: ${error.message}`);
+  }
+
+  switch (data as string) {
+    case 'ok':
+      return;
+    case 'no_encontrada':
+      throw new ErrorIA('IA001', `Conversación no encontrada: ${conversacionId}`);
+    case 'cerrada':
+      throw new ErrorLimiteAbuso(
+        'IA_TOPE_TURNOS',
+        'La conversación ya se encuentra cerrada y no admite más mensajes.',
+        400
+      );
+    case 'tope_turnos':
+      throw new ErrorLimiteAbuso('IA_TOPE_TURNOS', MENSAJE_DESPEDIDA_TOPE_TURNOS, 400);
+    case 'tope_tokens':
+      throw new ErrorLimiteAbuso(
+        'IA_TOPE_TOKENS',
+        'Presupuesto máximo de tokens superado para esta conversación.',
+        400
+      );
+    case 'rate_limit':
+      throw new ErrorLimiteAbuso(
+        'IA_RATE_LIMIT',
+        'Demasiados mensajes en un minuto. Por favor espere antes de continuar.',
+        429,
+        60
+      );
+    case 'concurrencia':
+      throw new ErrorLimiteAbuso(
+        'IA_CONCURRENCIA',
+        'Límite de conversaciones activas simultáneas alcanzado en 24 horas (máximo 3).',
+        429,
+        86400
+      );
+    default:
+      throw new Error(`Resultado inesperado de registrar_mensaje_comprador_ia: ${String(data)}`);
+  }
+}
