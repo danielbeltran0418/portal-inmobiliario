@@ -353,7 +353,7 @@ describe('actualizarPropiedad', () => {
     expect(upsertMock).toHaveBeenCalledTimes(1)
     const payloadUbicacion = upsertMock.mock.calls[0]![0] as Record<string, unknown>
     const opcionesUbicacion = upsertMock.mock.calls[0]![1] as Record<string, unknown>
-    expect(payloadUbicacion).toEqual({ propiedad_id: datosValidos.id, direccion: null })
+    expect(payloadUbicacion).toEqual({ propiedad_id: datosValidos.id, direccion: null, latitud: null, longitud: null })
     expect(opcionesUbicacion).toEqual({ onConflict: 'propiedad_id' })
   })
 
@@ -369,7 +369,23 @@ describe('actualizarPropiedad', () => {
 
     expect(upsertMock).toHaveBeenCalledTimes(1)
     const payloadUbicacion = upsertMock.mock.calls[0]![0] as Record<string, unknown>
-    expect(payloadUbicacion).toEqual({ propiedad_id: datosValidos.id, direccion: 'Calle 72 # 45-10' })
+    expect(payloadUbicacion).toEqual({ propiedad_id: datosValidos.id, direccion: 'Calle 72 # 45-10', latitud: null, longitud: null })
+  })
+
+  it('[mapa] las coordenadas pegadas se guardan como latitud y longitud en la tabla privada', async () => {
+    const r = await actualizarPropiedad({}, formulario({ ...datosValidos, coordenadas: '10.9878, -74.7889' }))
+    expect(r).toEqual({})
+    const payload = updateMock.mock.calls[0]![0] as Record<string, unknown>
+    expect(payload).not.toHaveProperty('coordenadas')
+    expect(payload).not.toHaveProperty('latitud')
+    const payloadUbicacion = upsertMock.mock.calls[0]![0] as Record<string, unknown>
+    expect(payloadUbicacion).toMatchObject({ latitud: 10.9878, longitud: -74.7889 })
+  })
+
+  it('[mapa] unas coordenadas fuera de Colombia o mal pegadas se rechazan sin guardar', async () => {
+    const r = await actualizarPropiedad({}, formulario({ ...datosValidos, coordenadas: '40.41, -3.70' }))
+    expect(r.errores?.coordenadas).toMatch(/Colombia/)
+    expect(updateMock).not.toHaveBeenCalled()
   })
 
   // Hallazgo Importante de la revision final de rama: cuando el UPDATE de

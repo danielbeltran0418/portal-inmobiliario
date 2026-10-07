@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { leerCoordenadas } from '@/lib/mapa/coordenadas'
 
 export const esquemaRegistro = z.object({
   nombre: z.string().trim().min(2, 'Escribe tu nombre').max(80),
@@ -91,6 +92,13 @@ export const esquemaPropiedad = z.object({
   area_m2: opcional(z.coerce.number().positive().max(100000)),
   barrio_id: opcional(z.string().uuid('Elige un barrio')),
   direccion: opcional(z.string().trim().max(200)),
+  // "lat, lng" tal como lo copia Google Maps. Privado: el publico solo ve la
+  // zona aproximada (zona_aproximada_propiedad, 20261011000100).
+  coordenadas: opcional(
+    z.string().trim().max(60).refine((texto) => leerCoordenadas(texto) !== null, {
+      message: 'Pega las coordenadas como "10.9878, -74.7889" (un punto dentro de Colombia)',
+    }),
+  ),
   // Campos colombianos (migracion 20261012000100): mismos limites que los CHECK.
   estrato: opcional(z.coerce.number().int('El estrato es un numero del 1 al 6').min(1, 'El estrato va del 1 al 6').max(6, 'El estrato va del 1 al 6')),
   administracion: opcional(z.coerce.number().min(0, 'La administracion no puede ser negativa').max(99999999, 'Valor de administracion demasiado alto')),

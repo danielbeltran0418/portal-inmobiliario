@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { leerCoordenadas } from '@/lib/mapa/coordenadas'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin'
 import { esquemaPropiedad, esquemaPropiedadNueva, type DatosPropiedad } from '@/lib/validacion/esquemas'
@@ -91,7 +92,7 @@ export async function crearBorrador(
 // upsert (ver actualizarPropiedad). El mismo vaciado-a-NULL explicito que
 // corrige este arreglo para los cinco de abajo se replica ahi con
 // `direccion ?? null`.
-const CAMPOS_OPCIONALES_ANULABLES: readonly (keyof Omit<DatosPropiedad, 'direccion'>)[] = [
+const CAMPOS_OPCIONALES_ANULABLES: readonly (keyof Omit<DatosPropiedad, 'direccion' | 'coordenadas'>)[] = [
   'precio', 'habitaciones', 'banos', 'area_m2', 'barrio_id',
   'estrato', 'administracion', 'parqueaderos', 'anio_construccion', 'piso',
 ]
@@ -115,7 +116,7 @@ const CAMPOS_OPCIONALES_ANULABLES: readonly (keyof Omit<DatosPropiedad, 'direcci
  * opcionales por un `null` EXPLICITO, que SI viaja en el JSON y SI le dice a
  * PostgREST "pon esta columna a NULL".
  */
-function paraElUpdate(datos: Omit<DatosPropiedad, 'direccion'>): Record<string, unknown> {
+function paraElUpdate(datos: Omit<DatosPropiedad, 'direccion' | 'coordenadas'>): Record<string, unknown> {
   const payload: Record<string, unknown> = { ...datos }
   for (const campo of CAMPOS_OPCIONALES_ANULABLES) {
     if (payload[campo] === undefined) payload[campo] = null
@@ -146,6 +147,7 @@ export async function actualizarPropiedad(
     area_m2: formData.get('area_m2'),
     barrio_id: formData.get('barrio_id'),
     direccion: formData.get('direccion'),
+    coordenadas: formData.get('coordenadas'),
     estrato: formData.get('estrato'),
     administracion: formData.get('administracion'),
     parqueaderos: formData.get('parqueaderos'),
@@ -166,7 +168,8 @@ export async function actualizarPropiedad(
   // direccion se separa del resto: desde 20260914000100 vive en
   // propiedades_ubicacion, no en propiedades (cierre de la fuga que dejaba
   // leer la direccion exacta a cualquier autenticado -- ver la migracion).
-  const { direccion, ...datosPropiedad } = analisis.data
+  const { direccion, coordenadas, ...datosPropiedad } = analisis.data
+  const punto = coordenadas ? leerCoordenadas(coordenadas) : null
 
   // El slug NO se actualiza nunca, aunque cambie el titulo: un slug que muta
   // rompe los enlaces ya publicados. analisis.data sale de esquemaPropiedad,
@@ -210,7 +213,10 @@ export async function actualizarPropiedad(
   // las dos escrituras son idempotentes.
   const { error: errorUbicacion } = await supabase
     .from('propiedades_ubicacion')
-    .upsert({ propiedad_id: id, direccion: direccion ?? null }, { onConflict: 'propiedad_id' })
+    .upsert(
+      { propiedad_id: id, direccion: direccion ?? null, latitud: punto?.latitud ?? null, longitud: punto?.longitud ?? null },
+      { onConflict: 'propiedad_id' },
+    )
 
   if (errorUbicacion) {
     mapearError(errorUbicacion)

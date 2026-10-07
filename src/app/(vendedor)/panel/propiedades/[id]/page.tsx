@@ -119,7 +119,7 @@ export default async function PaginaEditarPropiedad({
     // barrios_lectura_publica ya exige activo = true; se repite aqui para no
     // depender solo de RLS en un desplegable que el vendedor va a usar.
     supabase.from('barrios').select('id, nombre').eq('activo', true).order('nombre'),
-    supabase.from('propiedades_ubicacion').select('direccion').eq('propiedad_id', id).maybeSingle(),
+    supabase.from('propiedades_ubicacion').select('direccion, latitud, longitud').eq('propiedad_id', id).maybeSingle(),
   ])
 
   if (!propiedad) notFound()
@@ -170,6 +170,10 @@ export default async function PaginaEditarPropiedad({
     anio_construccion: p.anio_construccion ?? null,
     piso: p.piso ?? null,
     direccion: ubicacion?.direccion ?? null,
+    coordenadas:
+      ubicacion?.latitud != null && ubicacion?.longitud != null
+        ? `${ubicacion.latitud}, ${ubicacion.longitud}`
+        : null,
   }
 
   const TARJETA = 'rounded-2xl border border-linea bg-superficie p-6'

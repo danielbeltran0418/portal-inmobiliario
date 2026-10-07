@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { Bath, BedDouble, Building2, CalendarDays, Car, Layers, MapPin, Maximize2, Receipt } from 'lucide-react'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
+import { MapaZona } from '@/components/mapa-zona'
+import { mapaDisponible } from '@/lib/mapa/google'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { sesionActual } from '@/lib/auth/sesion'
 import { FormularioLead } from './formulario-lead'
@@ -25,6 +27,19 @@ export async function generateMetadata({ params }: { params: Promise<{ barrio: s
   if (!barrio) notFound()
   return metadatosFicha(p, barrio)
 }
+/** Centro aproximado de la zona (migracion 20261011000100), o null. */
+async function cargarZona(propiedadId: string): Promise<{ latitud: number; longitud: number } | null> {
+  // Sin clave de Google no hay imagen que mostrar: ni se consulta la zona.
+  if (!mapaDisponible()) return null
+  try {
+    const { data, error } = await crearClientePublico().rpc('zona_aproximada_propiedad', { p_propiedad_id: propiedadId })
+    const fila = (data as { latitud: number; longitud: number }[] | null)?.[0]
+    return !error && fila && Number.isFinite(fila.latitud) && Number.isFinite(fila.longitud) ? fila : null
+  } catch {
+    return null
+  }
+}
+
 export default async function FichaPublica({ params }: { params: Promise<{ barrio: string; slug: string }> }) {
   const ruta = await params
   // La sesion no depende de la ficha: se lanza a la vez. Si la ficha no
@@ -34,6 +49,9 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
   const sesionPendiente = sesionActual()
   sesionPendiente.catch(() => {})
   const p = await cargarFicha(ruta.slug)
+  // Lectura publica e independiente de la sesion: se lanza ya. Nunca rompe la
+  // ficha: sin coordenadas o con fallo, simplemente no hay mapa.
+  const zonaPendiente = cargarZona(p.id)
   const barrio = Array.isArray(p.barrios) ? p.barrios[0] : p.barrios
   if (!barrio) notFound()
   if (barrio.slug !== ruta.barrio) permanentRedirect(`/${barrio.slug}/${p.slug}`)
@@ -42,7 +60,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
   // La ficha es publica y esta cacheada por SP1; esta parte depende de la
   // sesion, asi que se resuelve en cada peticion. El layout raiz ya declara
   // force-dynamic, de modo que no cuesta nada extra.
-  const sesion = await sesionPendiente
+  const [sesion, zona] = await Promise.all([sesionPendiente, zonaPendiente])
   const rutaFicha = `/${barrio.slug}/${p.slug}`
   // /mi-cuenta, donde vive el chat, es solo de compradores: a un vendedor que
   // mira la ficha de otro no se le ofrece un boton que lo mandaria a su panel.
@@ -142,17 +160,24 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
           <p className="whitespace-pre-wrap break-words leading-relaxed text-tinta-suave">{p.descripcion}</p>
         </section>
 
-        <div className="flex items-start gap-4 rounded-2xl bg-marca-suave p-5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-marca/10">
-            <MapPin aria-hidden="true" className="h-5 w-5 text-marca" strokeWidth={1.5} />
-          </span>
-          <div>
-            <h3 className="mb-0.5 font-medium text-marca">Barrio {barrio.nombre}</h3>
-            <p className="text-sm text-tinta-suave">
-              La dirección exacta se comparte 2 horas antes de la visita agendada, para proteger la privacidad del propietario.
-            </p>
+        {zona ? (
+          <section aria-labelledby="titulo-ubicacion">
+            <h2 id="titulo-ubicacion" className="mb-3 font-titulo text-xl font-semibold text-tinta">Ubicación</h2>
+            <MapaZona propiedadId={p.id} zona={zona} barrio={barrio.nombre} />
+          </section>
+        ) : (
+          <div className="flex items-start gap-4 rounded-2xl bg-marca-suave p-5">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-marca/10">
+              <MapPin aria-hidden="true" className="h-5 w-5 text-marca" strokeWidth={1.5} />
+            </span>
+            <div>
+              <h3 className="mb-0.5 font-medium text-marca">Barrio {barrio.nombre}</h3>
+              <p className="text-sm text-tinta-suave">
+                La dirección exacta se comparte 2 horas antes de la visita agendada, para proteger la privacidad del propietario.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:w-80 xl:w-96">
