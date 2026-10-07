@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { SendHorizontal, Sparkles } from 'lucide-react'
 import { enviarMensajeComprador } from '@/app/(comprador)/mi-cuenta/solicitudes/acciones-ia'
 
 export interface MensajeChat {
@@ -69,26 +70,33 @@ export function ChatLeadIA({
   }
 
   return (
-    <div className="mt-3" data-testid="chat-lead-ia">
+    <div className="mt-4" data-testid="chat-lead-ia">
       <button
         type="button"
         onClick={() => setAbierto(!abierto)}
         aria-expanded={abierto}
         data-testid="boton-toggle-chat"
-        className="text-xs font-medium text-marca hover:underline inline-flex items-center gap-1"
+        className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-marca/40 px-3 text-sm font-semibold text-marca transition-colors hover:bg-marca-suave"
       >
+        <Sparkles aria-hidden="true" className="h-4 w-4" strokeWidth={1.75} />
         <span>{abierto ? 'Ocultar chat con el asistente' : 'Consultar dudas con el asistente virtual'}</span>
-        <span className="rounded-full bg-marca/10 px-1.5 py-0.5 text-[10px] text-marca">
+        <span className="rounded-full bg-marca-suave px-2 py-0.5 text-xs text-marca">
           {mensajes.length} msgs
         </span>
       </button>
 
       {abierto && (
-        <div className="mt-3 rounded-lg border border-linea bg-superficie p-4" data-testid="cuerpo-chat">
-          <div className="mb-3 flex items-center justify-between border-b border-linea pb-2 text-xs text-tinta-suave">
-            <span>Asistente Virtual IA</span>
+        <div className="mt-3 flex flex-col overflow-hidden rounded-2xl border border-linea bg-superficie" data-testid="cuerpo-chat">
+          <div className="flex items-center gap-3 border-b border-linea px-5 py-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-marca">
+              <Sparkles aria-hidden="true" className="h-4 w-4 text-marca-contraste" strokeWidth={2} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-tinta">Asistente IA</p>
+              <p className="text-xs text-tinta-suave">Responde dudas y propone horarios de visita</p>
+            </div>
             {franjaPropuesta && (
-              <span className="text-amber-600 font-medium" data-testid="badge-propuesta">
+              <span className="rounded-full bg-aviso-suave px-2.5 py-1 text-xs font-medium text-aviso" data-testid="badge-propuesta">
                 Cita propuesta en proceso
               </span>
             )}
@@ -96,8 +104,10 @@ export function ChatLeadIA({
 
           <div
             tabIndex={0}
+            role="log"
+            aria-live="polite"
             aria-label="Historial de mensajes"
-            className="max-h-64 space-y-2 overflow-y-auto pr-1"
+            className="max-h-80 space-y-4 overflow-y-auto p-5"
             data-testid="historial-mensajes"
           >
             {mensajes.map((m) => {
@@ -106,42 +116,45 @@ export function ChatLeadIA({
                 <div
                   key={m.id}
                   data-testid={'mensaje-' + m.emisor}
-                  className={'flex flex-col ' + (esComprador ? 'items-end' : 'items-start')}
+                  className={'flex ' + (esComprador ? 'justify-end' : 'items-end justify-start gap-2')}
                 >
-                  <span className="text-[10px] text-tinta-tenue mb-0.5">
-                    {esComprador ? 'Tú' : 'Asistente'}
-                  </span>
+                  {!esComprador && (
+                    <span aria-hidden="true" className="mb-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-marca">
+                      <Sparkles className="h-3 w-3 text-marca-contraste" strokeWidth={2} />
+                    </span>
+                  )}
                   <div
-                    className={'rounded-lg px-3 py-2 text-sm whitespace-pre-wrap max-w-[85%] ' + (
+                    className={'max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed ' + (
                       esComprador
-                        ? 'bg-marca text-white rounded-br-none'
-                        : 'bg-fondo border border-linea text-tinta rounded-bl-none'
+                        ? 'rounded-br-sm bg-marca text-marca-contraste'
+                        : 'rounded-bl-sm border border-linea bg-fondo text-tinta'
                     )}
                   >
+                    <span className="sr-only">{esComprador ? 'Tú: ' : 'Asistente: '}</span>
                     {m.contenido}
                   </div>
                 </div>
               )
             })}
             {isPending && (
-              <div className="flex items-center gap-1.5 text-xs text-tinta-tenue" data-testid="asistente-escribiendo">
-                <span className="animate-pulse">Asistente escribiendo...</span>
-              </div>
+              <p role="status" className="text-xs text-tinta-tenue" data-testid="asistente-escribiendo">
+                Asistente escribiendo…
+              </p>
             )}
           </div>
 
           {error && (
-            <div className="mt-2 text-xs text-rose-600" role="alert" data-testid="error-chat">
+            <div className="px-5 pb-2 text-xs text-peligro" role="alert" data-testid="error-chat">
               {error}
             </div>
           )}
 
           {limiteAlcanzado ? (
-            <p className="mt-3 text-xs text-tinta-suave italic border-t border-linea pt-2" data-testid="limite-turnos-alcanzado">
+            <p className="border-t border-linea px-5 py-3 text-xs text-tinta-suave" data-testid="limite-turnos-alcanzado">
               Has alcanzado el límite de 10 mensajes para esta consulta. Tu vendedor se pondrá en contacto pronto.
             </p>
           ) : (
-            <form onSubmit={handleSubmit} className="mt-3 flex gap-2 border-t border-linea pt-2">
+            <form onSubmit={handleSubmit} className="flex items-center gap-2 border-t border-linea px-4 py-3">
               <input
                 type="text"
                 value={texto}
@@ -151,15 +164,16 @@ export function ChatLeadIA({
                 disabled={isPending}
                 aria-label="Escribe tu mensaje"
                 data-testid="input-mensaje-chat"
-                className="flex-1 rounded-md border border-linea bg-fondo px-3 py-1.5 text-sm text-tinta focus:border-marca focus:outline-none"
+                className="min-w-0 flex-1 rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta placeholder:text-tinta-tenue focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
               />
               <button
                 type="submit"
                 disabled={isPending || !texto.trim()}
                 data-testid="boton-enviar-chat"
-                className="rounded-md bg-marca px-3 py-1.5 text-xs font-semibold text-white hover:bg-marca-fuerte disabled:opacity-50"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-marca text-marca-contraste transition-colors hover:bg-marca-fuerte disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Enviar
+                <SendHorizontal aria-hidden="true" className="h-4 w-4" strokeWidth={2} />
+                <span className="sr-only">Enviar</span>
               </button>
             </form>
           )}
