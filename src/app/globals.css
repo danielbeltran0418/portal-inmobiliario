@@ -175,9 +175,13 @@ h1, h2, h3, h4 {
               border-color 0.22s ease;
 }
 
-.tarjeta-interactiva:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px -6px color-mix(in srgb, var(--tinta) 8%, transparent);
+/* El tacto no tiene hover: el navegador lo simula y lo deja pegado tras el
+   primer toque. Solo donde el puntero puede de verdad pasar por encima. */
+@media (hover: hover) and (pointer: fine) {
+  .tarjeta-interactiva:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -6px color-mix(in srgb, var(--tinta) 8%, transparent);
+  }
 }
 
 .sombra-suave {
@@ -205,6 +209,37 @@ h1, h2, h3, h4 {
 
 .anim-pulso {
   animation: punto-pulso 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Capa de plataforma (movil). Fuera de @layer a proposito: debe ganar a las
+   utilidades de Tailwind (text-sm en un input) para que iOS no haga zoom. */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Los controles responden al instante (sin esperar un posible doble toque) y
+   su rotulo no se selecciona al mantener pulsado. El contenido SI se puede
+   seleccionar: no se toca body. */
+button,
+[role="button"],
+a {
+  touch-action: manipulation;
+}
+
+button,
+[role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

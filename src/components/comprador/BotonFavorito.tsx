@@ -41,7 +41,7 @@ export function BotonFavorito({
       type="button"
       onClick={handleToggle}
       disabled={isPending}
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-sm font-medium ${
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-[color,background-color,border-color,box-shadow,transform] active:scale-[0.97] text-sm font-medium ${
         esFavorito
           ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100 dark:bg-rose-950/30 dark:border-rose-900 dark:text-rose-400'
           : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300'

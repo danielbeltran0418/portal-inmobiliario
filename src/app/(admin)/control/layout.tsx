@@ -26,7 +26,7 @@ export default async function LayoutControl({
   }
 
   return (
-    <div className="min-h-screen bg-fondo">
+    <div className="min-h-dvh bg-fondo">
       <NavegacionAdmin />
       <div className="mx-auto max-w-6xl px-6 py-8">
         {children}
