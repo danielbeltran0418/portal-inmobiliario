@@ -7,7 +7,7 @@ import { MENSAJE_VERIFICACION_FALLIDA } from '@/lib/errores/mapear'
 export const metadata: Metadata = {
   title: 'Iniciar sesión | Portal Inmobiliario',
   description:
-    'Entra a tu cuenta del Portal Inmobiliario de Barranquilla para gestionar tus ' +
+    'Entra a tu cuenta del Portal Inmobiliario para gestionar tus ' +
     'publicaciones o tus búsquedas.',
 }
 

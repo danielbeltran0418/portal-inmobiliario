@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { sesionActual } from '@/lib/auth/sesion'
-import { estadoDeCabecera } from '@/lib/navegacion/enlaces'
+import { ENLACE_REGISTRO, estadoDeCabecera } from '@/lib/navegacion/enlaces'
 import { cerrarSesion } from './acciones-sesion'
 import { MenuMovil } from './ui/compuestos'
 
@@ -23,19 +23,16 @@ export async function Cabecera() {
   const { autenticado, enlaces } = estadoDeCabecera(await sesionActual())
 
   return (
-    <header className="sticky top-0 z-50 border-b border-linea/80 bg-superficie/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-linea bg-superficie/95 backdrop-blur-sm">
       <nav
         aria-label="Principal"
-        className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-3.5"
+        className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6"
       >
-        <Link
-          href="/"
-          className="group flex items-center gap-2.5 font-titulo text-xl font-semibold tracking-tight text-tinta transition-colors hover:text-marca"
-        >
-          {/* Isotipo arquitectónico representativo del portal */}
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-marca/10 text-marca transition-transform group-hover:scale-105">
+        <Link href="/" className="flex shrink-0 items-center gap-2">
+          {/* Isotipo sobre el verde de la marca, como en el diseño de Figma Make */}
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-marca text-marca-contraste">
             <svg
-              className="h-4.5 w-4.5"
+              className="h-4 w-4"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -48,15 +45,21 @@ export async function Cabecera() {
               <polyline points="9 21 9 12 15 12 15 21" />
             </svg>
           </span>
-          <span>{NOMBRE_DEL_SITIO}</span>
+          <span className="font-titulo text-lg leading-none font-semibold text-tinta">
+            Portal<span className="font-sans text-sm font-medium text-tinta-suave"> Inmobiliario</span>
+          </span>
         </Link>
 
-        <div className="hidden flex-wrap items-center gap-4 text-sm sm:gap-5 md:flex">
+        <div className="hidden items-center gap-2 md:flex">
           {enlaces.map((enlace) => (
             <Link
               key={enlace.destino}
               href={enlace.destino}
-              className="font-medium text-tinta-suave transition-colors hover:text-marca"
+              className={
+                enlace.destino === ENLACE_REGISTRO.destino
+                  ? 'rounded-lg bg-marca px-4 py-2 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte'
+                  : 'rounded-lg px-4 py-2 text-sm font-medium text-tinta-suave transition-colors hover:bg-superficie-alt hover:text-tinta'
+              }
             >
               {enlace.etiqueta}
             </Link>
@@ -70,7 +73,7 @@ export async function Cabecera() {
             <form action={cerrarSesion}>
               <button
                 type="submit"
-                className="cursor-pointer rounded-sm border border-linea/90 bg-superficie px-3 py-1.5 text-xs font-medium text-tinta-suave shadow-xs transition-colors hover:border-marca hover:bg-superficie-alt hover:text-marca"
+                className="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-tinta-suave transition-colors hover:bg-superficie-alt hover:text-tinta"
               >
                 Cerrar sesión
               </button>
