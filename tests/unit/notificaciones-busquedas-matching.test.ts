@@ -52,6 +52,10 @@ function tablaPropiedadesConstructor(propiedades: unknown[]) {
       filterCalls.push({ method: 'lte', column, value });
       return query;
     },
+    or: (value: string) => {
+      filterCalls.push({ method: 'or', column: '', value });
+      return query;
+    },
     then: (resolve: (v: { data: unknown[]; error: null }) => unknown) =>
       resolve({ data: propiedades, error: null }),
     _getFilterCalls: () => filterCalls,
@@ -221,5 +225,26 @@ describe('obtenerBusquedasParaNotificar', () => {
     const resultado = await obtenerBusquedasParaNotificar();
 
     expect(resultado).toHaveLength(0);
+  });
+
+  it('con palabras clave guardadas solo avisa de propiedades cuyo titulo o descripcion las contienen', async () => {
+    let propiedadesQuery: { _getFilterCalls: () => LlamadaFiltro[] } | undefined;
+    fromMock.mockImplementation((tabla: string) => {
+      if (tabla === 'busquedas_guardadas') return tablaBusquedas([{
+        id: 'busq-q', usuario_id: 'u', nombre: 'Con patio', filtros: { barrio: 'riomar', q: 'patio, (grande)*' },
+        ultima_notificacion_en: '2026-09-01T00:00:00Z', token_baja: 't',
+      }]);
+      if (tabla === 'barrios') return tablaBarrios('barrio-riomar-id');
+      if (tabla === 'propiedades') {
+        propiedadesQuery = tablaPropiedadesConstructor([]) as unknown as typeof propiedadesQuery;
+        return propiedadesQuery;
+      }
+      throw new Error(`tabla no mockeada: ${tabla}`);
+    });
+    await obtenerBusquedasParaNotificar();
+    // Se vuelve a sanear al leer: una fila vieja pudo guardarse sin pasar por el filtro.
+    expect(propiedadesQuery!._getFilterCalls()).toContainEqual({
+      method: 'or', column: '', value: 'titulo.ilike."*patio grande*",descripcion.ilike."*patio grande*"',
+    });
   });
 });

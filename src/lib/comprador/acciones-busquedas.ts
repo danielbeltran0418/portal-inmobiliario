@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor';
+import { normalizarFiltrosGuardados } from '@/lib/comprador/busquedas';
 
 const esquemaGuardarBusqueda = z.object({
   nombre: z.string().trim().min(1, 'El nombre es obligatorio').max(100, 'Máximo 100 caracteres'),
@@ -38,7 +39,7 @@ export async function guardarBusquedaAction(
     .insert({
       usuario_id: authData.user.id,
       nombre: parsed.data.nombre,
-      filtros: parsed.data.filtros,
+      filtros: normalizarFiltrosGuardados(parsed.data.filtros),
       notificaciones_activas: parsed.data.notificaciones,
     })
     .select('id')
