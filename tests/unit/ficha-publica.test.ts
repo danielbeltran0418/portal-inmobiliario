@@ -3,7 +3,8 @@ import { expect, it, vi, beforeEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 const resultado = vi.fn()
-vi.mock('@/lib/supabase/cliente-publico', () => ({ crearClientePublico: () => ({ from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: resultado }) }) }) }) }) }))
+const zonaRpc = vi.fn()
+vi.mock('@/lib/supabase/cliente-publico', () => ({ crearClientePublico: () => ({ rpc: zonaRpc, from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: resultado }) }) }) }) }) }))
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NOT_FOUND') }, permanentRedirect: (url: string) => { throw new Error(`REDIRECT:${url}`) } }))
 
 // La ficha ahora tambien lee la sesion (sesionActual, que pasa por
@@ -105,6 +106,7 @@ const PROPIEDAD = {
 }
 
 beforeEach(() => {
+  zonaRpc.mockReset().mockResolvedValue({ data: [], error: null })
   getUser.mockReset()
   getSession.mockReset().mockResolvedValue({ data: { session: null } })
   eqLeads.mockReset()
@@ -282,4 +284,25 @@ it('[diseño Figma Make] miga de pan hasta el barrio, descripcion y aviso de la 
   expect(html).toContain('La dirección exacta')
   // El portal es nacional: la ficha no fija una ciudad.
   expect(html).not.toContain('Barranquilla')
+})
+
+it('[mapa] con zona aproximada muestra el mapa del area y nunca pide el punto exacto', async () => {
+  resultado.mockResolvedValue({ data: PROPIEDAD, error: null })
+  getUser.mockResolvedValue({ data: { user: null } })
+  zonaRpc.mockResolvedValue({ data: [{ latitud: 10.9875, longitud: -74.8125 }], error: null })
+
+  const html = renderToStaticMarkup(await Ficha({ params }))
+  expect(zonaRpc).toHaveBeenCalledWith('zona_aproximada_propiedad', { p_propiedad_id: PROPIEDAD.id })
+  expect(html).toContain('aria-label="Mapa de la zona aproximada del inmueble en Prado"')
+  expect(html).toContain('tile.openstreetmap.org/15/')
+})
+
+it('[mapa] sin coordenadas, o si la consulta falla, queda el aviso del barrio sin mapa', async () => {
+  resultado.mockResolvedValue({ data: PROPIEDAD, error: null })
+  getUser.mockResolvedValue({ data: { user: null } })
+  zonaRpc.mockResolvedValue({ data: null, error: { message: 'caida' } })
+
+  const html = renderToStaticMarkup(await Ficha({ params }))
+  expect(html).not.toContain('Mapa de la zona aproximada')
+  expect(html).toContain('Barrio Prado')
 })

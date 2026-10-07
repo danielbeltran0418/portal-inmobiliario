@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useRef, useState } from 'react'
 import { actualizarPropiedad, type EstadoPropiedad } from '../acciones'
 import { OPERACIONES, TIPOS_INMUEBLE } from '@/lib/validacion/esquemas'
 
@@ -47,6 +47,8 @@ export interface PropiedadFormulario {
   area_m2: number | null
   barrio_id: string | null
   direccion: string | null
+  /** "lat, lng" o null. */
+  coordenadas?: string | null
 }
 
 export interface BarrioOpcion {
@@ -244,6 +246,8 @@ export function FormularioDatos({
         )}
       </div>
 
+      <CampoCoordenadas inicial={propiedad.coordenadas ?? ''} error={estado.errores?.coordenadas} />
+
       {estado.error && <p role="alert" className="text-sm text-peligro">{estado.error}</p>}
 
       <button
@@ -254,5 +258,61 @@ export function FormularioDatos({
         {pendiente ? 'Guardando...' : 'Guardar cambios'}
       </button>
     </form>
+  )
+}
+
+/**
+ * Punto del inmueble para el mapa de la ficha. Privado: el publico solo ve un
+ * circulo de ~500 m alrededor de un centro redondeado (src/lib/mapa/zona.ts).
+ * Se pega desde Google Maps o se toma del GPS si el vendedor esta en el sitio.
+ */
+function CampoCoordenadas({ inicial, error }: { inicial: string; error?: string }) {
+  const campo = useRef<HTMLInputElement>(null)
+  const [aviso, setAviso] = useState<string | null>(null)
+
+  const usarUbicacion = () => {
+    if (!navigator.geolocation) {
+      setAviso('Tu navegador no permite obtener la ubicación.')
+      return
+    }
+    setAviso('Obteniendo tu ubicación…')
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        if (campo.current) campo.current.value = `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`
+        setAviso('Listo. Revisa que estés en el inmueble y guarda los cambios.')
+      },
+      () => setAviso('No pudimos obtener tu ubicación. Pega las coordenadas desde Google Maps.'),
+      { enableHighAccuracy: true, timeout: 10000 },
+    )
+  }
+
+  return (
+    <div>
+      <label htmlFor="coordenadas" className="mb-1.5 block text-sm font-medium text-tinta">Ubicación en el mapa</label>
+      <div className="flex flex-wrap gap-2">
+        <input
+          ref={campo}
+          id="coordenadas"
+          name="coordenadas"
+          defaultValue={inicial}
+          placeholder="10.9878, -74.7889"
+          inputMode="decimal"
+          className="min-w-0 flex-1 rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
+        />
+        <button
+          type="button"
+          onClick={usarUbicacion}
+          className="cursor-pointer rounded-xl border border-linea px-4 py-2.5 text-sm font-medium text-tinta transition-colors hover:border-marca hover:text-marca"
+        >
+          Usar mi ubicación
+        </button>
+      </div>
+      <p className="mt-1 text-sm text-tinta-suave">
+        En Google Maps, mantén presionado el inmueble y copia las coordenadas. En la ficha solo se muestra la zona
+        aproximada (unos 500 m), nunca el punto exacto.
+      </p>
+      {aviso && <p role="status" className="mt-1 text-sm text-tinta-suave">{aviso}</p>}
+      {error && <p role="alert" className="mt-1 text-sm text-peligro">{error}</p>}
+    </div>
   )
 }

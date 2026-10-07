@@ -92,8 +92,9 @@ describe('cabeceras de seguridad', () => {
 
       // El comodin de produccion ya cubre https://<ref>.supabase.co: anadir
       // el origen exacto tambien seria redundante, no inseguro, pero la
-      // regla es "nada nuevo en produccion" -- igual que unsafe-eval.
-      expect(directivaDeImagenes(csp)).toBe(`img-src 'self' data: blob: https://*.supabase.co`)
+      // regla es "nada nuevo en produccion" -- igual que unsafe-eval. Lo unico
+      // extra es el origen de las teselas del mapa de la zona.
+      expect(directivaDeImagenes(csp)).toBe(`img-src 'self' data: blob: https://*.supabase.co https://tile.openstreetmap.org`)
     })
 
     it('fuera de produccion, img-src SI incluye el origen de NEXT_PUBLIC_SUPABASE_URL', () => {
@@ -139,4 +140,26 @@ it('solo fuerza HTTPS en producción; las redirecciones a Storage local conserva
     vi.stubEnv('NODE_ENV', 'production')
     expect(construirCabeceras('nonce')['Content-Security-Policy']).toContain('upgrade-insecure-requests')
   } finally { vi.unstubAllEnvs() }
+})
+
+describe('teselas del mapa de la zona en img-src', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it('por defecto autoriza solo el origen de OpenStreetMap, sin comodines', () => {
+    const img = directivaDeImagenes(construirCabeceras('n')['Content-Security-Policy'])
+    expect(img).toContain('https://tile.openstreetmap.org')
+    expect(img).not.toMatch(/https:\/\/\*\.openstreetmap/)
+  })
+
+  it('con un proveedor configurado autoriza ese origen y no el de OpenStreetMap', async () => {
+    vi.stubEnv('NEXT_PUBLIC_MAPA_TESELAS', 'https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=abc')
+    vi.resetModules()
+    const { construirCabeceras: construir } = await import('@/lib/seguridad/cabeceras')
+    const img = directivaDeImagenes(construir('n')['Content-Security-Policy'])
+    expect(img).toContain('https://api.maptiler.com')
+    expect(img).not.toContain('openstreetmap')
+  })
 })
