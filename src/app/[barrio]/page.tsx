@@ -1,5 +1,9 @@
 import { BotonGuardarBusqueda } from '@/components/comprador/BotonGuardarBusqueda'
 import { TarjetaPropiedad } from '@/components/tarjeta-propiedad'
+import { CorazonTarjeta } from '@/components/comprador/corazon-tarjeta'
+import { sesionActual } from '@/lib/auth/sesion'
+import { idsFavoritos } from '@/lib/comprador/favoritos'
+import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { cache } from 'react'
 import { metadatosBarrio, catalogoIndexable } from '@/lib/catalogo/seo'
 import Link from 'next/link'
@@ -34,16 +38,24 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
   const filtros = leerFiltros(parametros)
   // La URL es entrada no confiable: un desplazamiento excesivo se trata como primera página.
   if (!Number.isSafeInteger(filtros.pagina * TAMANO_PAGINA)) filtros.pagina = 1
-  const { propiedades, total } = await listarPropiedadesPublicas(db, barrio.id, filtros)
+  const [{ propiedades, total }, sesion] = await Promise.all([
+    listarPropiedadesPublicas(db, barrio.id, filtros),
+    sesionActual(),
+  ])
+  // Los favoritos son del usuario: se leen con SU cliente (RLS), no con el publico.
+  const favoritos = sesion.idUsuario
+    ? await idsFavoritos(await crearClienteServidor(), sesion.idUsuario, propiedades.map((p) => p.id))
+    : new Set<string>()
 
-  function pagina(numero: number) {
+  function pagina(numero: number | null) {
     const p = new URLSearchParams()
     if (filtros.operacion) p.set('operacion', filtros.operacion)
     if (filtros.tipo) p.set('tipo', filtros.tipo)
     if (filtros.precioMin !== undefined) p.set('precio_min', String(filtros.precioMin))
     if (filtros.precioMax !== undefined) p.set('precio_max', String(filtros.precioMax))
-    p.set('pagina', String(numero))
-    return `/${barrio!.slug}?${p}`
+    if (numero !== null) p.set('pagina', String(numero))
+    const query = p.toString()
+    return query ? `/${barrio!.slug}?${query}` : `/${barrio!.slug}`
   }
 
   const ETIQUETA_GRUPO = 'mb-3 block text-xs font-semibold uppercase tracking-wider text-tinta-suave'
@@ -178,7 +190,20 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
           ) : (
             <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {propiedades.map((p) => (
-                <TarjetaPropiedad key={p.id} propiedad={p} barrioSlug={barrio.slug} barrioNombre={barrio.nombre} />
+                <TarjetaPropiedad
+                  key={p.id}
+                  propiedad={p}
+                  barrioSlug={barrio.slug}
+                  barrioNombre={barrio.nombre}
+                  accion={
+                    <CorazonTarjeta
+                      propiedadId={p.id}
+                      conSesion={sesion.hayUsuario}
+                      favorito={favoritos.has(p.id)}
+                      volver={pagina(filtros.pagina > 1 ? filtros.pagina : null)}
+                    />
+                  }
+                />
               ))}
             </ul>
           )}

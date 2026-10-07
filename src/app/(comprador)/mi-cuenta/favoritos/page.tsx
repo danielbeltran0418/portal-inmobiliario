@@ -62,7 +62,7 @@ export default async function PaginaFavoritos() {
               propiedad={{ ...p, imagenes_propiedad: p.imagenes_propiedad ?? [] }}
               barrioSlug={p.barrio!.slug}
               barrioNombre={p.barrio!.nombre}
-              accion={<BotonFavorito propiedadId={p.id} inicialEsFavorito className="shadow-sm" />}
+              accion={<BotonFavorito propiedadId={p.id} inicialEsFavorito variante="icono" />}
             />
           ))}
         </ul>
