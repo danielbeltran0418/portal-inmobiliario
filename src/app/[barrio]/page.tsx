@@ -1,8 +1,8 @@
 import { BotonGuardarBusqueda } from '@/components/comprador/BotonGuardarBusqueda'
+import { TarjetaPropiedad } from '@/components/tarjeta-propiedad'
 import { cache } from 'react'
 import { metadatosBarrio, catalogoIndexable } from '@/lib/catalogo/seo'
 import Link from 'next/link'
-import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
 import { leerFiltros, type ParametrosCatalogo } from '@/lib/catalogo/filtros'
@@ -46,7 +46,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+    <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
       {/* Miga de pan estilizada */}
       <nav aria-label="Miga de pan" className="flex flex-wrap items-center gap-2 text-xs font-medium text-tinta-tenue">
         <Link href="/" className="transition-colors hover:text-marca">
@@ -69,15 +69,26 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
             Venta y arriendo en Barranquilla · Trato directo sin intermediarios
           </p>
         </div>
-        <span className="text-xs font-medium text-tinta-tenue">
-          {total} {total === 1 ? 'inmueble disponible' : 'inmuebles disponibles'}
-        </span>
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          <span className="text-xs font-medium text-tinta-tenue">
+            {total} {total === 1 ? 'inmueble disponible' : 'inmuebles disponibles'}
+          </span>
+          <BotonGuardarBusqueda
+                    filtrosActuales={{
+                      barrio: barrio.slug,
+                      operacion: filtros.operacion,
+                      tipo: filtros.tipo,
+                      precio_min: filtros.precioMin,
+                      precio_max: filtros.precioMax,
+                    }}
+                  />
+        </div>
       </div>
 
       {/* Formulario de filtros */}
       <form
         method="get"
-        className="my-8 rounded-xl border border-linea/80 bg-superficie p-6 shadow-xs"
+        className="my-8 rounded-2xl border border-linea/80 bg-superficie p-5 shadow-xs lg:sticky lg:top-20 lg:z-30"
       >
         <div className="flex flex-wrap items-end gap-4">
           <label className="grow-0 text-xs font-semibold text-tinta">
@@ -147,22 +158,6 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
         </div>
       </form>
 
-      {/* Barra de guardar búsqueda */}
-      <div className="mb-8 flex flex-col items-start justify-between gap-3 rounded-lg border border-linea/60 bg-superficie-alt/40 px-5 py-3.5 sm:flex-row sm:items-center">
-        <p className="text-xs text-tinta-suave">
-          Guarda estos criterios de búsqueda para consultarlos luego desde tu panel.
-        </p>
-        <BotonGuardarBusqueda
-          filtrosActuales={{
-            barrio: barrio.slug,
-            operacion: filtros.operacion,
-            tipo: filtros.tipo,
-            precio_min: filtros.precioMin,
-            precio_max: filtros.precioMax,
-          }}
-        />
-      </div>
-
       {/* Lista de propiedades */}
       {propiedades.length === 0 ? (
         <div className="rounded-xl border border-linea bg-superficie p-12 text-center">
@@ -182,66 +177,9 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
         </div>
       ) : (
         <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {propiedades.map((p) => {
-            const foto = [...p.imagenes_propiedad].sort((a, b) => a.orden - b.orden)[0]
-            const arriendo = p.operacion === 'arriendo'
-
-            return (
-              <li
-                key={p.id}
-                className="tarjeta-interactiva group overflow-hidden rounded-xl border border-linea bg-superficie shadow-xs"
-              >
-                <Link href={`/${barrio.slug}/${p.slug}`} className="block">
-                  {/* Foto de la propiedad con zoom sutil en hover */}
-                  <div className="relative aspect-[3/2] w-full overflow-hidden bg-superficie-alt">
-                    {foto ? (
-                      <Image
-                        src={`/imagen/${foto.id}`}
-                        alt={foto.alt_text}
-                        width={480}
-                        height={320}
-                        unoptimized
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs text-tinta-tenue">
-                        Sin fotografías
-                      </div>
-                    )}
-
-                    {/* Badge flotante de operacion */}
-                    <div className="absolute top-3 left-3">
-                      <span
-                        className={`inline-block rounded-sm px-2.5 py-1 text-xs font-bold uppercase tracking-wider shadow-xs ${
-                          arriendo
-                            ? 'bg-realce-suave text-realce'
-                            : 'bg-marca-suave text-marca'
-                        }`}
-                      >
-                        {p.operacion}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-5">
-                    <p className="text-xs font-medium uppercase tracking-wide text-tinta-tenue">
-                      {p.tipo_inmueble || 'Inmueble'}
-                    </p>
-                    <h2 className="mt-1 line-clamp-2 break-words font-titulo text-lg font-bold text-tinta transition-colors group-hover:text-marca">
-                      {p.titulo}
-                    </h2>
-                    <p className="cifra mt-2 font-titulo text-xl font-bold text-tinta">
-                      {new Intl.NumberFormat('es-CO', {
-                        style: 'currency',
-                        currency: 'COP',
-                        maximumFractionDigits: 0,
-                      }).format(p.precio)}
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            )
-          })}
+          {propiedades.map((p) => (
+            <TarjetaPropiedad key={p.id} propiedad={p} barrioSlug={barrio.slug} />
+          ))}
         </ul>
       )}
 
