@@ -15,9 +15,9 @@ export const metadata: Metadata = {
  */
 export default function PaginaNuevaPropiedad() {
   return (
-    <main className="mx-auto max-w-md p-8">
-      <h1 className="text-2xl font-semibold">Nueva propiedad</h1>
-      <p className="mt-2 opacity-80">
+    <main className="mx-auto w-full max-w-md px-4 py-10 sm:px-6">
+      <h1 className="font-titulo text-3xl font-semibold text-tinta">Nueva propiedad</h1>
+      <p className="mt-2 text-tinta-suave">
         Empieza con un título. Vas a poder completar el resto de los datos y las fotos
         despues, sobre el borrador.
       </p>

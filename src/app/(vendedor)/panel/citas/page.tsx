@@ -32,7 +32,7 @@ export default async function PaginaCitasVendedor() {
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-10">
       <Link href="/panel" className="text-sm text-marca hover:underline">Volver al panel</Link>
-      <h1 className="mt-2 text-3xl font-semibold text-tinta">Visitas</h1>
+      <h1 className="mt-2 font-titulo text-3xl font-semibold text-tinta">Visitas</h1>
 
       {propuestas.length > 0 && (
         <section className="mt-8 rounded-lg border-2 border-emerald-500/30 bg-emerald-500/5 p-6" data-testid="seccion-citas-propuestas">
@@ -42,7 +42,7 @@ export default async function PaginaCitasVendedor() {
           </p>
           <ul className="mt-4 space-y-4">
             {propuestas.map((p) => (
-              <li key={p.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-md border border-linea bg-superficie p-5">
+              <li key={p.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-linea bg-superficie p-5">
                 <div>
                   <p className="text-sm text-tinta-tenue">{p.propiedad_titulo ?? 'Propiedad'}</p>
                   <p className="mt-1 font-medium text-tinta">{p.comprador_nombre ?? 'Comprador'}</p>
@@ -62,7 +62,7 @@ export default async function PaginaCitasVendedor() {
         ) : (
           <ul className="mt-4 space-y-4">
             {confirmadas.map((cita) => (
-              <li key={cita.id} className="rounded-md border border-linea bg-superficie p-5">
+              <li key={cita.id} className="rounded-2xl border border-linea bg-superficie p-5">
                 <p className="text-sm text-tinta-tenue">{cita.tituloPropiedad ?? 'Propiedad'}</p>
                 <p className="mt-1 font-medium text-tinta">{cita.nombreComprador ?? 'Comprador'}</p>
                 <p className="cifra mt-1 text-tinta">{formatearFechaHora(cita.inicio)}</p>
@@ -82,7 +82,7 @@ export default async function PaginaCitasVendedor() {
           <h2 className="text-xl font-semibold text-tinta">Canceladas</h2>
           <ul className="mt-4 space-y-3">
             {canceladas.map((cita) => (
-              <li key={cita.id} className="rounded-md border border-linea p-4 text-tinta-suave">
+              <li key={cita.id} className="rounded-2xl border border-linea p-4 text-tinta-suave">
                 <p>{cita.tituloPropiedad ?? 'Propiedad'} · {cita.nombreComprador ?? 'Comprador'}</p>
                 <p className="cifra text-sm">{formatearFechaHora(cita.inicio)}</p>
               </li>

@@ -63,16 +63,16 @@ export function PanelFotos({
 
   return (
     <div>
-      <h2 className="text-lg font-medium">Fotos</h2>
+      <h2 className="font-titulo text-xl font-semibold text-tinta">Fotos</h2>
 
       {imagenes.length === 0 ? (
-        <p className="mt-2 opacity-80">Todavía no has subido ninguna foto.</p>
+        <p className="mt-2 text-tinta-suave">Todavía no has subido ninguna foto.</p>
       ) : (
         <ul className="mt-4 flex flex-col gap-3">
           {imagenes.map((imagen, indice) => (
             <li
               key={imagen.id}
-              className="flex flex-wrap items-center gap-4 rounded border border-black/10 p-3 dark:border-white/15"
+              className="flex flex-wrap items-center gap-4 rounded-xl border border-linea p-3"
             >
               {imagen.url ? (
                 <Image
@@ -81,14 +81,14 @@ export function PanelFotos({
                   width={ANCHO_MINIATURA}
                   height={ALTO_MINIATURA}
                   unoptimized
-                  className="rounded object-cover"
+                  className="rounded-lg object-cover"
                 />
               ) : (
                 <div
                   role="img"
                   aria-label={imagen.altText}
                   style={{ width: ANCHO_MINIATURA, height: ALTO_MINIATURA }}
-                  className="shrink-0 rounded bg-black/10 dark:bg-white/10"
+                  className="shrink-0 rounded-lg bg-superficie-alt"
                 />
               )}
 
@@ -101,7 +101,7 @@ export function PanelFotos({
                   <button
                     type="submit"
                     disabled={indice === 0}
-                    className="rounded border px-3 py-1.5 text-sm disabled:opacity-40"
+                    className="min-h-9 cursor-pointer rounded-lg border border-linea px-3 text-sm text-tinta transition-colors hover:border-marca hover:text-marca disabled:opacity-40"
                   >
                     Subir
                   </button>
@@ -112,13 +112,13 @@ export function PanelFotos({
                   <button
                     type="submit"
                     disabled={indice === imagenes.length - 1}
-                    className="rounded border px-3 py-1.5 text-sm disabled:opacity-40"
+                    className="min-h-9 cursor-pointer rounded-lg border border-linea px-3 text-sm text-tinta transition-colors hover:border-marca hover:text-marca disabled:opacity-40"
                   >
                     Bajar
                   </button>
                 </form>
                 <form action={async () => { await eliminarImagen(imagen.id, propiedadId) }}>
-                  <button type="submit" className="rounded border px-3 py-1.5 text-sm">
+                  <button type="submit" className="min-h-9 cursor-pointer rounded-lg border border-linea px-3 text-sm text-tinta-suave transition-colors hover:border-peligro hover:text-peligro">
                     Eliminar
                   </button>
                 </form>
@@ -132,7 +132,7 @@ export function PanelFotos({
         <input type="hidden" name="propiedad_id" value={propiedadId} />
 
         <div>
-          <label htmlFor="archivo" className="block">Foto</label>
+          <label htmlFor="archivo" className="mb-1.5 block text-sm font-medium text-tinta">Foto</label>
           <input
             id="archivo"
             name="archivo"
@@ -145,7 +145,7 @@ export function PanelFotos({
         </div>
 
         <div>
-          <label htmlFor="alt_text" className="block">
+          <label htmlFor="alt_text" className="mb-1.5 block text-sm font-medium text-tinta">
             Descripción de la foto (para accesibilidad)
           </label>
           <input
@@ -156,22 +156,22 @@ export function PanelFotos({
             minLength={5}
             disabled={alMaximo}
             placeholder="Ej: Fachada de la casa desde la calle"
-            className="w-full border p-2"
+            className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
           />
         </div>
 
         {alMaximo && (
-          <p className="text-sm opacity-70">
+          <p className="text-sm text-tinta-suave">
             Ya tienes el máximo de {maximoFotos} fotos por propiedad.
           </p>
         )}
 
-        {estado.error && <p role="alert" className="text-red-600">{estado.error}</p>}
+        {estado.error && <p role="alert" className="text-sm text-peligro">{estado.error}</p>}
 
         <button
           type="submit"
           disabled={pendiente || alMaximo}
-          className="rounded bg-black px-4 py-2 text-white disabled:opacity-60"
+          className="cursor-pointer rounded-xl bg-marca px-5 py-2.5 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte disabled:opacity-60"
         >
           {pendiente ? 'Subiendo...' : 'Subir foto'}
         </button>

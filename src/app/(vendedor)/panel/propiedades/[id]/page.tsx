@@ -1,3 +1,6 @@
+import Link from 'next/link'
+import { CircleDashed } from 'lucide-react'
+import { ChipEstado } from '@/components/ui/compuestos'
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
@@ -158,66 +161,93 @@ export default async function PaginaEditarPropiedad({
     direccion: ubicacion?.direccion ?? null,
   }
 
+  const TARJETA = 'rounded-2xl border border-linea bg-superficie p-6'
+
   return (
-    <main className="mx-auto max-w-3xl p-8">
-      <h1 className="text-2xl font-semibold">{p.titulo}</h1>
-      <p className="mt-1 opacity-80">
-        Estado: {p.estado} · Precio: {textoPrecio(p.precio)}
-      </p>
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+      <nav aria-label="Miga de pan" className="mb-3 flex flex-wrap items-center gap-2 text-sm text-tinta-suave">
+        <Link href="/panel" className="transition-colors hover:text-tinta">Mis propiedades</Link>
+        <span aria-hidden="true">/</span>
+        <span className="font-medium text-tinta">Editar propiedad</span>
+      </nav>
 
-      {faltantes.length > 0 && (
-        <div
-          className="mt-4 rounded border border-amber-500/50 bg-amber-500/10 p-4 text-sm"
-        >
-          <p className="font-medium">Para publicarla falta:</p>
-          <ul className="mt-1 list-disc pl-5">
-            {faltantes.map((item) => <li key={item}>{item}</li>)}
-          </ul>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="break-words font-titulo text-3xl font-semibold text-tinta">{p.titulo}</h1>
+          <p className="mt-1 text-sm text-tinta-suave">
+            Estado: {p.estado} · Precio: {textoPrecio(p.precio)}
+          </p>
         </div>
-      )}
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {DESTINOS_DE_ESTADO.filter((destino) => destino !== p.estado).map((destino) => (
-          <form key={destino} action={accionCambiarEstado.bind(null, id, destino)}>
-            <button
-              type="submit"
-              disabled={destino === 'publicada' && bloqueaPublicar}
-              className="rounded border px-4 py-2 text-sm disabled:opacity-40"
-            >
-              {ETIQUETA_ESTADO[destino]}
-            </button>
-          </form>
-        ))}
+        <ChipEstado estado={p.estado} />
       </div>
 
-      <section className="mt-8">
-        <h2 className="text-lg font-medium">Datos</h2>
-        <div className="mt-4">
-          <FormularioDatos propiedad={propiedadFormulario} barrios={barriosOpciones} />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+        <div className="flex min-w-0 flex-col gap-6">
+          <section className={TARJETA}>
+            <h2 className="mb-5 font-titulo text-xl font-semibold text-tinta">Información general</h2>
+            <FormularioDatos propiedad={propiedadFormulario} barrios={barriosOpciones} />
+          </section>
+
+          <section className={TARJETA}>
+            <PanelFotos
+              propiedadId={id}
+              imagenes={imagenesPanel}
+              maximoFotos={MAXIMO_IMAGENES_POR_PROPIEDAD}
+              alMaximo={imagenes.length >= MAXIMO_IMAGENES_POR_PROPIEDAD}
+            />
+          </section>
+
+          {/* Hallazgo Importante de la revision final de rama: eliminarPropiedad()
+              (acciones.ts) ya estaba construida y probada, pero ninguna pantalla la
+              llamaba -- y por eso drenarLimpieza(), que solo se invoca desde ahi
+              dentro, nunca corria en produccion. Seccion propia, separada de "Datos"
+              y "Fotos": es la unica accion irreversible de esta pantalla. */}
+          <section className="rounded-2xl border border-peligro/30 bg-superficie p-6">
+            <h2 className="font-titulo text-xl font-semibold text-tinta">Eliminar propiedad</h2>
+            <p className="mt-1 text-sm text-tinta-suave">
+              Borra la propiedad y todas sus fotos de forma permanente.
+            </p>
+            <BotonEliminar id={id} />
+          </section>
         </div>
-      </section>
 
-      <section className="mt-8">
-        <PanelFotos
-          propiedadId={id}
-          imagenes={imagenesPanel}
-          maximoFotos={MAXIMO_IMAGENES_POR_PROPIEDAD}
-          alMaximo={imagenes.length >= MAXIMO_IMAGENES_POR_PROPIEDAD}
-        />
-      </section>
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-24">
+          <section className={TARJETA}>
+            <h2 className="mb-4 text-sm font-semibold text-tinta">Estado y publicación</h2>
+            <div className="flex flex-col gap-2">
+              {DESTINOS_DE_ESTADO.filter((destino) => destino !== p.estado).map((destino) => (
+                <form key={destino} action={accionCambiarEstado.bind(null, id, destino)}>
+                  <button
+                    type="submit"
+                    disabled={destino === 'publicada' && bloqueaPublicar}
+                    className={
+                      destino === 'publicada'
+                        ? 'w-full cursor-pointer rounded-xl bg-marca py-2.5 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte disabled:cursor-not-allowed disabled:opacity-40'
+                        : 'w-full cursor-pointer rounded-xl border border-linea py-2.5 text-sm font-medium text-tinta transition-colors hover:border-marca hover:text-marca disabled:cursor-not-allowed disabled:opacity-40'
+                    }
+                  >
+                    {ETIQUETA_ESTADO[destino]}
+                  </button>
+                </form>
+              ))}
+            </div>
+          </section>
 
-      {/* Hallazgo Importante de la revision final de rama: eliminarPropiedad()
-          (acciones.ts) ya estaba construida y probada, pero ninguna pantalla la
-          llamaba -- y por eso drenarLimpieza(), que solo se invoca desde ahi
-          dentro, nunca corria en produccion. Seccion propia, separada de "Datos"
-          y "Fotos": es la unica accion irreversible de esta pantalla. */}
-      <section className="mt-8 border-t border-black/10 pt-6 dark:border-white/15">
-        <h2 className="text-lg font-medium">Eliminar propiedad</h2>
-        <p className="mt-1 text-sm opacity-80">
-          Borra la propiedad y todas sus fotos de forma permanente.
-        </p>
-        <BotonEliminar id={id} />
-      </section>
+          {faltantes.length > 0 && (
+            <section className="rounded-2xl border border-realce/30 bg-realce-suave p-5 text-sm">
+              <h2 className="mb-2 font-semibold text-realce">Para publicarla falta:</h2>
+              <ul className="space-y-1.5 text-tinta">
+                {faltantes.map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <CircleDashed aria-hidden="true" className="h-4 w-4 shrink-0 text-realce" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </aside>
+      </div>
     </main>
   )
 }

@@ -81,7 +81,7 @@ export function FormularioDatos({
       <input type="hidden" name="id" value={propiedad.id} />
 
       <div>
-        <label htmlFor="titulo" className="block">Título</label>
+        <label htmlFor="titulo" className="mb-1.5 block text-sm font-medium text-tinta">Título</label>
         <input
           id="titulo"
           name="titulo"
@@ -89,63 +89,63 @@ export function FormularioDatos({
           required
           minLength={10}
           maxLength={120}
-          className="w-full border p-2"
+          className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
         />
         {estado.errores?.titulo && (
-          <p role="alert" className="mt-1 text-red-600">{estado.errores.titulo}</p>
+          <p role="alert" className="mt-1 text-sm text-peligro">{estado.errores.titulo}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="descripcion" className="block">Descripción</label>
+        <label htmlFor="descripcion" className="mb-1.5 block text-sm font-medium text-tinta">Descripción</label>
         <textarea
           id="descripcion"
           name="descripcion"
           defaultValue={propiedad.descripcion ?? ''}
           rows={5}
-          className="w-full border p-2"
+          className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
         />
         {estado.errores?.descripcion && (
-          <p role="alert" className="mt-1 text-red-600">{estado.errores.descripcion}</p>
+          <p role="alert" className="mt-1 text-sm text-peligro">{estado.errores.descripcion}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="operacion" className="block">Operación</label>
+        <label htmlFor="operacion" className="mb-1.5 block text-sm font-medium text-tinta">Operación</label>
         <select
           id="operacion"
           name="operacion"
           defaultValue={propiedad.operacion}
-          className="w-full border p-2"
+          className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
         >
           {OPERACIONES.map((op) => (
             <option key={op} value={op}>{ETIQUETA_OPERACION[op]}</option>
           ))}
         </select>
         {estado.errores?.operacion && (
-          <p role="alert" className="mt-1 text-red-600">{estado.errores.operacion}</p>
+          <p role="alert" className="mt-1 text-sm text-peligro">{estado.errores.operacion}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="tipo_inmueble" className="block">Tipo de inmueble</label>
+        <label htmlFor="tipo_inmueble" className="mb-1.5 block text-sm font-medium text-tinta">Tipo de inmueble</label>
         <select
           id="tipo_inmueble"
           name="tipo_inmueble"
           defaultValue={propiedad.tipo_inmueble}
-          className="w-full border p-2"
+          className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
         >
           {TIPOS_INMUEBLE.map((tipo) => (
             <option key={tipo} value={tipo}>{ETIQUETA_TIPO[tipo]}</option>
           ))}
         </select>
         {estado.errores?.tipo_inmueble && (
-          <p role="alert" className="mt-1 text-red-600">{estado.errores.tipo_inmueble}</p>
+          <p role="alert" className="mt-1 text-sm text-peligro">{estado.errores.tipo_inmueble}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="precio" className="block">Precio (COP)</label>
+        <label htmlFor="precio" className="mb-1.5 block text-sm font-medium text-tinta">Precio (COP)</label>
         <input
           id="precio"
           name="precio"
@@ -153,47 +153,47 @@ export function FormularioDatos({
           min="0"
           step="1"
           defaultValue={valorInicialNumerico(propiedad.precio)}
-          className="w-full border p-2"
+          className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
         />
         {estado.errores?.precio && (
-          <p role="alert" className="mt-1 text-red-600">{estado.errores.precio}</p>
+          <p role="alert" className="mt-1 text-sm text-peligro">{estado.errores.precio}</p>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label htmlFor="habitaciones" className="block">Habitaciones</label>
+          <label htmlFor="habitaciones" className="mb-1.5 block text-sm font-medium text-tinta">Habitaciones</label>
           <input
             id="habitaciones"
             name="habitaciones"
             type="number"
             min="0"
             defaultValue={valorInicialNumerico(propiedad.habitaciones)}
-            className="w-full border p-2"
+            className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
           />
           {estado.errores?.habitaciones && (
-            <p role="alert" className="mt-1 text-red-600">{estado.errores.habitaciones}</p>
+            <p role="alert" className="mt-1 text-sm text-peligro">{estado.errores.habitaciones}</p>
           )}
         </div>
 
         <div>
-          <label htmlFor="banos" className="block">Baños</label>
+          <label htmlFor="banos" className="mb-1.5 block text-sm font-medium text-tinta">Baños</label>
           <input
             id="banos"
             name="banos"
             type="number"
             min="0"
             defaultValue={valorInicialNumerico(propiedad.banos)}
-            className="w-full border p-2"
+            className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
           />
           {estado.errores?.banos && (
-            <p role="alert" className="mt-1 text-red-600">{estado.errores.banos}</p>
+            <p role="alert" className="mt-1 text-sm text-peligro">{estado.errores.banos}</p>
           )}
         </div>
       </div>
 
       <div>
-        <label htmlFor="area_m2" className="block">Área (m²)</label>
+        <label htmlFor="area_m2" className="mb-1.5 block text-sm font-medium text-tinta">Área (m²)</label>
         <input
           id="area_m2"
           name="area_m2"
@@ -201,20 +201,20 @@ export function FormularioDatos({
           min="0"
           step="0.01"
           defaultValue={valorInicialNumerico(propiedad.area_m2)}
-          className="w-full border p-2"
+          className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
         />
         {estado.errores?.area_m2 && (
-          <p role="alert" className="mt-1 text-red-600">{estado.errores.area_m2}</p>
+          <p role="alert" className="mt-1 text-sm text-peligro">{estado.errores.area_m2}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="barrio_id" className="block">Barrio</label>
+        <label htmlFor="barrio_id" className="mb-1.5 block text-sm font-medium text-tinta">Barrio</label>
         <select
           id="barrio_id"
           name="barrio_id"
           defaultValue={propiedad.barrio_id ?? ''}
-          className="w-full border p-2"
+          className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
         >
           <option value="">Elige un barrio</option>
           {barrios.map((barrio) => (
@@ -222,34 +222,34 @@ export function FormularioDatos({
           ))}
         </select>
         {estado.errores?.barrio_id && (
-          <p role="alert" className="mt-1 text-red-600">{estado.errores.barrio_id}</p>
+          <p role="alert" className="mt-1 text-sm text-peligro">{estado.errores.barrio_id}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="direccion" className="block">Dirección</label>
+        <label htmlFor="direccion" className="mb-1.5 block text-sm font-medium text-tinta">Dirección</label>
         <input
           id="direccion"
           name="direccion"
           defaultValue={propiedad.direccion ?? ''}
-          className="w-full border p-2"
+          className="w-full rounded-xl border border-linea bg-fondo px-4 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25"
         />
         {/* No es cosmetico: sin esto el vendedor puede dejarla en blanco por
             desconfianza. El catalogo publico solo va a mostrar el barrio. */}
-        <p className="mt-1 text-sm opacity-70">
+        <p className="mt-1 text-sm text-tinta-suave">
           No se muestra públicamente: en el catálogo solo se ve el barrio.
         </p>
         {estado.errores?.direccion && (
-          <p role="alert" className="mt-1 text-red-600">{estado.errores.direccion}</p>
+          <p role="alert" className="mt-1 text-sm text-peligro">{estado.errores.direccion}</p>
         )}
       </div>
 
-      {estado.error && <p role="alert" className="text-red-600">{estado.error}</p>}
+      {estado.error && <p role="alert" className="text-sm text-peligro">{estado.error}</p>}
 
       <button
         type="submit"
         disabled={pendiente}
-        className="w-full bg-black p-2 text-white disabled:opacity-60"
+        className="w-full cursor-pointer rounded-xl bg-marca py-3 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte disabled:opacity-60"
       >
         {pendiente ? 'Guardando...' : 'Guardar cambios'}
       </button>

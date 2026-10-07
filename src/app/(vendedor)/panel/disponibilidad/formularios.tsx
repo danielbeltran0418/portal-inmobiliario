@@ -7,11 +7,11 @@ import {
 } from './acciones'
 import { DIAS_SEMANA, HORAS_FIN, HORAS_INICIO } from './opciones'
 
-const CAMPO = 'mt-1 block rounded-sm border border-linea bg-superficie px-3 py-2 text-tinta'
+const CAMPO = 'mt-1 block rounded-xl border border-linea bg-fondo px-3 py-2.5 text-base text-tinta focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25'
 const BOTON =
-  'cursor-pointer rounded-sm bg-marca px-4 py-2 text-sm font-medium text-marca-contraste hover:bg-marca-fuerte disabled:opacity-60'
+  'min-h-10 cursor-pointer rounded-xl bg-marca px-4 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte disabled:opacity-60'
 const BOTON_QUITAR =
-  'cursor-pointer rounded-sm border border-linea px-3 py-1 text-sm text-tinta-suave hover:border-peligro hover:text-peligro disabled:opacity-60'
+  'min-h-9 cursor-pointer rounded-lg border border-linea px-3 text-sm text-tinta-suave transition-colors hover:border-peligro hover:text-peligro disabled:opacity-60'
 
 // Todos con useActionState: cada accion devuelve un error (validacion, o cero
 // filas al borrar) que un <form action={fn}> a secas tiraria.

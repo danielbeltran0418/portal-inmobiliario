@@ -29,7 +29,7 @@ export default async function PaginaDisponibilidad() {
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-10">
       <Link href="/panel" className="text-sm text-marca hover:underline">Volver al panel</Link>
-      <h1 className="mt-2 text-3xl font-semibold text-tinta">Disponibilidad</h1>
+      <h1 className="mt-2 font-titulo text-3xl font-semibold text-tinta">Disponibilidad</h1>
 
       <section className="mt-6">
         <ToggleAutoConfirmar inicial={autoConfirmar} />
@@ -47,7 +47,7 @@ export default async function PaginaDisponibilidad() {
           <ul className="mt-4 space-y-2">
             {franjas.map((franja) => (
               <li key={franja.id}
-                className="flex items-center justify-between rounded-md border border-linea bg-superficie px-4 py-2">
+                className="flex items-center justify-between rounded-xl border border-linea bg-superficie px-4 py-2.5">
                 <span className="text-tinta">
                   {nombreDia(franja.dia_semana)} · {horaCorta(franja.hora_inicio)} – {horaCorta(franja.hora_fin)}
                 </span>
@@ -66,7 +66,7 @@ export default async function PaginaDisponibilidad() {
           <ul className="mt-4 space-y-2">
             {bloqueos.map((bloqueo) => (
               <li key={bloqueo.id}
-                className="flex items-center justify-between rounded-md border border-linea bg-superficie px-4 py-2">
+                className="flex items-center justify-between rounded-xl border border-linea bg-superficie px-4 py-2.5">
                 <span className="cifra text-tinta">
                   {bloqueo.desde === bloqueo.hasta ? bloqueo.desde : bloqueo.desde + ' a ' + bloqueo.hasta}
                 </span>
