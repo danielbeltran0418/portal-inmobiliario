@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Bath, BedDouble, Maximize2, type LucideIcon } from 'lucide-react'
@@ -39,10 +40,14 @@ export function TarjetaPropiedad({
   propiedad: p,
   barrioSlug,
   barrioNombre,
+  accion,
 }: {
   propiedad: PropiedadDeTarjeta
   barrioSlug: string
   barrioNombre?: string
+  /** Control sobre la foto (p. ej. quitar de favoritos). Va FUERA del enlace:
+   *  un boton dentro de un <a> no es HTML valido ni accesible. */
+  accion?: ReactNode
 }) {
   const fotos = [...p.imagenes_propiedad].sort((a, b) => a.orden - b.orden)
   const portada = fotos[0]
@@ -50,7 +55,8 @@ export function TarjetaPropiedad({
   const datos = caracteristicas(p)
 
   return (
-    <li className="tarjeta-interactiva group overflow-hidden rounded-xl border border-linea bg-superficie">
+    <li className="tarjeta-interactiva group relative overflow-hidden rounded-xl border border-linea bg-superficie">
+      {accion && <div className="absolute top-3 right-3 z-10">{accion}</div>}
       <Link href={`/${barrioSlug}/${p.slug}`} className="block">
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-marca-suave">
           {portada ? (

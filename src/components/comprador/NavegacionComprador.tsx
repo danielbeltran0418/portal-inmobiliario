@@ -14,17 +14,18 @@ export function NavegacionComprador() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Secciones de tu cuenta" className="-mx-1 mb-8 flex items-center gap-2 overflow-x-auto border-b border-linea px-1 pb-4 text-sm font-medium">
+    <nav aria-label="Secciones de tu cuenta" className="-mx-1 mb-8 flex items-center gap-1 overflow-x-auto border-b border-linea px-1 pb-4 text-sm font-medium">
       {ENLACES.map((item) => {
         const activo = pathname === item.ruta;
         return (
           <Link
             key={item.ruta}
             href={item.ruta}
-            className={`px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${
+            aria-current={activo ? 'page' : undefined}
+            className={`whitespace-nowrap rounded-lg px-3.5 py-2 transition-colors ${
               activo
-                ? 'bg-marca text-marca-contraste font-semibold shadow-xs'
-                : 'text-tinta-suave hover:text-tinta hover:bg-superficie-alt'
+                ? 'bg-marca-suave font-semibold text-marca'
+                : 'text-tinta-suave hover:bg-superficie-alt hover:text-tinta'
             }`}
           >
             {item.label}

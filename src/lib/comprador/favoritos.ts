@@ -15,8 +15,8 @@ export interface PropiedadFavorita {
     habitaciones: number | null;
     banos: number | null;
     area_m2: number | null;
-    barrio?: { nombre: string } | null;
-    imagenes_propiedad?: { ruta_storage: string; orden: number }[];
+    barrio?: { nombre: string; slug: string } | null;
+    imagenes_propiedad?: { id: string; alt_text: string; orden: number }[];
   };
 }
 
@@ -41,8 +41,8 @@ export async function obtenerFavoritosUsuario(
         habitaciones,
         banos,
         area_m2,
-        barrio:barrios (nombre),
-        imagenes_propiedad (ruta_storage, orden)
+        barrio:barrios (nombre, slug),
+        imagenes_propiedad (id, alt_text, orden)
       )
     `)
     .eq('usuario_id', usuarioId)

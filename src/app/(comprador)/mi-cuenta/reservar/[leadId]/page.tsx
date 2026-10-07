@@ -33,14 +33,16 @@ export default async function PaginaReservarVisita({ params }: { params: Promise
     : []
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-10">
-      <Link href="/mi-cuenta" className="text-sm text-marca hover:underline">Volver a mi cuenta</Link>
-      <h1 className="mt-2 text-3xl font-semibold text-tinta">Reservar visita</h1>
-      <p className="mt-2 text-tinta-suave">{lead.tituloPropiedad ?? 'Propiedad'}</p>
+    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
+      <Link href="/mi-cuenta" className="text-sm text-tinta-suave transition-colors hover:text-tinta">← Volver a mi cuenta</Link>
+      <h1 className="mt-3 font-titulo text-3xl font-semibold text-tinta">Reservar visita</h1>
+      <p className="mt-1 text-tinta-suave">
+        {lead.tituloPropiedad ?? 'Propiedad'} · Elige una franja libre de los próximos 14 días.
+      </p>
       <div className="mt-6">
         {lead.estado === 'aceptado'
           ? <SelectorFranjas modo="reservar" objetivoId={lead.id} grupos={grupos} volverA="/mi-cuenta" />
-          : <p className="rounded-md border border-linea bg-superficie p-6 text-tinta-suave">{MENSAJE_VISITA_LEAD_NO_ACEPTADO}</p>}
+          : <p className="rounded-2xl border border-linea bg-superficie p-6 text-tinta-suave">{MENSAJE_VISITA_LEAD_NO_ACEPTADO}</p>}
       </div>
     </main>
   )
