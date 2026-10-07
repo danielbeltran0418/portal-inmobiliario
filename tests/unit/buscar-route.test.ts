@@ -50,3 +50,15 @@ it('[campos colombianos] /buscar conserva estrato y habitaciones validos', async
   const r = await GET(new Request('http://localhost/buscar?barrio=riomar&estrato_min=3&habitaciones_min=2&estrato_max=9'))
   expect(r.headers.get('location')).toBe('/riomar?estrato_min=3&habitaciones_min=2')
 })
+
+it('[ciudades] con ciudad redirige al catalogo de la ciudad con sus filtros', async () => {
+  const r = await GET(new Request('http://localhost/buscar?ciudad=bogota&operacion=arriendo&q=patio'))
+  expect(r.headers.get('location')).toBe('/ciudad/bogota?operacion=arriendo&q=patio')
+})
+
+it('[ciudades] una ciudad invalida vuelve a la portada', async () => {
+  for (const c of ['../panel', '//evil.example', 'Bogotá']) {
+    const r = await GET(new Request(`http://localhost/buscar?ciudad=${encodeURIComponent(c)}`))
+    expect(r.headers.get('location')).toBe('/')
+  }
+})

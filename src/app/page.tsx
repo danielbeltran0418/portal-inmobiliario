@@ -8,6 +8,7 @@ import { CorazonTarjeta } from '@/components/comprador/corazon-tarjeta'
 import { idsFavoritos } from '@/lib/comprador/favoritos'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { listarRecientes } from '@/lib/catalogo/consultas'
+import { listarCiudades } from '@/lib/catalogo/ciudades'
 import { enlaceDePanel } from '@/lib/navegacion/enlaces'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
 
@@ -86,13 +87,12 @@ export default async function PaginaInicio() {
   // es visible, y un visitante anonimo debe poder verlo sin cuenta. Un fallo de
   // cualquiera de las dos consultas NO tumba la portada: se degrada a vacio.
   const db = crearClientePublico()
-  const [{ data: barriosCrudos }, recientes] = await Promise.all([
-    db.from('barrios').select('nombre,slug').eq('activo', true).order('nombre'),
-    listarRecientes(db),
-  ])
+  // Portal nacional: la portada ofrece CIUDADES, no la lista de todos los
+  // barrios del pais (serian miles). Cada ciudad lleva a /ciudad/{slug}, que
+  // muestra sus barrios.
+  const [ciudades, recientes] = await Promise.all([listarCiudades(db), listarRecientes(db)])
   const sesion = await sesionPendiente
   const panel = enlaceDePanel(sesion)
-  const barrios = barriosCrudos ?? []
   // Sin tipos generados, supabase-js tipa la relacion como lista aunque llegue
   // un objeto (es N:1): se normaliza como en la ficha, y sin barrio no hay enlace.
   const propiedades = (
@@ -131,35 +131,34 @@ export default async function PaginaInicio() {
           <p className="mb-10 max-w-md text-lg text-white/75">
             Quien vende o arrienda publica su propiedad, y un asistente de IA agenda las visitas en tiempo real.
           </p>
-          <BuscadorPortada barrios={barrios} />
+          <BuscadorPortada ciudades={ciudades} />
         </div>
       </section>
 
-      {/* ─── BARRIOS ─── */}
+      {/* ─── CIUDADES ─── */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
         <div className="mb-8">
           <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-tinta-tenue">Explorar por zona</p>
-          <h2 className="font-titulo text-3xl font-semibold text-tinta">Explora por barrio</h2>
+          <h2 className="font-titulo text-3xl font-semibold text-tinta">Explora por ciudad</h2>
         </div>
 
-        {barrios.length === 0 ? (
+        {ciudades.length === 0 ? (
           <p className="rounded-2xl border border-linea bg-superficie p-8 text-center text-tinta-suave">
             Todavía no hay barrios disponibles. Vuelve pronto.
           </p>
         ) : (
           <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {barrios.map((barrio, i) => (
-              <li key={barrio.slug}>
-                {/* aria-label: el nombre accesible es solo el del barrio, no
-                    "El Prado Ver propiedades". */}
+            {ciudades.map((ciudad, i) => (
+              <li key={ciudad.slug}>
+                {/* aria-label: el nombre accesible es solo el de la ciudad. */}
                 <Link
-                  href={`/${barrio.slug}`}
-                  aria-label={barrio.nombre}
+                  href={`/ciudad/${ciudad.slug}`}
+                  aria-label={ciudad.nombre}
                   className={`tarjeta-interactiva group flex aspect-[4/3] flex-col justify-end rounded-2xl bg-gradient-to-br p-4 ${FONDOS_BARRIO[i % FONDOS_BARRIO.length]}`}
                 >
-                  <span className="break-words font-titulo text-xl font-semibold text-[#1F1B14]">{barrio.nombre}</span>
+                  <span className="break-words font-titulo text-xl font-semibold text-[#1F1B14]">{ciudad.nombre}</span>
                   <span className="mt-0.5 text-sm font-medium text-[#3F392F]" aria-hidden="true">
-                    Ver propiedades →
+                    {ciudad.barrios} {ciudad.barrios === 1 ? 'barrio' : 'barrios'} →
                   </span>
                 </Link>
               </li>

@@ -3,7 +3,7 @@ import type { FiltrosCatalogo } from './filtros'
 
 export const TAMANO_PAGINA = 12
 // La lista explícita evita que una columna nueva se exponga por accidente.
-const COLUMNAS_LISTADO = 'id,slug,titulo,operacion,tipo_inmueble,precio,moneda,habitaciones,banos,area_m2,estrato,parqueaderos,actualizado_en,imagenes_propiedad!inner(id,alt_text,orden)'
+const COLUMNAS_LISTADO = 'id,slug,barrio_id,titulo,operacion,tipo_inmueble,precio,moneda,habitaciones,banos,area_m2,estrato,parqueaderos,actualizado_en,imagenes_propiedad!inner(id,alt_text,orden)'
 
 /**
  * Filtro or() de PostgREST para las palabras clave: titulo o descripcion.
@@ -44,14 +44,23 @@ export function aplicarFiltros<T>(consulta: T, filtros: Omit<FiltrosCatalogo, 'p
   return q as unknown as T
 }
 
-export async function listarPropiedadesPublicas(cliente: SupabaseClient, barrioId: string, filtros: FiltrosCatalogo) {
+/**
+ * Publicadas de un barrio (su id) o de una ciudad (los ids de sus barrios).
+ */
+export async function listarPropiedadesPublicas(
+  cliente: SupabaseClient,
+  barrios: string | readonly string[],
+  filtros: FiltrosCatalogo,
+) {
   const inicio = (filtros.pagina - 1) * TAMANO_PAGINA
   if (!Number.isSafeInteger(inicio) || inicio < 0 || !Number.isSafeInteger(inicio + TAMANO_PAGINA - 1)) {
     throw new Error('Página fuera de rango')
   }
-  let consulta = cliente.from('propiedades')
+  if (Array.isArray(barrios) && barrios.length === 0) return { propiedades: [], total: 0 }
+  const base = cliente.from('propiedades')
     .select(COLUMNAS_LISTADO, { count: 'exact' })
-    .eq('estado', 'publicada').eq('barrio_id', barrioId)
+    .eq('estado', 'publicada')
+  let consulta = typeof barrios === 'string' ? base.eq('barrio_id', barrios) : base.in('barrio_id', [...barrios])
   consulta = aplicarFiltros(consulta, filtros)
   const { data, error, count } = await consulta
     .order('actualizado_en', { ascending: false }).order('id', { ascending: false })

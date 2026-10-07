@@ -6,6 +6,7 @@ import { Bath, BedDouble, Maximize2, type LucideIcon, Layers } from 'lucide-reac
 export interface PropiedadDeTarjeta {
   id: string
   slug: string
+  barrio_id?: string
   titulo: string
   operacion: string
   tipo_inmueble: string | null

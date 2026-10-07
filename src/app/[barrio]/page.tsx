@@ -1,20 +1,16 @@
 import { BotonGuardarBusqueda } from '@/components/comprador/BotonGuardarBusqueda'
-import { TarjetaPropiedad } from '@/components/tarjeta-propiedad'
-import { CorazonTarjeta } from '@/components/comprador/corazon-tarjeta'
+import { FiltrosLaterales } from '@/components/catalogo/filtros-laterales'
+import { ListadoCatalogo } from '@/components/catalogo/listado-catalogo'
 import { sesionActual } from '@/lib/auth/sesion'
 import { idsFavoritos } from '@/lib/comprador/favoritos'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { cache } from 'react'
 import { metadatosBarrio, catalogoIndexable } from '@/lib/catalogo/seo'
 import Link from 'next/link'
-import { Search } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
-import { leerFiltros, parametrosDeFiltros, type ParametrosCatalogo } from '@/lib/catalogo/filtros'
+import { leerFiltros, type ParametrosCatalogo } from '@/lib/catalogo/filtros'
 import { listarPropiedadesPublicas, TAMANO_PAGINA } from '@/lib/catalogo/consultas'
-
-const CAMPO =
-  'block w-full rounded-xl border border-linea bg-fondo px-3 py-2.5 text-base text-tinta transition-colors focus:border-marca focus:outline-none focus:ring-2 focus:ring-marca/25'
 
 type Entrada = { params: Promise<{ barrio: string }>; searchParams: Promise<ParametrosCatalogo> }
 
@@ -22,27 +18,12 @@ type Entrada = { params: Promise<{ barrio: string }>; searchParams: Promise<Para
 const cargarBarrio = cache(async (slug: string) => {
   const { data, error } = await crearClientePublico()
     .from('barrios')
-    .select('id,nombre,slug,ciudad')
+    .select('id,nombre,slug,ciudad,ciudad_slug')
     .eq('slug', slug)
     .maybeSingle()
   if (error) throw new Error('No se pudo cargar el barrio')
   return data
 })
-
-const ESTRATOS = [1, 2, 3, 4, 5, 6] as const
-
-/** "Al menos N": cualquiera, 1+, 2+, 3+, 4+. */
-function SelectorMinimo({ nombre, etiqueta, valor }: { nombre: string; etiqueta: string; valor?: number }) {
-  return (
-    <label className="block text-xs text-tinta-suave">
-      {etiqueta}
-      <select className={`${CAMPO} mt-1`} name={nombre} defaultValue={valor ?? ''}>
-        <option value="">Cualquiera</option>
-        {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}+</option>)}
-      </select>
-    </label>
-  )
-}
 
 export default async function PaginaBarrio({ params, searchParams }: Entrada) {
   const [{ barrio: slug }, parametros] = await Promise.all([params, searchParams])
@@ -62,15 +43,6 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
     ? await idsFavoritos(await crearClienteServidor(), sesion.idUsuario, propiedades.map((p) => p.id))
     : new Set<string>()
 
-  function pagina(numero: number | null) {
-    const query = parametrosDeFiltros({ ...filtros, pagina: numero ?? undefined }).toString()
-    return query ? `/${barrio!.slug}?${query}` : `/${barrio!.slug}`
-  }
-
-  const ETIQUETA_GRUPO = 'mb-3 block text-xs font-semibold uppercase tracking-wider text-tinta-suave'
-  const BOTON_PAGINA =
-    'inline-flex items-center gap-1.5 rounded-xl border border-linea px-4 py-2 text-sm font-medium text-tinta-suave transition-colors hover:border-marca hover:text-marca'
-
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
       <nav aria-label="Miga de pan" className="mb-6 flex flex-wrap items-center gap-2 text-sm text-tinta-suave">
@@ -78,6 +50,14 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
           Inicio
         </Link>
         <span aria-hidden="true">/</span>
+        {barrio.ciudad_slug && (
+          <>
+            <Link href={`/ciudad/${barrio.ciudad_slug}`} className="transition-colors hover:text-tinta">
+              {barrio.ciudad}
+            </Link>
+            <span aria-hidden="true">/</span>
+          </>
+        )}
         <span className="font-medium text-tinta">{barrio.nombre}</span>
       </nav>
 
@@ -108,189 +88,17 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
       </div>
 
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-        {/* Filtros en columna lateral (diseño de Figma Make). Siguen siendo un
-            formulario GET: la URL es la fuente de verdad del catalogo. */}
-        <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:w-64">
-          <form method="get" className="flex flex-col gap-6 rounded-2xl border border-linea bg-superficie p-5">
-            <label className="block">
-              <span className={ETIQUETA_GRUPO}>Palabras clave</span>
-              <input
-                className={CAMPO}
-                type="search"
-                name="q"
-                maxLength={60}
-                defaultValue={filtros.texto}
-                placeholder="Balcón, piscina…"
-              />
-            </label>
-            <fieldset>
-              <legend className={ETIQUETA_GRUPO}>Operación</legend>
-              <div className="flex flex-col gap-1">
-                {([['', 'Todas'], ['venta', 'Venta'], ['arriendo', 'Arriendo']] as const).map(([valor, texto]) => (
-                  <label key={texto} className="flex min-h-9 cursor-pointer items-center gap-2.5 text-sm text-tinta">
-                    <input
-                      type="radio"
-                      name="operacion"
-                      value={valor}
-                      defaultChecked={(filtros.operacion ?? '') === valor}
-                      className="h-4 w-4 accent-[var(--marca)]"
-                    />
-                    {texto}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <label className="block">
-              <span className={ETIQUETA_GRUPO}>Tipo de inmueble</span>
-              <select className={CAMPO} name="tipo" defaultValue={filtros.tipo ?? ''}>
-                <option value="">Todos los tipos</option>
-                {['apartamento', 'casa', 'local', 'lote', 'oficina'].map((t) => (
-                  <option key={t} value={t}>
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <fieldset>
-              <legend className={ETIQUETA_GRUPO}>Precio (COP)</legend>
-              <div className="flex flex-col gap-2">
-                <label className="block text-xs text-tinta-suave">
-                  Precio mínimo
-                  <input
-                    className={`${CAMPO} cifra mt-1`}
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    inputMode="decimal"
-                    name="precio_min"
-                    defaultValue={filtros.precioMin}
-                    placeholder="Mínimo"
-                  />
-                </label>
-                <label className="block text-xs text-tinta-suave">
-                  Precio máximo
-                  <input
-                    className={`${CAMPO} cifra mt-1`}
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    inputMode="decimal"
-                    name="precio_max"
-                    defaultValue={filtros.precioMax}
-                    placeholder="Máximo"
-                  />
-                </label>
-              </div>
-            </fieldset>
-
-            {/* Lo que el comprador colombiano filtra siempre (migracion 20261012000100). */}
-            <div className="grid grid-cols-2 gap-3">
-              <SelectorMinimo nombre="habitaciones_min" etiqueta="Habitaciones" valor={filtros.habitacionesMin} />
-              <SelectorMinimo nombre="banos_min" etiqueta="Baños" valor={filtros.banosMin} />
-              <SelectorMinimo nombre="parqueaderos_min" etiqueta="Parqueaderos" valor={filtros.parqueaderosMin} />
-              <label className="block text-xs text-tinta-suave">
-                Administración máx.
-                <input
-                  className={`${CAMPO} cifra mt-1`}
-                  type="number"
-                  min="1"
-                  step="1"
-                  inputMode="numeric"
-                  name="administracion_max"
-                  defaultValue={filtros.administracionMax}
-                  placeholder="Sin tope"
-                />
-              </label>
-            </div>
-
-            <fieldset>
-              <legend className={ETIQUETA_GRUPO}>Estrato</legend>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block text-xs text-tinta-suave">
-                  Desde
-                  <select className={`${CAMPO} mt-1`} name="estrato_min" defaultValue={filtros.estratoMin ?? ''}>
-                    <option value="">Cualquiera</option>
-                    {ESTRATOS.map((e) => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                </label>
-                <label className="block text-xs text-tinta-suave">
-                  Hasta
-                  <select className={`${CAMPO} mt-1`} name="estrato_max" defaultValue={filtros.estratoMax ?? ''}>
-                    <option value="">Cualquiera</option>
-                    {ESTRATOS.map((e) => <option key={e} value={e}>{e}</option>)}
-                  </select>
-                </label>
-              </div>
-            </fieldset>
-
-            <div className="flex flex-col gap-2">
-              <button
-                type="submit"
-                className="w-full cursor-pointer rounded-xl bg-marca py-2.5 text-sm font-semibold text-marca-contraste transition-colors hover:bg-marca-fuerte"
-              >
-                Filtrar
-              </button>
-              <Link
-                href={`/${barrio.slug}`}
-                className="block w-full rounded-xl border border-linea py-2 text-center text-sm text-tinta-suave transition-colors hover:border-marca hover:text-marca"
-              >
-                Limpiar filtros
-              </Link>
-            </div>
-          </form>
-        </aside>
-
-        <div className="min-w-0 flex-1">
-          {propiedades.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-marca-suave">
-                <Search aria-hidden="true" className="h-8 w-8 text-marca" strokeWidth={1.5} />
-              </span>
-              <h2 className="mb-2 font-titulo text-xl text-tinta">No hay propiedades que coincidan con estos filtros</h2>
-              <p className="text-sm text-tinta-suave">Prueba ajustando el rango de precio o cambiando el tipo de inmueble.</p>
-              <Link href={`/${barrio.slug}`} className="mt-4 text-sm font-semibold text-marca hover:underline">
-                Ver todas las de {barrio.nombre}
-              </Link>
-            </div>
-          ) : (
-            <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {propiedades.map((p) => (
-                <TarjetaPropiedad
-                  key={p.id}
-                  propiedad={p}
-                  barrioSlug={barrio.slug}
-                  barrioNombre={barrio.nombre}
-                  accion={
-                    <CorazonTarjeta
-                      propiedadId={p.id}
-                      conSesion={sesion.hayUsuario}
-                      favorito={favoritos.has(p.id)}
-                      volver={pagina(filtros.pagina > 1 ? filtros.pagina : null)}
-                    />
-                  }
-                />
-              ))}
-            </ul>
-          )}
-
-          <nav aria-label="Paginación" className="mt-10 flex items-center justify-center gap-3 text-sm">
-            {filtros.pagina > 1 && (
-              <Link href={pagina(filtros.pagina - 1)} className={BOTON_PAGINA}>
-                ← Anterior
-              </Link>
-            )}
-            <span className="font-medium text-tinta-tenue">
-              Página {filtros.pagina} de {Math.max(1, Math.ceil(total / TAMANO_PAGINA))}
-            </span>
-            {filtros.pagina * TAMANO_PAGINA < total && (
-              <Link href={pagina(filtros.pagina + 1)} className={BOTON_PAGINA}>
-                Siguiente →
-              </Link>
-            )}
-          </nav>
-        </div>
+        <FiltrosLaterales filtros={filtros} limpiarHref={`/${barrio.slug}`} />
+        <ListadoCatalogo
+          propiedades={propiedades}
+          total={total}
+          filtros={filtros}
+          rutaBase={`/${barrio.slug}`}
+          nombreLugar={barrio.nombre}
+          barrioDe={() => barrio}
+          conSesion={sesion.hayUsuario}
+          favoritos={favoritos}
+        />
       </div>
     </main>
   )

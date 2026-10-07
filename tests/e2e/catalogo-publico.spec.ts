@@ -7,12 +7,12 @@ const admin = clienteAdmin()
 let usuario = ''
 let propiedad = ''
 let ruta = ''
-let barrio = { id: '', nombre: '', slug: '' }
+let barrio = { id: '', nombre: '', slug: '', ciudad: '' }
 const titulo = `Casa catálogo ${randomUUID().slice(0, 8)}`
 
 test.beforeAll(async () => {
   usuario = await crearUsuarioDePrueba({ correo: `catalogo-e2e-${randomUUID()}@prueba.test`, password: 'CatalogoE2ePrueba2026*', rol: 'vendedor' })
-  const { data: barrios, error: eBarrio } = await admin.from('barrios').select('id,nombre,slug').eq('activo', true).limit(1)
+  const { data: barrios, error: eBarrio } = await admin.from('barrios').select('id,nombre,slug,ciudad').eq('activo', true).limit(1)
   if (eBarrio || !barrios?.length) throw new Error('Falta barrio de prueba')
   barrio = barrios[0]
   const { data: p, error } = await admin.from('propiedades').insert({ vendedor_id: usuario, barrio_id: barrio.id, slug: `catalogo-e2e-${randomUUID()}`, titulo, descripcion: 'Una casa luminosa para conocer el catálogo público.', precio: 98765432.12, operacion: 'venta', tipo_inmueble: 'casa' }).select('id').single()
@@ -58,7 +58,10 @@ test('palabras clave: encuentra la casa por su titulo y no por un texto ajeno', 
   await expect(page.getByRole('link', { name: new RegExp(titulo) })).toHaveCount(0)
 })
 test('visitante explora barrio, filtra, abre ficha y ve la foto sin dirección exacta', async ({ page }) => {
+  // Portal nacional: la portada lleva a la ciudad, y la ciudad a sus barrios.
   await page.goto('/')
+  await page.getByRole('link', { name: barrio.ciudad, exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1, name: `Propiedades en ${barrio.ciudad}` })).toBeVisible()
   await page.getByRole('link', { name: barrio.nombre, exact: true }).click()
   await page.getByLabel('Precio mínimo').fill('98765432.12')
   await page.getByLabel('Precio máximo').fill('98765432.12')

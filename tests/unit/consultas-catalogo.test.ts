@@ -3,8 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { listarPropiedadesPublicas } from '@/lib/catalogo/consultas'
 
 function cliente(error: object | null = null) {
-  const q = { select: vi.fn(), eq: vi.fn(), gte: vi.fn(), lte: vi.fn(), order: vi.fn(), range: vi.fn() }
-  for (const metodo of ['select', 'eq', 'gte', 'lte', 'order'] as const) q[metodo].mockReturnValue(q)
+  const q = { select: vi.fn(), eq: vi.fn(), in: vi.fn(), gte: vi.fn(), lte: vi.fn(), order: vi.fn(), range: vi.fn() }
+  for (const metodo of ['select', 'eq', 'in', 'gte', 'lte', 'order'] as const) q[metodo].mockReturnValue(q)
   q.range.mockResolvedValue({ data: [], error, count: 0 })
   return { q, db: { from: vi.fn().mockReturnValue(q) } as unknown as SupabaseClient }
 }
@@ -56,5 +56,14 @@ describe('consulta publica del catalogo', () => {
     expect(q.gte).toHaveBeenCalledWith('parqueaderos', 1)
     expect(q.lte).toHaveBeenCalledWith('administracion', 300000)
     expect(q.select.mock.calls[0][0]).toContain('estrato')
+  })
+  it('[ciudades] con varios barrios consulta con in() y sin barrios no consulta', async () => {
+    const { db, q } = cliente()
+    await listarPropiedadesPublicas(db, ['b1', 'b2'], { pagina: 1 })
+    expect(q.in).toHaveBeenCalledWith('barrio_id', ['b1', 'b2'])
+    expect(q.eq).not.toHaveBeenCalledWith('barrio_id', expect.anything())
+    const vacio = cliente()
+    expect(await listarPropiedadesPublicas(vacio.db, [], { pagina: 1 })).toEqual({ propiedades: [], total: 0 })
+    expect(vacio.q.select).not.toHaveBeenCalled()
   })
 })
