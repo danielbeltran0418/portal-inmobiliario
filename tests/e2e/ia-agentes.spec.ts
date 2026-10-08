@@ -129,10 +129,9 @@ test.describe('Recorrido de Agentes IA de punta a punta', () => {
     await pageComprador.fill('textarea[name="mensaje"]', MENSAJE_INICIAL)
     await enviarYEsperar(pageComprador, 'Enviar mensaje')
 
-    // Comprobar mensaje de exito
-    await expect(pageComprador.getByText(/Tu mensaje se envio|Recibimos tu mensaje/i)).toBeVisible({
-      timeout: 15000,
-    })
+    // Pasa directo al chat con el asistente, sin que el vendedor acepte nada
+    await expect(pageComprador).toHaveURL(/\/mi-cuenta\/chat\/[0-9a-f-]+$/, { timeout: 15000 })
+    await expect(pageComprador.locator('[data-testid="mensaje-agente_ia"]').first()).toBeVisible({ timeout: 10000 })
 
     // 2. Drenar leads_nuevos_idx via cron HTTP endpoint
     const cronSecret = process.env.CRON_SECRET || 'desarrollo-cron-secreto-2026'

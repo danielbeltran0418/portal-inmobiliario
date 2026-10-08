@@ -15,7 +15,7 @@ export function FormularioLead(
   if (estado.enviado) {
     return (
       <p role="status" className="rounded-xl border border-exito/30 bg-exito-suave p-4 text-sm text-exito">
-        Tu mensaje se envio. El vendedor vera tus datos de contacto cuando lo acepte.
+        Tu mensaje se envio. Revisa la conversacion con el asistente en Mi cuenta.
       </p>
     )
   }

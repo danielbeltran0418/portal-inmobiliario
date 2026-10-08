@@ -66,12 +66,13 @@ export const MENSAJE_SIN_PRECIO =
   'Para publicar necesitas fijar un precio para la propiedad.'
 
 /**
- * PR001 (20261014000100_guarda_moderacion_propiedades): la propiedad esta en
- * un estado de moderacion ('rechazada' o 'en_revision') y solo el super_admin
- * la saca de ahi.
+ * 42501 de propiedades_guardar_moderacion (20261006000100) al intentar sacar
+ * de 'rechazada' una propiedad. Solo lo usa cambiarEstado(), que sabe que el
+ * UPDATE toca `estado`; mapearError() no lo traduce porque el mismo codigo
+ * sale de cualquier otra denegacion de privilegios.
  */
-export const MENSAJE_PROPIEDAD_MODERADA =
-  'Esta propiedad está retenida por moderación. Solo el equipo del portal puede cambiar su estado.'
+export const MENSAJE_PROPIEDAD_SUSPENDIDA =
+  'Esta propiedad fue suspendida por la administracion. Solo la administracion puede reactivarla.'
 
 /**
  * Red de seguridad para 23514 (check_violation) cuando NINGUNA de las dos

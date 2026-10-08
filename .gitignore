@@ -16,3 +16,6 @@ supabase/.branches/
 
 .DS_Store
 *.pem
+
+# playwright-cli (capturas de la skill)
+.playwright-cli/

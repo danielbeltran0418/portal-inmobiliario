@@ -6,11 +6,17 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { leerCoordenadas } from '@/lib/mapa/coordenadas'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin'
-import { esquemaPropiedad, esquemaPropiedadNueva, type DatosPropiedad } from '@/lib/validacion/esquemas'
+import type { z } from 'zod'
+import {
+  esquemaEstadoDestino,
+  esquemaPropiedad,
+  esquemaPropiedadNueva,
+  type DatosPropiedad,
+} from '@/lib/validacion/esquemas'
 import {
   mapearError,
   MENSAJE_GENERICO,
-  MENSAJE_PROPIEDAD_MODERADA,
+  MENSAJE_PROPIEDAD_SUSPENDIDA,
   MENSAJE_SIN_FOTOS,
   MENSAJE_SIN_PRECIO,
   MENSAJE_UBICACION_NO_GUARDADA,
@@ -231,16 +237,7 @@ export async function actualizarPropiedad(
   return {}
 }
 
-export type EstadoDestino = 'publicada' | 'pausada' | 'vendida' | 'borrador'
-
-/**
- * Lo que el vendedor puede pedir. Una server action se invoca con cualquier
- * argumento, no solo con los que pinta la interfaz: sin esta lista, 'rechazada'
- * o 'en_revision' llegarian hasta la base (que igualmente los rechaza, PR001).
- */
-const DESTINOS_PERMITIDOS: ReadonlySet<string> = new Set<EstadoDestino>(['publicada', 'pausada', 'vendida', 'borrador'])
-
-const CODIGO_PROPIEDAD_MODERADA = 'PR001'
+export type EstadoDestino = z.infer<typeof esquemaEstadoDestino>
 
 /**
  * Lo que le falta a la propiedad para publicarse, de las DOS condiciones que
@@ -292,8 +289,12 @@ async function faltaParaPublicar(
   return null
 }
 
-export async function cambiarEstado(id: string, estado: EstadoDestino): Promise<EstadoPropiedad> {
-  if (!DESTINOS_PERMITIDOS.has(estado)) return { error: MENSAJE_GENERICO }
+export async function cambiarEstado(id: string, estadoPedido: EstadoDestino): Promise<EstadoPropiedad> {
+  // Una server action es un endpoint: EstadoDestino no existe en runtime y
+  // el cliente puede mandar cualquier valor del enum de la base.
+  const validacion = esquemaEstadoDestino.safeParse(estadoPedido)
+  if (!validacion.success) return { error: MENSAJE_GENERICO }
+  const estado = validacion.data
 
   const supabase = await crearClienteServidor()
 
@@ -312,10 +313,10 @@ export async function cambiarEstado(id: string, estado: EstadoDestino): Promise<
   // fila cambia en el hueco entre faltaParaPublicar() y este UPDATE (ver
   // MENSAJE_REQUISITOS_PUBLICACION en mapear.ts). El camino normal ya
   // devolvio antes con el mensaje exacto.
-  if (error) {
-    if (error.code === CODIGO_PROPIEDAD_MODERADA) return { error: MENSAJE_PROPIEDAD_MODERADA }
-    return { error: mapearError(error).mensaje }
-  }
+  // 42501: este UPDATE solo toca `estado`, y la unica guarda que lo deniega
+  // con ese codigo es propiedades_guardar_moderacion (propiedad suspendida).
+  if (error?.code === '42501') return { error: MENSAJE_PROPIEDAD_SUSPENDIDA }
+  if (error) return { error: mapearError(error).mensaje }
 
   // RLS deniega filtrando filas: cero filas significa "no es tuya".
   if (!data || data.length === 0) return { error: MENSAJE_GENERICO }
