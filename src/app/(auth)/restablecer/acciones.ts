@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { esquemaNuevaContrasena } from '@/lib/validacion/esquemas'
 import { MENSAJE_GENERICO } from '@/lib/errores/mapear'
-import { rolDesdeToken, rutaDePanel } from '@/lib/auth/roles'
+import { destinoTrasContrasena, rolDesdeToken } from '@/lib/auth/roles'
 import {
   COOKIE_RECUPERACION,
   MENSAJE_ENLACE_RECUPERACION,
@@ -55,5 +55,5 @@ export async function restablecerContrasena(
 
   almacen.delete(COOKIE_RECUPERACION)
   const { data: { session } } = await supabase.auth.getSession()
-  redirect(rutaDePanel(rolDesdeToken(session?.access_token ?? '')))
+  redirect(destinoTrasContrasena(rolDesdeToken(session?.access_token ?? '')))
 }
