@@ -6,10 +6,17 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { leerCoordenadas } from '@/lib/mapa/coordenadas'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin'
-import { esquemaPropiedad, esquemaPropiedadNueva, type DatosPropiedad } from '@/lib/validacion/esquemas'
+import type { z } from 'zod'
+import {
+  esquemaEstadoDestino,
+  esquemaPropiedad,
+  esquemaPropiedadNueva,
+  type DatosPropiedad,
+} from '@/lib/validacion/esquemas'
 import {
   mapearError,
   MENSAJE_GENERICO,
+  MENSAJE_PROPIEDAD_SUSPENDIDA,
   MENSAJE_SIN_FOTOS,
   MENSAJE_SIN_PRECIO,
   MENSAJE_UBICACION_NO_GUARDADA,
@@ -230,7 +237,7 @@ export async function actualizarPropiedad(
   return {}
 }
 
-export type EstadoDestino = 'publicada' | 'pausada' | 'vendida' | 'borrador'
+export type EstadoDestino = z.infer<typeof esquemaEstadoDestino>
 
 /**
  * Lo que le falta a la propiedad para publicarse, de las DOS condiciones que
@@ -282,7 +289,13 @@ async function faltaParaPublicar(
   return null
 }
 
-export async function cambiarEstado(id: string, estado: EstadoDestino): Promise<EstadoPropiedad> {
+export async function cambiarEstado(id: string, estadoPedido: EstadoDestino): Promise<EstadoPropiedad> {
+  // Una server action es un endpoint: EstadoDestino no existe en runtime y
+  // el cliente puede mandar cualquier valor del enum de la base.
+  const validacion = esquemaEstadoDestino.safeParse(estadoPedido)
+  if (!validacion.success) return { error: MENSAJE_GENERICO }
+  const estado = validacion.data
+
   const supabase = await crearClienteServidor()
 
   // Solo al PUBLICAR hace falta esta comprobacion previa: pausar, marcar
@@ -300,6 +313,9 @@ export async function cambiarEstado(id: string, estado: EstadoDestino): Promise<
   // fila cambia en el hueco entre faltaParaPublicar() y este UPDATE (ver
   // MENSAJE_REQUISITOS_PUBLICACION en mapear.ts). El camino normal ya
   // devolvio antes con el mensaje exacto.
+  // 42501: este UPDATE solo toca `estado`, y la unica guarda que lo deniega
+  // con ese codigo es propiedades_guardar_moderacion (propiedad suspendida).
+  if (error?.code === '42501') return { error: MENSAJE_PROPIEDAD_SUSPENDIDA }
   if (error) return { error: mapearError(error).mensaje }
 
   // RLS deniega filtrando filas: cero filas significa "no es tuya".
