@@ -12,7 +12,8 @@
     "test:e2e": "playwright test",
     "verificar:render": "node scripts/verificar-render-dinamico.mjs",
     "limpiar:usuarios": "npx tsx tests/rls/limpiar-usuarios.ts",
-    "sembrar:publicaciones": "npx tsx scripts/sembrar-publicaciones-prueba.ts"
+    "sembrar:publicaciones": "npx tsx scripts/sembrar-publicaciones-prueba.ts",
+    "verificar:mapa": "node scripts/verificar-mapa.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
