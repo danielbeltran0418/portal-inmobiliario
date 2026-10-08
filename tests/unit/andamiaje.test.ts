@@ -4,8 +4,10 @@ import { readFileSync, existsSync } from 'node:fs'
 describe('andamiaje del proyecto', () => {
   it('.gitignore excluye los archivos de entorno', () => {
     const contenido = readFileSync('.gitignore', 'utf8')
-    expect(contenido).toContain('.env.local')
-    expect(contenido).toContain('.env*.local')
+    expect(contenido).toContain('.env*')
+    expect(contenido).toContain('!.env.example')
+    expect(contenido).toContain('.vercel/')
+    expect(contenido).toContain('credentials.json')
   })
 
   it('.env.example no contiene valores de llaves', () => {

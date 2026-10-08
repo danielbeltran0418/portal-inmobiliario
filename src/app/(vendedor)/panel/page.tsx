@@ -48,7 +48,7 @@ export default async function PaginaPanelVendedor() {
     .order('actualizado_en', { ascending: false })
 
   const filas = filasDelPanel((data ?? []) as unknown as PropiedadCruda[])
-  const nuevos = await contarLeadsNuevos(supabase)
+  const nuevos = await contarLeadsNuevos(supabase, usuario.user.id)
   const resumen = contarPorEstado(filas)
 
   // Sin horario semanal el asistente no tiene horas que ofrecer y nadie puede
@@ -99,3 +99,4 @@ export default async function PaginaPanelVendedor() {
     </main>
   )
 }
+

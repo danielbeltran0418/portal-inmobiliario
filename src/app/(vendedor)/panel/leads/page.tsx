@@ -22,7 +22,7 @@ export default async function PaginaLeads() {
   if (!usuario.user) redirect('/login')
 
   const [leads, conversaciones] = await Promise.all([
-    listarLeadsDelVendedor(supabase),
+    listarLeadsDelVendedor(supabase, usuario.user.id),
     listarConversacionesVendedor(supabase, usuario.user.id),
   ])
 
@@ -100,3 +100,4 @@ export default async function PaginaLeads() {
 function iniciales(nombre: string): string {
   return nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]!.toUpperCase()).join('') || '?'
 }
+

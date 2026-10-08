@@ -95,8 +95,6 @@ describe('Componentes del Panel de Vendedor IA', () => {
     it('5. aprobarCitaPropuesta invoca reservar_cita_como y marca cita_confirmada', async () => {
       mockGetUser.mockResolvedValue({ data: { user: { id: 'vendedor-1' } } })
 
-      // Aceptar el lead lo hace el cliente DEL VENDEDOR (no admin): asi el
-      // trigger de transicion registra lead_aceptado con su actor_id.
       const mockVendedorUpdateLead = vi.fn().mockReturnValue({
         eq: () => ({ eq: async () => ({ data: null, error: null }) }),
       })
@@ -126,8 +124,6 @@ describe('Componentes del Panel de Vendedor IA', () => {
 
       mockAdminRpc.mockResolvedValue({ data: 'cita-uuid-1', error: null })
       const mockAdminUpdate = vi.fn().mockReturnValue({
-        // Sirve tanto para .eq() terminal (conversaciones_ia) como para el
-        // encadenado .eq().eq() con que se acepta el lead.
         eq: () => {
           const resultado = Promise.resolve({ data: null, error: null }) as Promise<unknown> & { eq: () => Promise<unknown> }
           resultado.eq = async () => ({ data: null, error: null })
@@ -153,16 +149,80 @@ describe('Componentes del Panel de Vendedor IA', () => {
       }))
     })
 
-    it('6. actualizarAutoConfirmacion actualiza disponibilidad_semanal', async () => {
+    it('6. actualizarAutoConfirmacion actualiza disponibilidad_semanal exitosamente con rol vendedor y filas afectadas', async () => {
       mockGetUser.mockResolvedValue({ data: { user: { id: 'vendedor-1' } } })
       const mockUpdate = vi.fn().mockReturnValue({
-        eq: async () => ({ data: null, error: null }),
+        eq: () => ({
+          select: async () => ({ data: [{ id: 'disp-1' }], error: null }),
+        }),
       })
-      mockFrom.mockReturnValue({ update: mockUpdate })
+      mockFrom.mockImplementation((tabla: string) => {
+        if (tabla === 'perfiles') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({ data: { rol: 'vendedor' }, error: null }),
+              }),
+            }),
+          }
+        }
+        if (tabla === 'disponibilidad_semanal') {
+          return { update: mockUpdate }
+        }
+        return {}
+      })
 
       const res = await actualizarAutoConfirmacion(true)
       expect(res.ok).toBe(true)
       expect(mockUpdate).toHaveBeenCalledWith({ auto_confirmar_citas: true })
+    })
+
+    it('7. actualizarAutoConfirmacion rechaza si el usuario no tiene rol vendedor', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'comprador-1' } } })
+      mockFrom.mockImplementation((tabla: string) => {
+        if (tabla === 'perfiles') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({ data: { rol: 'comprador' }, error: null }),
+              }),
+            }),
+          }
+        }
+        return {}
+      })
+
+      const res = await actualizarAutoConfirmacion(true)
+      expect(res.ok).toBe(false)
+      expect(res.error).toBe('Solo vendedores pueden modificar esta configuración')
+    })
+
+    it('8. actualizarAutoConfirmacion falla si no hay filas actualizadas (vendedor sin horarios)', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'vendedor-1' } } })
+      const mockUpdate = vi.fn().mockReturnValue({
+        eq: () => ({
+          select: async () => ({ data: [], error: null }),
+        }),
+      })
+      mockFrom.mockImplementation((tabla: string) => {
+        if (tabla === 'perfiles') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({ data: { rol: 'vendedor' }, error: null }),
+              }),
+            }),
+          }
+        }
+        if (tabla === 'disponibilidad_semanal') {
+          return { update: mockUpdate }
+        }
+        return {}
+      })
+
+      const res = await actualizarAutoConfirmacion(true)
+      expect(res.ok).toBe(false)
+      expect(res.error).toBe('Debes configurar tus horarios de disponibilidad antes de activar la auto-confirmación.')
     })
   })
 })

@@ -36,8 +36,8 @@ BEGIN
   -- local, staging y produccion, asi que esa condicion nunca disparaba y
   -- solo aparentaba ser una segunda deteccion. No volver a agregarla sin
   -- una forma real de distinguir el entorno por el nombre de la base.
-  IF current_setting('app.entorno', true) = 'production' THEN
-    RAISE EXCEPTION 'El seed de desarrollo no se ejecuta en produccion';
+  IF current_setting('app.entorno', true) IS DISTINCT FROM 'local' THEN
+    RAISE EXCEPTION 'El seed de desarrollo solo puede ejecutarse con app.entorno = ''local''';
   END IF;
 END
 $guarda$;
@@ -94,3 +94,4 @@ END
 $seed$;
 
 COMMIT;
+

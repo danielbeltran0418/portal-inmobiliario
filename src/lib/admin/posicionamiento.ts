@@ -1,5 +1,13 @@
 import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { mapearError } from '@/lib/errores/mapear'
+
+const esquemaId = z.string().uuid('Identificador inválido')
+const esquemaMotivo = z
+  .string()
+  .trim()
+  .min(1, 'Se requiere un motivo.')
+  .max(500, 'El motivo no puede superar 500 caracteres.')
 
 export const esquemaPagoPosicionamiento = z
   .object({
@@ -60,6 +68,11 @@ export async function registrarPagoPosicionamiento(
   datosRaw: unknown,
   adminId: string,
 ): Promise<ResultadoPagoPosicionamiento> {
+  const valAdmin = esquemaId.safeParse(adminId)
+  if (!valAdmin.success) {
+    return { ok: false, error: 'ID de administrador inválido.' }
+  }
+
   const validacion = esquemaPagoPosicionamiento.safeParse(datosRaw)
   if (!validacion.success) {
     const primerError = validacion.error.issues[0]?.message ?? 'Datos de pago inválidos'
@@ -90,7 +103,7 @@ export async function registrarPagoPosicionamiento(
       fecha_inicio: datos.fecha_inicio,
       fecha_fin: datos.fecha_fin,
       estado: 'activo',
-      registrado_por: adminId,
+      registrado_por: valAdmin.data,
       notas: datos.notas ?? null,
       referencia_externa: datos.referencia_externa ?? null,
     })
@@ -98,15 +111,15 @@ export async function registrarPagoPosicionamiento(
     .single()
 
   if (errInsert || !nuevoPago) {
-    return { ok: false, error: 'Error al registrar el pago: ' + errInsert?.message }
+    return { ok: false, error: errInsert ? mapearError(errInsert).mensaje : 'Error al registrar el pago.' }
   }
 
-  // 3. Registrar auditoría
-  await clienteAdmin.rpc('registrar_evento_auditoria', {
+  // 3. Registrar auditoría comprobando error
+  const { error: errAuditoria } = await clienteAdmin.rpc('registrar_evento_auditoria', {
     p_accion: 'posicionamiento_activado',
     p_entidad: 'pagos_posicionamiento',
     p_entidad_id: nuevoPago.id,
-    p_actor_id: adminId,
+    p_actor_id: valAdmin.data,
     p_metadatos: {
       propiedad_id: datos.propiedad_id,
       vendedor_id: prop.vendedor_id,
@@ -118,6 +131,10 @@ export async function registrarPagoPosicionamiento(
     },
     p_ip: null,
   })
+
+  if (errAuditoria) {
+    return { ok: false, error: mapearError(errAuditoria).mensaje }
+  }
 
   return { ok: true, pagoId: nuevoPago.id }
 }
@@ -132,43 +149,63 @@ export async function cancelarPagoPosicionamiento(
   motivo: string,
   adminId: string,
 ): Promise<ResultadoPagoPosicionamiento> {
-  if (!pagoId) {
-    return { ok: false, error: 'Se requiere el ID del acuerdo de posicionamiento.' }
+  const valPago = esquemaId.safeParse(pagoId)
+  if (!valPago.success) {
+    return { ok: false, error: 'ID del acuerdo inválido.' }
+  }
+
+  const valAdmin = esquemaId.safeParse(adminId)
+  if (!valAdmin.success) {
+    return { ok: false, error: 'ID de administrador inválido.' }
+  }
+
+  const valMotivo = esquemaMotivo.safeParse(motivo)
+  if (!valMotivo.success) {
+    return { ok: false, error: valMotivo.error.issues[0]?.message ?? 'Motivo de cancelación inválido.' }
   }
 
   const { data: pago, error: errPago } = await cliente
     .from('pagos_posicionamiento')
     .select('id, propiedad_id, estado')
-    .eq('id', pagoId)
+    .eq('id', valPago.data)
     .single()
 
   if (errPago || !pago) {
     return { ok: false, error: 'Acuerdo de posicionamiento no encontrado.' }
   }
 
-  const { error: errUpdate } = await cliente
+  const { data: filas, error: errUpdate } = await cliente
     .from('pagos_posicionamiento')
     .update({ estado: 'cancelado' })
-    .eq('id', pagoId)
+    .eq('id', valPago.data)
+    .select('id')
 
   if (errUpdate) {
-    return { ok: false, error: 'Error al cancelar el posicionamiento: ' + errUpdate.message }
+    return { ok: false, error: mapearError(errUpdate).mensaje }
   }
 
-  await clienteAdmin.rpc('registrar_evento_auditoria', {
+  if (!filas || filas.length === 0) {
+    return { ok: false, error: 'Acuerdo de posicionamiento no encontrado o ya cancelado.' }
+  }
+
+  const { error: errAuditoria } = await clienteAdmin.rpc('registrar_evento_auditoria', {
     p_accion: 'posicionamiento_cancelado',
     p_entidad: 'pagos_posicionamiento',
-    p_entidad_id: pagoId,
-    p_actor_id: adminId,
+    p_entidad_id: valPago.data,
+    p_actor_id: valAdmin.data,
     p_metadatos: {
       propiedad_id: pago.propiedad_id,
       estado_anterior: pago.estado,
-      motivo: motivo.trim() || 'Cancelado por administrador',
+      motivo: valMotivo.data,
     },
     p_ip: null,
   })
 
-  return { ok: true, pagoId }
+  if (errAuditoria) {
+    return { ok: false, error: mapearError(errAuditoria).mensaje }
+  }
+
+  return { ok: true, pagoId: valPago.data }
 }
 
 /**

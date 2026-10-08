@@ -30,6 +30,7 @@ enabled = false
 # key_path = "../certs/my-key.pem"
 
 [db]
+
 # Port to use for the local database URL.
 port = 54322
 # Port used by db diff command to initialize the shadow database.
@@ -67,7 +68,7 @@ schema_paths = []
 enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql"]
+sql_paths = ["./seed_env.sql", "./seed.sql"]
 
 [db.network_restrictions]
 # Enable management of network restrictions.
@@ -437,3 +438,5 @@ enabled = true
 # declarative_schema_path = "./schemas"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+

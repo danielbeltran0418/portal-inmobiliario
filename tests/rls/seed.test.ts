@@ -123,7 +123,7 @@ describe('seed de desarrollo', () => {
   // Las pruebas de abajo borran las tres cuentas para poder observar si el
   // seed las crea o no. Se dejan repuestas pase lo que pase.
   afterAll(async () => {
-    const resultado = await ejecutarSeed(null)
+    const resultado = await ejecutarSeed('local')
     expect(resultado.fallo, `no se pudo reponer el seed: ${resultado.mensaje}`).toBe(false)
   })
 
@@ -198,7 +198,12 @@ describe('seed de desarrollo', () => {
     const resultado = await ejecutarSeed('production')
 
     expect(resultado.fallo, 'el seed NO fallo con app.entorno = production').toBe(true)
-    expect(resultado.mensaje).toContain('El seed de desarrollo no se ejecuta en produccion')
+    expect(resultado.mensaje).toContain("El seed de desarrollo solo puede ejecutarse con app.entorno = 'local'")
+
+    // Falla cerrado si app.entorno no está fijado (null)
+    const sinEntorno = await ejecutarSeed(null)
+    expect(sinEntorno.fallo, 'el seed NO fallo cerrado sin app.entorno').toBe(true)
+    expect(sinEntorno.mensaje).toContain("El seed de desarrollo solo puede ejecutarse con app.entorno = 'local'")
 
     // Lo que de verdad importa: ninguna cuenta llego a existir. El archivo va
     // en una sola transaccion, asi que la excepcion de la guarda la deja
