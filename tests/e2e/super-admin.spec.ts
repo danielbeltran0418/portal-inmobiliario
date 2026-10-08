@@ -28,7 +28,9 @@ test.describe('E2E — Segundo factor del super_admin (M2)', () => {
     await expect(page.getByTestId('secreto-totp')).toBeVisible()
     await page.fill('input[name="codigo"]', '000000')
     await page.getByRole('button', { name: /^Verificar$/ }).click()
-    await expect(page.getByRole('alert')).toContainText(/no es válido/i)
+    // getByText y no getByRole('alert'): Next tambien pinta un role=alert (su
+    // anunciador de rutas) y el selector seria ambiguo.
+    await expect(page.getByText(/Ese código no es válido/i)).toBeVisible()
     await expect(page).toHaveURL(/\/doble-factor$/)
   })
 })
