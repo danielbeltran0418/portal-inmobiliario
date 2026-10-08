@@ -111,6 +111,13 @@ describe('enviarLead', () => {
     expect(r.error).toBe(MENSAJE_LEAD_PROPIA)
   })
 
+  it('[limite] al pasar de 20 contactos en 24 h (LD005) lo explica, sin el texto de la base', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: 'LD005', message: 'detalle interno' } })
+    const r = await enviarLead({}, formulario(CAMPOS_VALIDOS))
+    expect(r.error).toMatch(/24 horas/)
+    expect(r.error).not.toContain('detalle interno')
+  })
+
   it('cualquier otro error cae en el mensaje generico, sin filtrar el original', async () => {
     rpc.mockResolvedValue({ data: null, error: { code: '99999', message: 'boom interno' } })
 

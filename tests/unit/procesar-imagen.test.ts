@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import sharp from 'sharp'
-import { procesarImagen, ANCHO_MAXIMO } from '@/lib/imagenes/procesar'
+import { procesarImagen, formatoReal, ANCHO_MAXIMO } from '@/lib/imagenes/procesar'
 
 async function jpegDePrueba(ancho: number, alto: number, conGps = false) {
   let imagen = sharp({
@@ -97,5 +97,25 @@ describe('procesarImagen', () => {
     expect(metaSalida.width).toBe(600)
     expect(metaSalida.height).toBe(800)
     expect(metaSalida.orientation).toBeUndefined()
+  })
+})
+
+describe('formatoReal: el contenido manda, no el tipo que declara el navegador', () => {
+  it('reconoce JPEG, PNG y WebP por sus bytes', async () => {
+    const base = sharp({ create: { width: 4, height: 4, channels: 3, background: '#888' } })
+    expect(formatoReal(await base.clone().jpeg().toBuffer())).toBe('jpeg')
+    expect(formatoReal(await base.clone().png().toBuffer())).toBe('png')
+    expect(formatoReal(await base.clone().webp().toBuffer())).toBe('webp')
+  })
+
+  it('rechaza un SVG, un GIF o basura aunque se suban como image/png', () => {
+    expect(formatoReal(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>'))).toBeNull()
+    expect(formatoReal(Buffer.from('<?xml version="1.0"?><svg/>'))).toBeNull()
+    expect(formatoReal(Buffer.from('GIF89a......'))).toBeNull()
+    expect(formatoReal(Buffer.from([0, 1, 2]))).toBeNull()
+  })
+
+  it('procesarImagen nunca le pasa a sharp algo que no sea JPEG, PNG o WebP', async () => {
+    await expect(procesarImagen(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>'))).rejects.toThrow(/formato/i)
   })
 })
