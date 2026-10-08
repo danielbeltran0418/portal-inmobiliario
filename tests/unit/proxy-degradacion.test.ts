@@ -5,9 +5,12 @@ import type { NextRequest } from 'next/server'
 // Mocks -- vi.hoisted() crea las referencias antes del izado de vi.mock
 // ---------------------------------------------------------------------------
 
-const { resolverRutaPublicaMock, esRutaFichaMock } = vi.hoisted(() => ({
+const { resolverRutaPublicaMock, esRutaFichaMock, getUserMock, getClaimsMock, rutaPermitidaMock } = vi.hoisted(() => ({
   resolverRutaPublicaMock: vi.fn(),
   esRutaFichaMock: vi.fn(),
+  getUserMock: vi.fn(),
+  getClaimsMock: vi.fn(),
+  rutaPermitidaMock: vi.fn(() => true),
 }))
 
 vi.mock('@/lib/catalogo/rutas', () => ({
@@ -28,7 +31,8 @@ vi.mock('@/lib/seguridad/cabeceras', () => ({
 
 vi.mock('@/lib/auth/roles', () => ({
   rolDesdeToken: vi.fn(() => 'visitante'),
-  rutaPermitida: vi.fn(() => true),
+  rolDesdeClaims: vi.fn((c: { app_metadata?: { rol?: string } } | null) => c?.app_metadata?.rol ?? 'comprador'),
+  rutaPermitida: rutaPermitidaMock,
   rutaDePanel: vi.fn(() => '/'),
 }))
 
@@ -39,7 +43,8 @@ vi.mock('@/lib/http/origen-peticion', () => ({
 vi.mock('@supabase/ssr', () => ({
   createServerClient: vi.fn(() => ({
     auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
+      getUser: getUserMock,
+      getClaims: getClaimsMock,
       getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
     },
   })),
@@ -116,9 +121,50 @@ function crearPeticion(ruta: string, metodo = 'GET') {
 // Tests
 // ---------------------------------------------------------------------------
 
+beforeEach(() => {
+  getUserMock.mockReset().mockResolvedValue({ data: { user: null } })
+  getClaimsMock.mockReset().mockResolvedValue({ data: null, error: null })
+  rutaPermitidaMock.mockReset().mockReturnValue(true)
+})
+
+describe('proxy: autenticacion con getClaims()', () => {
+  it('una ruta publica verifica con getClaims y no paga un getUser() de red', async () => {
+    esRutaFichaMock.mockReturnValue(false)
+    getClaimsMock.mockResolvedValue({ data: { claims: { sub: 'u1' } }, error: null })
+    const r = await proxy(crearPeticion('/ciudad/bogota') as unknown as NextRequest)
+    expect(r.status).toBe(200)
+    expect(getClaimsMock).toHaveBeenCalledTimes(1)
+    expect(getUserMock).not.toHaveBeenCalled()
+  })
+
+  it('una ruta protegida sin claims va al login sin consultar al servidor', async () => {
+    const r = await proxy(crearPeticion('/panel') as unknown as NextRequest)
+    expect(r.headers.get('Location')).toMatch(/\/login$/)
+    expect(getUserMock).not.toHaveBeenCalled()
+  })
+
+  it('una ruta protegida exige el correo verificado (getUser) y decide con el rol de las claims', async () => {
+    getClaimsMock.mockResolvedValue({ data: { claims: { sub: 'u1', app_metadata: { rol: 'vendedor' } } }, error: null })
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1', email_confirmed_at: null } } })
+    const sinVerificar = await proxy(crearPeticion('/panel') as unknown as NextRequest)
+    expect(sinVerificar.headers.get('Location')).toMatch(/\/verificar-correo$/)
+
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1', email_confirmed_at: '2026-10-01' } } })
+    await proxy(crearPeticion('/panel') as unknown as NextRequest)
+    expect(rutaPermitidaMock).toHaveBeenLastCalledWith('/panel', 'vendedor')
+  })
+
+  it('un token que getClaims rechaza cuenta como sin sesion', async () => {
+    getClaimsMock.mockResolvedValue({ data: null, error: { message: 'invalid JWT signature' } })
+    const r = await proxy(crearPeticion('/mi-cuenta') as unknown as NextRequest)
+    expect(r.headers.get('Location')).toMatch(/\/login$/)
+  })
+})
+
 describe('proxy: degradacion ante fallo de base de datos', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    resolverRutaPublicaMock.mockReset()
+    esRutaFichaMock.mockReset()
   })
 
   it('devuelve 200 (degrada) en vez de 503 cuando resolverRutaPublica lanza', async () => {

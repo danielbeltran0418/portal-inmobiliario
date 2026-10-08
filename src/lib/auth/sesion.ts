@@ -44,9 +44,16 @@ export const SIN_SESION: Sesion = { hayUsuario: false, accessToken: null, idUsua
 export const sesionActual = cache(async (): Promise<Sesion> => {
   const supabase = await crearClienteServidor()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return SIN_SESION
+  // getClaims() verifica la firma del token. Con llaves de firma asimetricas
+  // (Supabase > Auth > JWT Signing Keys) lo hace localmente contra el JWKS en
+  // cache, SIN viaje al servidor de auth; con el secreto simetrico (HS256)
+  // hace por dentro lo mismo que getUser(). Nunca es menos seguro que antes.
+  const { data, error } = await supabase.auth.getClaims()
+  const claims = data?.claims
+  if (error || !claims?.sub) return SIN_SESION
 
+  // getSession() solo lee la cookie: el token que devuelve es el mismo que
+  // getClaims() acaba de verificar.
   const { data: { session } } = await supabase.auth.getSession()
-  return { hayUsuario: true, accessToken: session?.access_token ?? null, idUsuario: user.id }
+  return { hayUsuario: true, accessToken: session?.access_token ?? null, idUsuario: claims.sub }
 })

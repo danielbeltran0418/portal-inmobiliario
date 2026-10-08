@@ -74,7 +74,17 @@ function builderLeadsSimulado() {
 
 vi.mock('@/lib/supabase/cliente-servidor', () => ({
   crearClienteServidor: async () => ({
-    auth: { getUser, getSession },
+    // sesionActual usa getClaims(): se deriva del mismo getUser que fija cada
+    // prueba, asi el resto de mocks sigue igual.
+    auth: {
+      getUser,
+      getSession,
+      getClaims: async () => {
+        const r = await getUser()
+        const id = r?.data?.user?.id
+        return id ? { data: { claims: { sub: id } }, error: null } : { data: null, error: null }
+      },
+    },
     from: (tabla: string) => {
       if (tabla === 'leads') {
         if (simularRlsLeads) return { select: () => builderLeadsSimulado() }
