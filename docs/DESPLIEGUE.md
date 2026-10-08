@@ -59,6 +59,20 @@ cualquiera).
 vercel --prod
 ```
 
+### 5 · Lo que se agregó en octubre de 2026
+
+| Qué | Dónde | Sin configurarlo… |
+|---|---|---|
+| `GOOGLE_MAPS_API_KEY` | Google Cloud: clave con **solo Maps Static API**. Variable de servidor, nunca `NEXT_PUBLIC_`. | La ficha no muestra el mapa de la zona (queda el aviso del barrio). |
+| `GOOGLE_MAPS_SIGNING_SECRET` | Google Cloud → Maps → Credenciales → *URL signing secret*. | El mapa funciona, pero una URL con la clave sirve para gastar tu cuota. |
+| Redirect URL `https://<dominio>/confirmar/recuperacion` | Supabase → Authentication → URL Configuration → Redirect URLs. | El enlace de "¿Olvidaste tu contraseña?" falla. |
+| Llaves de firma **asimétricas** | Supabase → Authentication → JWT Signing Keys. | Todo funciona, pero cada visita paga un viaje de red al servidor de Auth (`getClaims()` vuelve a `getUser()` con HS256). |
+| Regla de *rate limiting* | Vercel → Firewall: limitar por IP `/imagen/zona/*` y las fichas (`/*/*`). | Un bot puede recorrer fichas sin límite. La app no lo hace por petición: costaría una escritura en la base en cada visita. |
+
+Los barrios y ciudades ya no se crean con migraciones: **`/control/barrios`** (super admin).
+El slug de un barrio es la URL y es único en todo el país; con homónimos el panel le agrega la
+ciudad (`el-prado-bucaramanga`).
+
 ---
 
 ## Lo que rompe en silencio si nadie lo configura
@@ -207,3 +221,8 @@ En este orden, porque cada paso depende del anterior:
 5. Publicar una propiedad con foto, y verla en `/<barrio>/<slug>`.
 6. **La foto se ve.** Si no, revisa que `img-src` de la CSP admita el dominio de Storage: en
    producción cubre `https://*.supabase.co`, que es donde vive un proyecto alojado.
+7. En el editor, pon coordenadas a una propiedad publicada: su ficha muestra el **mapa de la
+   zona** (requiere `GOOGLE_MAPS_API_KEY`).
+8. `/recuperar` envía el correo y su enlace abre `/restablecer`.
+9. `/ciudad/<ciudad>` lista las propiedades de todos sus barrios.
+10. `/robots.txt` lista `/sitemap.xml` y `/sitemaps/fichas/0`, y los dos responden XML.

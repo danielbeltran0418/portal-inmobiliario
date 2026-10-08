@@ -41,6 +41,31 @@ anterior para que la IA se entere de algo, la costura se cortó mal.
 | **SP1** | Catálogo público y SEO | 📋 **Spec escrito, sin plan ni código** |
 | SP2, SP5, SP6, SP7 | Comprador, citas, IA, admin | ⬜ Sin empezar |
 
+## Al día (octubre de 2026)
+
+El portal es **nacional**: nada asume una ciudad. Lo que se agregó, con el PR donde vive:
+
+- **Catálogo**: por barrio (`/<barrio>`) y por ciudad (`/ciudad/<ciudad>`, #64); filtros de
+  operación, tipo, precio, palabras clave (#55), estrato, habitaciones, baños, parqueaderos y
+  administración (#63). `aplicarFiltros()` y `parametrosDeFiltros()`
+  (`src/lib/catalogo/`) son el único sitio que conoce los filtros: los usan el catálogo,
+  `/buscar`, las búsquedas guardadas y los avisos por correo.
+- **Ficha**: estrato, administración, parqueaderos, año y piso (#63); mapa de la **zona
+  aproximada** con Google Maps (#61; el punto exacto nunca sale de la base,
+  `zona_aproximada_propiedad()`); ♡ favoritos en las tarjetas (#49).
+- **Comprador**: recuperar contraseña (#48); búsquedas guardadas con todos los filtros (#58).
+- **Vendedor**: cuadrícula semanal de disponibilidad (#52); coordenadas del inmueble en el editor.
+- **Super admin**: exportar CSV en moderación (#50), gráfico mensual (#51), métricas agregadas en
+  la base (#60), **gestión de barrios y ciudades** en `/control/barrios` (#64).
+- **IA**: límites del chat atómicos en la base (#53); el tope de 3 conversaciones frena la
+  cuarta, no las tres (#57).
+- **Seguridad**: formato real de imagen por sus bytes y `sharp` 0.35.5 (#65); 20 leads por
+  comprador en 24 h (#65); `crear_lead` sin oráculo (#54).
+- **Rendimiento**: `getClaims()` en proxy y sesión (#66); fotos cacheables, sitemap partido en
+  `/sitemaps/fichas/{n}` y avisos por lotes (#67).
+
+Configuración pendiente en producción: ver la sección 5 de `docs/DESPLIEGUE.md`.
+
 ## Lo que un usuario puede hacer hoy
 
 **Como visitante:** ver la landing, registrarse como comprador o vendedor, verificar su correo
@@ -63,21 +88,30 @@ estado de SP1 y SP2 en este documento queda pendiente de una revisión aparte.
 ## Rutas construidas
 
 ```
-/                          landing (pública)
+/                          portada: buscador por ciudad, ciudades, recién publicados
+/ciudad/[ciudad]           catálogo de una ciudad (todos sus barrios)
+/[barrio]                  catálogo de un barrio, con filtros laterales
+/[barrio]/[slug]           ficha pública (mapa de la zona si hay coordenadas)
+/buscar                    puente del buscador (ciudad o barrio + filtros)
 /registro  /login          alta y acceso
+/recuperar /restablecer    "¿Olvidaste tu contraseña?"
 /verificar-correo          instrucciones tras registrarse
-/confirmar                 destino del enlace del correo
-/panel                     listado del vendedor          🔒 vendedor
-/panel/propiedades/nueva   alta de propiedad             🔒 vendedor
-/panel/propiedades/[id]    edición, fotos y estados      🔒 vendedor
-/panel/leads               bandeja de leads, sin contacto 🔒 vendedor    (SP4)
-/mi-cuenta                 marcador de posición          🔒 comprador  (SP2)
-/control                   marcador de posición          🔒 super admin (SP7)
+/confirmar(/recuperacion)  destino de los enlaces del correo
+/imagen/[id]               foto de una publicada (redirección firmada, 5 min de caché)
+/imagen/zona/[id]          mapa de la zona (Google Static Maps, 1 día de caché)
+/sitemap.xml  /sitemaps/fichas/[n]   sitemaps; robots.txt los lista
+/panel/...                 propiedades, leads, disponibilidad, visitas   🔒 vendedor
+/mi-cuenta/...             solicitudes, chat IA, favoritos, búsquedas    🔒 comprador
+/control/...               moderación, posicionamiento, métricas,
+                           auditoría, barrios                           🔒 super admin
 ```
+
+Toda carpeta nueva de primer nivel en `src/app` tiene que ir en `RUTAS_RESERVADAS`
+(`src/lib/catalogo/rutas.ts`) y en el `CHECK barrios_slug_no_reservado`: una prueba falla si no.
 
 ## Base de datos
 
-**36 migraciones.** Nunca se edita una ya aplicada: toda corrección va en una nueva.
+**61 migraciones** (en main al escribir esto). Nunca se edita una ya aplicada: toda corrección va en una nueva.
 
 Tablas: `perfiles`, `barrios`, `propiedades`, `imagenes_propiedad`, `registro_auditoria`,
 `intentos_accion` (antes `intentos_login`: SP4 la generalizó para cubrir también el límite de
