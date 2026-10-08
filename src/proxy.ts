@@ -164,6 +164,7 @@ export async function proxy(peticion: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp)$).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon\\.ico|acceso\\.jpg|file\\.svg|globe\\.svg|next\\.svg|og-fallback\\.jpg|portada\\.jpg|vercel\\.svg|window\\.svg).*)',
+  ],
 }
-
