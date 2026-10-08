@@ -98,11 +98,18 @@ test('visitante explora barrio, filtra, abre ficha y ve la foto sin dirección e
   expect(json.offers.price).toBe(98765432.12)
   expect(JSON.stringify(json)).not.toContain('DIRECCION SECRETA E2E')
   const fichaUrl = page.url()
+  // El sitemap principal lista el barrio; las fichas van en /sitemaps/fichas/{n},
+  // y robots.txt enumera los dos.
   const mapa = await page.request.get('/sitemap.xml')
   expect(mapa.status()).toBe(200)
-  expect(await mapa.text()).toContain(fichaUrl)
+  expect(await mapa.text()).toContain(`/${barrio.slug}</loc>`)
+  const fichas = await page.request.get('/sitemaps/fichas/0')
+  expect(fichas.status()).toBe(200)
+  expect(await fichas.text()).toContain(fichaUrl)
   const reglas = await page.request.get('/robots.txt')
-  expect(await reglas.text()).toContain('Disallow: /panel')
+  const robotsTxt = await reglas.text()
+  expect(robotsTxt).toContain('Disallow: /panel')
+  expect(robotsTxt).toContain('/sitemaps/fichas/0')
   const { data: otroBarrio, error: eBarrio } = await admin.from('barrios').select('id,slug').eq('activo', true).neq('id', barrio.id).limit(1).single()
   if (eBarrio) throw eBarrio
   const { error: eMover } = await admin.from('propiedades').update({ barrio_id: otroBarrio.id }).eq('id', propiedad)
