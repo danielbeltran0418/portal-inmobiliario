@@ -9,6 +9,16 @@ vi.mock('@/lib/supabase/cliente-servidor', () => ({
   crearClienteServidor: async () => ({ rpc }),
 }))
 
+vi.mock('@/lib/ia/despachador', () => ({
+  procesarLeadIndividual: vi.fn().mockResolvedValue(null),
+}))
+
+vi.mock('next/navigation', () => ({
+  redirect: (ruta: string) => {
+    throw new Error(`NEXT_REDIRECT:${ruta}`)
+  },
+}))
+
 const { enviarLead } = await import('@/app/[barrio]/[slug]/acciones')
 const { FormularioLead } = await import('@/app/[barrio]/[slug]/formulario-lead')
 const {
@@ -68,12 +78,10 @@ describe('enviarLead', () => {
     expect(rpc).not.toHaveBeenCalled()
   })
 
-  it('llama a crear_lead con los datos validados y devuelve enviado', async () => {
+  it('llama a crear_lead con los datos validados y lleva al chat del lead', async () => {
     rpc.mockResolvedValue({ data: 'lead-1', error: null })
 
-    const r = await enviarLead({}, formulario(CAMPOS_VALIDOS))
-
-    expect(r).toEqual({ enviado: true })
+    await expect(enviarLead({}, formulario(CAMPOS_VALIDOS))).rejects.toThrow('NEXT_REDIRECT:/mi-cuenta/chat/lead-1')
     expect(rpc).toHaveBeenCalledWith('crear_lead', {
       p_propiedad_id: 'prop-123',
       p_telefono: '3001234567',

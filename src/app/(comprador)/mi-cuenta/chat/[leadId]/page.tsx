@@ -7,13 +7,13 @@ import { listarConversacionesComprador } from '@/lib/ia/consultas'
 import { ChatLeadIA } from '@/components/mi-cuenta/chat-lead-ia'
 
 export const metadata: Metadata = {
-  title: 'Agendar visita | Portal Inmobiliario',
+  title: 'Chat con el asistente | Portal Inmobiliario',
   robots: { index: false, follow: false },
 }
 
 /**
- * Destino del boton "Agendar visita" de la ficha: el chat con el asistente de
- * una sola solicitud, ya abierto. Es la misma conversacion que aparece en
+ * Destino del formulario de contacto y del boton "Agendar visita" de la ficha:
+ * el chat con el asistente de una sola solicitud, ya abierto. Es la misma conversacion que aparece en
  * /mi-cuenta, no otra.
  */
 export default async function PaginaChatAgendamiento(
@@ -38,9 +38,9 @@ export default async function PaginaChatAgendamiento(
   return (
     <div className="space-y-4">
       <Link href="/mi-cuenta" className="text-sm text-marca hover:underline">← Mis solicitudes</Link>
-      <h1 className="text-2xl font-semibold text-tinta">Agendar visita: {titulo}</h1>
+      <h1 className="text-2xl font-semibold text-tinta">Asistente de {titulo}</h1>
       <p className="text-sm text-tinta-suave">
-        Pídele al asistente un horario. Solo te ofrecerá las horas que el propietario marcó como disponibles, y
+        Pregúntale al asistente lo que quieras sobre la propiedad o pídele un horario de visita. Solo te ofrecerá las horas que el propietario marcó como disponibles, y
         cuando la visita quede agendada le llegará un correo al propietario. Puedes cancelarla o moverla sin
         penalización hasta 8 horas antes.
       </p>
