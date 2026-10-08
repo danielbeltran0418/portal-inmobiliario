@@ -66,7 +66,7 @@ describe('iniciarSesion', () => {
 
       // Y NO se contabiliza como intento fallido de login. Si contara, cinco
       // envios con el captcha en blanco bloquearian la cuenta de cualquiera
-      // durante 15 minutos sin haber tocado su contrasena.
+      // durante 5 minutos sin haber tocado su contrasena.
       expect(registrarIntentoAccion).not.toHaveBeenCalled()
     })
 

@@ -15,6 +15,10 @@ import { clienteAdmin, clienteComo, crearUsuarioDePrueba, sesionVendedor } from 
 let clienteActual: SupabaseClient
 let deleteUserFalla = false
 
+// El cliente admin y el limitador de intentos importan 'server-only', que
+// revienta bajo Vitest: se neutraliza, como en eliminar-propiedad.test.ts.
+vi.mock('server-only', () => ({}))
+
 vi.mock('@/lib/supabase/cliente-servidor', () => ({
   crearClienteServidor: async () => clienteActual,
 }))
@@ -34,10 +38,14 @@ vi.mock('@/lib/supabase/cliente-admin', async () => {
   }
 })
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+// La puerta de entrada (contrasena + limite de intentos) lee la IP de las
+// cabeceras de la peticion, que no existen fuera de Next.
+vi.mock('next/headers', () => ({ headers: async () => new Headers() }))
 
 const { suprimirCuentaCompradorAction } = await import('@/lib/comprador/acciones-datos')
 
 const CONFIRMACION = 'ELIMINAR MI CUENTA'
+const PASSWORD = 'ClaveDePrueba123!'
 
 describe('suprimirCuentaCompradorAction (CN-006)', () => {
   let vendedor: SupabaseClient
@@ -75,9 +83,8 @@ describe('suprimirCuentaCompradorAction (CN-006)', () => {
   // Comprador con un lead (y su contacto) y un favorito sobre la propiedad.
   async function compradorConDatos(): Promise<{ cliente: SupabaseClient; id: string; leadId: string }> {
     const correo = `supresion-${randomUUID()}@prueba.test`
-    const password = 'ClaveDePrueba123!'
-    const id = await crearUsuarioDePrueba({ correo, password, rol: 'comprador' })
-    const cliente = await clienteComo(correo, password)
+    const id = await crearUsuarioDePrueba({ correo, password: PASSWORD, rol: 'comprador' })
+    const cliente = await clienteComo(correo, PASSWORD)
 
     const admin = clienteAdmin()
     const { data: lead, error: errLead } = await admin
@@ -141,7 +148,7 @@ describe('suprimirCuentaCompradorAction (CN-006)', () => {
     // Positivo previo: los datos existen antes de la accion.
     expect(await restos(id, leadId)).toEqual({ cuentaAuth: true, perfil: 1, lead: 1, contacto: 1, favoritos: 1 })
 
-    const r = await suprimirCuentaCompradorAction(CONFIRMACION)
+    const r = await suprimirCuentaCompradorAction(CONFIRMACION, PASSWORD)
 
     expect(r).toEqual({ exito: true })
     expect(await restos(id, leadId)).toEqual({ cuentaAuth: false, perfil: 0, lead: 0, contacto: 0, favoritos: 0 })
@@ -158,7 +165,7 @@ describe('suprimirCuentaCompradorAction (CN-006)', () => {
     deleteUserFalla = true
 
     try {
-      const r = await suprimirCuentaCompradorAction(CONFIRMACION)
+      const r = await suprimirCuentaCompradorAction(CONFIRMACION, PASSWORD)
 
       expect(r.exito).toBe(false)
       expect(r.error).toBeTruthy()
@@ -181,7 +188,7 @@ describe('suprimirCuentaCompradorAction (CN-006)', () => {
     clienteActual = otroVendedor
     const { data: u } = await otroVendedor.auth.getUser()
 
-    const r = await suprimirCuentaCompradorAction(CONFIRMACION)
+    const r = await suprimirCuentaCompradorAction(CONFIRMACION, PASSWORD)
 
     expect(r.exito).toBe(false)
     const { data } = await clienteAdmin().auth.admin.getUserById(u.user!.id)

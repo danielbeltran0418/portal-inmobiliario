@@ -1,4 +1,7 @@
 import { expect, type Page } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
+import { createClient } from '@supabase/supabase-js'
+import { codigoTotp } from '../compartido/totp'
 
 /**
  * Cuentas del seed de desarrollo (supabase/seed.sql). Ya vienen con el correo
@@ -53,9 +56,51 @@ export async function cookiesDeSesion(page: Page) {
 }
 
 export async function entrar(page: Page, cuenta: Cuenta) {
+  if (cuenta.rol === 'super_admin') return entrarComoSuperAdmin(page)
   await page.goto('/login')
   await page.fill('input[name="correo"]', cuenta.correo)
   await page.fill('input[name="password"]', cuenta.clave)
   await page.click('button[type="submit"]')
   await expect(page).toHaveURL(new RegExp(`${cuenta.ruta}$`))
+}
+
+const adminSupabase = () => createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false } },
+)
+
+/**
+ * Entra como super_admin pasando por el segundo factor (hallazgo M2:
+ * /control exige una sesion aal2).
+ *
+ * Con un super_admin EFIMERO por llamada, no con admin@portal.com: el alta
+ * del factor es por usuario y varios specs entran como super_admin en
+ * paralelo; sobre la misma cuenta, el alta de uno dejaria al otro con un
+ * secreto que ya no vale. El secreto se lee de la propia pantalla (el texto
+ * para apps que no leen QR) y el codigo se calcula como lo haria el telefono.
+ */
+export async function entrarComoSuperAdmin(page: Page): Promise<string> {
+  const correo = `admin-e2e-${randomUUID()}@prueba.test`
+  const clave = 'AdminEfimero2026*'
+  const admin = adminSupabase()
+  const { data, error } = await admin.auth.admin.createUser({ email: correo, password: clave, email_confirm: true })
+  if (error) throw error
+  const { error: errorRol } = await admin.from('perfiles').update({ rol: 'super_admin' }).eq('id', data.user.id)
+  if (errorRol) throw errorRol
+
+  await page.goto('/login')
+  await page.fill('input[name="correo"]', correo)
+  await page.fill('input[name="password"]', clave)
+  await page.click('button[type="submit"]')
+
+  // Con solo la contrasena, /control manda al segundo factor.
+  await expect(page).toHaveURL(/\/doble-factor$/)
+  await page.getByRole('button', { name: /Configurar autenticador/i }).click()
+  const secreto = (await page.getByTestId('secreto-totp').textContent())?.trim()
+  if (!secreto) throw new Error('La pantalla de doble factor no mostro el secreto')
+
+  await page.fill('input[name="codigo"]', codigoTotp(secreto))
+  await page.getByRole('button', { name: /^Verificar$/ }).click()
+  await expect(page).toHaveURL(/\/control$/)
+  return secreto
 }

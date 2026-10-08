@@ -5,8 +5,12 @@ import { redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { esquemaNuevaContrasena } from '@/lib/validacion/esquemas'
 import { MENSAJE_GENERICO } from '@/lib/errores/mapear'
-import { rolDesdeToken, rutaDePanel } from '@/lib/auth/roles'
-import { COOKIE_RECUPERACION, MENSAJE_ENLACE_RECUPERACION } from '@/lib/auth/recuperacion'
+import { destinoTrasContrasena, rolDesdeToken } from '@/lib/auth/roles'
+import {
+  COOKIE_RECUPERACION,
+  MENSAJE_ENLACE_RECUPERACION,
+  sesionDeRecuperacionReciente,
+} from '@/lib/auth/recuperacion'
 
 export interface EstadoRestablecer {
   error?: string
@@ -30,6 +34,13 @@ export async function restablecerContrasena(
   if (!user || almacen.get(COOKIE_RECUPERACION)?.value !== user.id) {
     return { error: MENSAJE_ENLACE_RECUPERACION }
   }
+  // La cookie la puede escribir quien tenga la sesion; el amr del token
+  // verificado no (ver sesionDeRecuperacionReciente).
+  const { data: datosClaims, error: errorClaims } = await supabase.auth.getClaims()
+  if (errorClaims || datosClaims?.claims?.sub !== user.id
+      || !sesionDeRecuperacionReciente(datosClaims.claims)) {
+    return { error: MENSAJE_ENLACE_RECUPERACION }
+  }
 
   const { error } = await supabase.auth.updateUser({ password: analisis.data.password })
   if (error) {
@@ -44,5 +55,5 @@ export async function restablecerContrasena(
 
   almacen.delete(COOKIE_RECUPERACION)
   const { data: { session } } = await supabase.auth.getSession()
-  redirect(rutaDePanel(rolDesdeToken(session?.access_token ?? '')))
+  redirect(destinoTrasContrasena(rolDesdeToken(session?.access_token ?? '')))
 }

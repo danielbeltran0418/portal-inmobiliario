@@ -2,26 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('server-only', () => ({}))
 
-const getUser = vi.fn()
-const getSession = vi.fn()
+const accesoAdmin = vi.fn()
 const consulta = vi.fn()
 
-vi.mock('@/lib/supabase/cliente-servidor', () => ({
-  crearClienteServidor: async () => ({
-    auth: { getUser, getSession },
-    from: () => {
-      const q = { select: () => q, order: () => q, limit: () => consulta() }
-      return q
-    },
-  }),
-}))
+const cliente = {
+  from: () => {
+    const q = { select: () => q, order: () => q, limit: () => consulta() }
+    return q
+  },
+}
+
+vi.mock('@/lib/auth/admin', () => ({ accesoAdmin }))
 
 const { aCsv, filasModeracionCsv } = await import('@/lib/admin/csv')
 const { GET } = await import('@/app/(admin)/control/moderacion/exportar/route')
-
-function token(rol: string): string {
-  return `x.${Buffer.from(JSON.stringify({ app_metadata: { rol } })).toString('base64url')}.y`
-}
 
 describe('aCsv', () => {
   it('separa con comas, termina en CRLF y escapa comillas, comas y saltos', () => {
@@ -57,8 +51,7 @@ describe('filasModeracionCsv', () => {
 
 describe('GET /control/moderacion/exportar', () => {
   beforeEach(() => {
-    getUser.mockReset().mockResolvedValue({ data: { user: { id: 'admin' } } })
-    getSession.mockReset().mockResolvedValue({ data: { session: { access_token: token('super_admin') } } })
+    accesoAdmin.mockReset().mockResolvedValue({ estado: 'ok', cliente, adminId: 'admin' })
     consulta.mockReset().mockResolvedValue({
       data: [{ id: 'p1', titulo: 'Casa', operacion: 'venta', estado: 'publicada', destacada: true, precio: 1, creado_en: '2026-10-01T00:00:00Z', vendedor: null, barrios: null }],
       error: null,
@@ -79,14 +72,21 @@ describe('GET /control/moderacion/exportar', () => {
   })
 
   it('otro rol recibe 403 y no se consulta nada', async () => {
-    getSession.mockResolvedValue({ data: { session: { access_token: token('vendedor') } } })
+    accesoAdmin.mockResolvedValue({ estado: 'no_admin' })
+    const res = await pedir()
+    expect(res.status).toBe(403)
+    expect(consulta).not.toHaveBeenCalled()
+  })
+
+  it('un super_admin sin segundo factor en la sesion recibe 403 (M2)', async () => {
+    accesoAdmin.mockResolvedValue({ estado: 'falta_mfa', cliente, adminId: 'admin' })
     const res = await pedir()
     expect(res.status).toBe(403)
     expect(consulta).not.toHaveBeenCalled()
   })
 
   it('sin sesion recibe 401', async () => {
-    getUser.mockResolvedValue({ data: { user: null } })
+    accesoAdmin.mockResolvedValue({ estado: 'sin_sesion' })
     expect((await pedir()).status).toBe(401)
   })
 

@@ -82,7 +82,8 @@ async function contrasenaCorrecta(correo: string, password: string): Promise<boo
  * seria una forma de adivinar contrasenas sin el limite del login.
  */
 export async function suprimirCuentaCompradorAction(
-  confirmacion: string
+  confirmacion: string,
+  password: string,
 ): Promise<ResultadoAccionDatos> {
   if (confirmacion !== 'ELIMINAR MI CUENTA') {
     return {
@@ -90,37 +91,43 @@ export async function suprimirCuentaCompradorAction(
       error: 'Debes escribir exactamente "ELIMINAR MI CUENTA" para confirmar.',
     };
   }
+  if (typeof password !== 'string' || password.length === 0 || password.length > 72) {
+    return { exito: false, error: 'Escribe tu contraseña actual para confirmar.' };
+  }
 
   const supabase = await crearClienteServidor();
-  const { data: authData, error: errUsuario } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
 
-  if (errUsuario || !authData?.user) {
+  if (!authData?.user?.email) {
     return { exito: false, error: 'No autenticado.' };
   }
 
   const usuarioId = authData.user.id;
+  const correo = authData.user.email;
+  const admin = crearClienteAdmin();
 
-  // Solo el comprador usa esta supresion: un vendedor tiene propiedades y
-  // leads de otros colgando de su cuenta, y esta accion no los contempla.
-  const { data: perfil, error: errPerfil } = await supabase
-    .from('perfiles')
-    .select('rol')
-    .eq('id', usuarioId)
-    .single();
-
-  if (errPerfil || !perfil || perfil.rol !== 'comprador') {
-    return {
-      exito: false,
-      error: 'Solo los compradores pueden suprimir su cuenta desde esta acción.',
-    };
+  // Solo cuentas de comprador: un vendedor o un super_admin que llamara a esta
+  // accion borraria sus propiedades o el acceso de administracion.
+  const { data: perfil } = await supabase.from('perfiles').select('rol').eq('id', usuarioId).maybeSingle();
+  if (perfil?.rol !== 'comprador') {
+    return { exito: false, error: 'Esta opción solo está disponible para cuentas de comprador.' };
   }
 
-  const admin = crearClienteAdmin();
+  const ip = ipDeConfianza(await headers());
+  if (await accionBloqueada('login', correo, ip)) {
+    return { exito: false, error: MENSAJE_SUPRESION_BLOQUEADA };
+  }
+  if (!(await contrasenaCorrecta(correo, password))) {
+    const quedoRegistrado = await registrarIntentoAccion('login', correo, ip, false);
+    return { exito: false, error: quedoRegistrado ? MENSAJE_CONTRASENA_SUPRESION : MENSAJE_SUPRESION_BLOQUEADA };
+  }
 
   // Borrar la cuenta de Auth arrastra en CASCADA (ON DELETE CASCADE) perfiles,
   // leads, leads_contacto, citas, favoritos, busquedas_guardadas,
   // conversaciones_ia y mensajes_ia. Por eso NO se toca ni se anonimiza nada
-  // antes: si Auth falla, la cuenta queda entera y el titular puede reintentar.
+  // antes (el codigo anterior ademas escribia columnas que no existen en
+  // leads_contacto y no miraba ningun error): si Auth falla, la cuenta queda
+  // entera y el titular puede reintentar.
   const { error: errAuth } = await admin.auth.admin.deleteUser(usuarioId);
   if (errAuth) {
     console.error('[CN-006] Error al eliminar usuario de auth:', errAuth);
