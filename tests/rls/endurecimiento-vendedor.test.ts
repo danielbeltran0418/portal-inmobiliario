@@ -3,8 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
 import { clienteAdmin, clienteComo, crearUsuarioDePrueba } from './ayudantes'
 
-// Hallazgos CN-001 y CN-002 (la parte de moderacion/destacado la cubre la
-// migracion guarda_moderacion_propiedades, de otra rama) de la auditoria de seguridad: lo que un vendedor
+// Hallazgos CN-001 y CN-002 (la parte de moderacion la cubre
+// guarda-moderacion.test.ts) de la auditoria de seguridad: lo que un vendedor
 // puede escribir DIRECTO contra PostgREST con su propio JWT, sin pasar por las
 // acciones del servidor. Cada prueba ataca la API como lo haria un cliente
 // hostil, no como lo hace la interfaz.

@@ -59,6 +59,13 @@ const ETIQUETA_ESTADO: Record<EstadoDestino, string> = {
 const DESTINOS_DE_ESTADO: readonly EstadoDestino[] = ['publicada', 'pausada', 'vendida', 'borrador']
 
 /**
+ * Estados que pone y quita solo el super_admin. La base ya rechaza cualquier
+ * cambio del vendedor (guarda_moderacion_propiedades, PR001); aqui solo se
+ * evita ofrecerle botones que no van a funcionar.
+ */
+const ESTADOS_MODERADOS: ReadonlySet<string> = new Set(['rechazada', 'en_revision'])
+
+/**
  * Envoltorio con 'use server' PROPIA (aunque este archivo no lo sea): un
  * Server Component solo puede pasarle a `action` de un <form> un string o una
  * referencia de Server Action -- una funcion arbitraria sin 'use server' no
@@ -229,6 +236,12 @@ export default async function PaginaEditarPropiedad({
         <aside className="flex flex-col gap-4 lg:sticky lg:top-24">
           <section className={TARJETA}>
             <h2 className="mb-4 text-sm font-semibold text-tinta">Estado y publicación</h2>
+            {ESTADOS_MODERADOS.has(p.estado) ? (
+              <p className="text-sm text-tinta-suave">
+                Esta propiedad está retenida por moderación. Puedes editar sus datos o
+                eliminarla, pero solo el equipo del portal puede cambiar su estado.
+              </p>
+            ) : (
             <div className="flex flex-col gap-2">
               {DESTINOS_DE_ESTADO.filter((destino) => destino !== p.estado).map((destino) => (
                 <form key={destino} action={accionCambiarEstado.bind(null, id, destino)}>
@@ -246,6 +259,7 @@ export default async function PaginaEditarPropiedad({
                 </form>
               ))}
             </div>
+            )}
           </section>
 
           {faltantes.length > 0 && (

@@ -66,6 +66,14 @@ export const MENSAJE_SIN_PRECIO =
   'Para publicar necesitas fijar un precio para la propiedad.'
 
 /**
+ * PR001 (20261014000100_guarda_moderacion_propiedades): la propiedad esta en
+ * un estado de moderacion ('rechazada' o 'en_revision') y solo el super_admin
+ * la saca de ahi.
+ */
+export const MENSAJE_PROPIEDAD_MODERADA =
+  'Esta propiedad está retenida por moderación. Solo el equipo del portal puede cambiar su estado.'
+
+/**
  * Red de seguridad para 23514 (check_violation) cuando NINGUNA de las dos
  * causas conocidas puede identificarse por el codigo solo.
  *

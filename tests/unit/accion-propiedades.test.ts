@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { faltantesParaPublicar } from '@/lib/propiedades/completitud'
-import { MENSAJE_UBICACION_NO_GUARDADA } from '@/lib/errores/mapear'
+import { MENSAJE_PROPIEDAD_MODERADA, MENSAJE_UBICACION_NO_GUARDADA } from '@/lib/errores/mapear'
 
 const getUser = vi.fn()
 const insertMock = vi.fn()
@@ -531,6 +531,31 @@ describe('cambiarEstado', () => {
     const r = await cambiarEstado('prop-1', 'publicada')
 
     expect(r.error).toBe('Para publicar, la propiedad necesita al menos una foto y un precio.')
+  })
+
+  // H1: la accion se invoca con cualquier argumento, no solo con los botones
+  // que pinta el panel. Un estado moderado no llega ni a la base.
+  it.each(['rechazada', 'en_revision', 'cualquier-cosa'])(
+    'rechaza el destino %s sin tocar la base',
+    async (destino) => {
+      const r = await cambiarEstado('prop-1', destino as never)
+
+      expect(r.error).toBeTruthy()
+      expect(crearClienteServidor).not.toHaveBeenCalled()
+      expect(updateMock).not.toHaveBeenCalled()
+    },
+  )
+
+  it('si la base responde PR001 (propiedad moderada), devuelve el mensaje de moderacion', async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: { precio: 300000, imagenes_propiedad: [{ id: 'img-1' }] },
+    })
+    selectUpdateMock.mockResolvedValue({ data: null, error: { code: 'PR001' } })
+
+    const r = await cambiarEstado('prop-1', 'publicada')
+
+    expect(r.error).toBe(MENSAJE_PROPIEDAD_MODERADA)
+    expect(revalidatePath).not.toHaveBeenCalled()
   })
 })
 

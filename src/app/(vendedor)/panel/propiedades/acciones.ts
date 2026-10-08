@@ -10,6 +10,7 @@ import { esquemaPropiedad, esquemaPropiedadNueva, type DatosPropiedad } from '@/
 import {
   mapearError,
   MENSAJE_GENERICO,
+  MENSAJE_PROPIEDAD_MODERADA,
   MENSAJE_SIN_FOTOS,
   MENSAJE_SIN_PRECIO,
   MENSAJE_UBICACION_NO_GUARDADA,
@@ -233,6 +234,15 @@ export async function actualizarPropiedad(
 export type EstadoDestino = 'publicada' | 'pausada' | 'vendida' | 'borrador'
 
 /**
+ * Lo que el vendedor puede pedir. Una server action se invoca con cualquier
+ * argumento, no solo con los que pinta la interfaz: sin esta lista, 'rechazada'
+ * o 'en_revision' llegarian hasta la base (que igualmente los rechaza, PR001).
+ */
+const DESTINOS_PERMITIDOS: ReadonlySet<string> = new Set<EstadoDestino>(['publicada', 'pausada', 'vendida', 'borrador'])
+
+const CODIGO_PROPIEDAD_MODERADA = 'PR001'
+
+/**
  * Lo que le falta a la propiedad para publicarse, de las DOS condiciones que
  * la base exige de verdad (propiedades_exigir_imagen y
  * propiedades_exigir_precio). Deliberadamente NO reutiliza
@@ -283,6 +293,8 @@ async function faltaParaPublicar(
 }
 
 export async function cambiarEstado(id: string, estado: EstadoDestino): Promise<EstadoPropiedad> {
+  if (!DESTINOS_PERMITIDOS.has(estado)) return { error: MENSAJE_GENERICO }
+
   const supabase = await crearClienteServidor()
 
   // Solo al PUBLICAR hace falta esta comprobacion previa: pausar, marcar
@@ -300,7 +312,10 @@ export async function cambiarEstado(id: string, estado: EstadoDestino): Promise<
   // fila cambia en el hueco entre faltaParaPublicar() y este UPDATE (ver
   // MENSAJE_REQUISITOS_PUBLICACION en mapear.ts). El camino normal ya
   // devolvio antes con el mensaje exacto.
-  if (error) return { error: mapearError(error).mensaje }
+  if (error) {
+    if (error.code === CODIGO_PROPIEDAD_MODERADA) return { error: MENSAJE_PROPIEDAD_MODERADA }
+    return { error: mapearError(error).mensaje }
+  }
 
   // RLS deniega filtrando filas: cero filas significa "no es tuya".
   if (!data || data.length === 0) return { error: MENSAJE_GENERICO }
