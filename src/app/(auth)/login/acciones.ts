@@ -16,7 +16,7 @@ export interface EstadoFormulario {
 }
 
 const MENSAJE_BLOQUEADO =
-  'Demasiados intentos fallidos. Espera 15 minutos antes de volver a intentar.'
+  'Demasiados intentos fallidos. Espera 5 minutos antes de volver a intentar.'
 
 export async function iniciarSesion(
   _estado: EstadoFormulario,
