@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
-import { rolDesdeToken } from '@/lib/auth/roles'
+import { accesoAdmin } from '@/lib/auth/admin'
 import { aCsv, filasModeracionCsv, type PropiedadModeracionCsv } from '@/lib/admin/csv'
 
 /** Tope de filas: suficiente para el volumen del portal y acota la respuesta. */
@@ -14,14 +13,10 @@ const MAXIMO_FILAS = 5000
  * Es dinamica por leer cookies: nunca se prerenderiza.
  */
 export async function GET() {
-  const supabase = await crearClienteServidor()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return new NextResponse('No autenticado', { status: 401 })
-
-  const { data: { session } } = await supabase.auth.getSession()
-  if (rolDesdeToken(session?.access_token ?? '') !== 'super_admin') {
-    return new NextResponse('Acceso no autorizado', { status: 403 })
-  }
+  const acceso = await accesoAdmin()
+  if (acceso.estado === 'sin_sesion') return new NextResponse('No autenticado', { status: 401 })
+  if (acceso.estado !== 'ok') return new NextResponse('Acceso no autorizado', { status: 403 })
+  const supabase = acceso.cliente
 
   const { data, error } = await supabase
     .from('propiedades')
