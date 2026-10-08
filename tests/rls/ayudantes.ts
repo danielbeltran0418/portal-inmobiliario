@@ -162,7 +162,7 @@ export async function crearUsuarioDePrueba(opciones: {
  * Sesion de un usuario de prueba con su contrasena.
  *
  * Si es super_admin, la sesion sube a aal2 con un factor TOTP (por defecto):
- * desde 20261014000100_mfa_super_admin.sql, es_super_admin() exige el segundo
+ * desde 20261015000100_mfa_super_admin.sql, es_super_admin() exige el segundo
  * factor y un super_admin con solo la contrasena no tiene privilegios. Pasa
  * `{ segundoFactor: false }` para probar precisamente eso.
  */

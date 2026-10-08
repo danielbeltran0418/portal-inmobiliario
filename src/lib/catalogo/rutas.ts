@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 /**
  * Primer segmento de cada ruta propia de la app. Un barrio con uno de estos
  * slugs quedaria tapado por la ruta (o la taparia), asi que la base tambien
- * los prohibe (ultima version: migracion 20261014000100). tests/unit/rutas-reservadas.test.ts
+ * los prohibe (ultima version: migracion 20261015000100). tests/unit/rutas-reservadas.test.ts
  * comprueba que la lista cubre todas las carpetas de src/app.
  */
 export const RUTAS_RESERVADAS = [

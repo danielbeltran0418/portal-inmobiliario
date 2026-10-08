@@ -27,7 +27,7 @@ export type AccesoAdmin =
  *   las acciones que escriben con service_role (barrios) no pasan por RLS.
  * - `aal` sale de getClaims(), que verifica la firma (hallazgo M2). Es la
  *   misma condicion que exige es_super_admin() en la base
- *   (20261014000100_mfa_super_admin.sql).
+ *   (20261015000100_mfa_super_admin.sql).
  */
 export async function accesoAdmin(): Promise<AccesoAdmin> {
   const cliente = await crearClienteServidor()

@@ -325,7 +325,7 @@ max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
 [auth.mfa.totp]
-# Obligatorio para super_admin (20261014000100_mfa_super_admin.sql): sin el
+# Obligatorio para super_admin (20261015000100_mfa_super_admin.sql): sin el
 # segundo factor verificado, es_super_admin() devuelve false.
 enroll_enabled = true
 verify_enabled = true

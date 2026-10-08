@@ -26,8 +26,8 @@ describe('rutas reservadas frente a los barrios', () => {
     expect(esRutaFicha('/el-prado/casa-a1b2')).toBe(true)
   })
 
-  it('la base prohibe los mismos slugs de barrio (ultima version: migracion 20261014000100)', () => {
-    const sql = readFileSync('supabase/migrations/20261014000100_mfa_super_admin.sql', 'utf8')
+  it('la base prohibe los mismos slugs de barrio (ultima version: migracion 20261015000100)', () => {
+    const sql = readFileSync('supabase/migrations/20261015000100_mfa_super_admin.sql', 'utf8')
     for (const segmento of RUTAS_RESERVADAS) expect(sql).toContain(`'${segmento}'`)
   })
 })

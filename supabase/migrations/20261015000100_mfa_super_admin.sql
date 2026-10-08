@@ -15,8 +15,16 @@
 --
 -- 3. registrar_intento_accion audita tambien los intentos de segundo factor
 --    (mfa_exitoso / mfa_fallido / bloqueo_por_intentos), igual que el login.
---    El cuerpo de 'login', 'registro' y 'recuperar' es IDENTICO al de
---    20261008000100 y 20260911000100.
+--
+-- VERSION: este archivo se llamo 20261014000100_mfa_super_admin.sql, el mismo
+-- numero que 20261014000100_limite_login_5_minutos.sql (PR #71, fusionado
+-- cuatro minutos despues). Dos archivos con la misma version rompen
+-- supabase_migrations.schema_migrations (clave duplicada): el CI de main cayo,
+-- y en produccion quedo viva la accion_bloqueada de limite_login, sin la rama
+-- 'mfa' -- cuyo ELSE true bloqueaba SIEMPRE el segundo factor. Se renombra a
+-- una version unica y se unen las dos funciones: ventana de login de 5
+-- minutos (limite_login) mas la rama 'mfa' de 15. Todo es CREATE OR REPLACE
+-- o DROP + ADD, asi que reaplicarla es seguro en cualquier estado.
 
 -- ---------------------------------------------------------------------------
 -- 1. Super admin = rol + segundo factor en esta sesion
@@ -43,7 +51,7 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
         AND clave = lower(p_clave)
         AND (p_ip IS NULL OR ip = p_ip)
         AND exitoso = false
-        AND creado_en > now() - interval '15 minutes'
+        AND creado_en > now() - interval '5 minutes'
     )
     WHEN 'registro' THEN (
       CASE WHEN p_ip IS NULL THEN true
@@ -143,7 +151,9 @@ BEGIN
        AND public.accion_bloqueada(p_accion, p_clave, p_ip) THEN
       PERFORM public.registrar_evento_auditoria(
         'bloqueo_por_intentos', 'sesion', v_actor, v_actor,
-        v_metadatos || jsonb_build_object('minutos_bloqueo', 15),
+        v_metadatos || jsonb_build_object(
+          'minutos_bloqueo', CASE WHEN p_accion = 'login' THEN 5 ELSE 15 END
+        ),
         p_ip
       );
     END IF;
