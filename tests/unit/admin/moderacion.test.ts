@@ -362,6 +362,70 @@ describe('Servicios de Moderación Administrativa (SP7 / CN-009)', () => {
       expect(res.error).toBe('No se pudo eliminar la propiedad.')
     })
 
+    // La auditoria va ANTES de borrar (falla cerrado: sin rastro no se borra),
+    // pero la tabla es inmutable: si el borrado luego falla, el rastro diria
+    // que se elimino algo que sigue ahi. Se registra un evento compensatorio.
+    it('si el delete afecta 0 filas, deja un evento compensatorio en la auditoría', async () => {
+      const selectDeleteMock = vi.fn().mockResolvedValue({ data: [], error: null })
+      const eqDeleteMock = vi.fn().mockReturnValue({ select: selectDeleteMock })
+      clienteMock.from.mockReturnValue({ delete: vi.fn().mockReturnValue({ eq: eqDeleteMock }) })
+
+      const res = await eliminarPropiedadAdmin(
+        clienteMock as unknown as SupabaseClient,
+        adminMock as unknown as SupabaseClient,
+        PROP_ID,
+        'Inmueble duplicado',
+        ADMIN_ID,
+      )
+
+      expect(res.ok).toBe(false)
+      expect(adminMock.rpc).toHaveBeenCalledTimes(2)
+      expect(adminMock.rpc).toHaveBeenLastCalledWith('registrar_evento_auditoria', {
+        p_accion: 'propiedad_moderada',
+        p_entidad: 'propiedades',
+        p_entidad_id: PROP_ID,
+        p_actor_id: ADMIN_ID,
+        p_metadatos: { accion_especifica: 'eliminar_fallida', motivo: 'Inmueble duplicado' },
+        p_ip: null,
+      })
+    })
+
+    it('si el delete devuelve error, deja el evento compensatorio y muestra el mensaje mapeado', async () => {
+      const selectDeleteMock = vi.fn().mockResolvedValue({ data: null, error: { code: '42501', message: 'detalle interno' } })
+      const eqDeleteMock = vi.fn().mockReturnValue({ select: selectDeleteMock })
+      clienteMock.from.mockReturnValue({ delete: vi.fn().mockReturnValue({ eq: eqDeleteMock }) })
+
+      const res = await eliminarPropiedadAdmin(
+        clienteMock as unknown as SupabaseClient,
+        adminMock as unknown as SupabaseClient,
+        PROP_ID,
+        'Inmueble duplicado',
+        ADMIN_ID,
+      )
+
+      expect(res.ok).toBe(false)
+      expect(res.error).not.toContain('detalle interno')
+      expect(adminMock.rpc).toHaveBeenCalledTimes(2)
+      expect(adminMock.rpc.mock.calls[1][1].p_metadatos.accion_especifica).toBe('eliminar_fallida')
+    })
+
+    it('si el delete funciona, la auditoría se registra una sola vez', async () => {
+      const selectDeleteMock = vi.fn().mockResolvedValue({ data: [{ id: PROP_ID }], error: null })
+      const eqDeleteMock = vi.fn().mockReturnValue({ select: selectDeleteMock })
+      clienteMock.from.mockReturnValue({ delete: vi.fn().mockReturnValue({ eq: eqDeleteMock }) })
+
+      const res = await eliminarPropiedadAdmin(
+        clienteMock as unknown as SupabaseClient,
+        adminMock as unknown as SupabaseClient,
+        PROP_ID,
+        'Inmueble duplicado',
+        ADMIN_ID,
+      )
+
+      expect(res.ok).toBe(true)
+      expect(adminMock.rpc).toHaveBeenCalledTimes(1)
+    })
+
     it('falla si la auditoría previa falla antes de eliminar', async () => {
       adminMock.rpc.mockResolvedValue({ data: null, error: { message: 'Auditoria fallo' } })
 

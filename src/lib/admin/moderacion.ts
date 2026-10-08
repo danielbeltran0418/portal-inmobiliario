@@ -10,7 +10,7 @@ export interface ResultadoModeracion {
 
 export interface MetadatosModeracion {
   motivo?: string
-  accion_especifica: 'suspender' | 'reactivar' | 'eliminar' | 'eliminar_imagen'
+  accion_especifica: 'suspender' | 'reactivar' | 'eliminar' | 'eliminar_fallida' | 'eliminar_imagen'
   estado_anterior?: string
   estado_nuevo?: string
   imagen_id?: string
@@ -209,12 +209,24 @@ export async function eliminarPropiedadAdmin(
     .eq('id', valProp.data)
     .select('id')
 
-  if (errDelete) {
-    return { ok: false, error: mapearError(errDelete).mensaje }
-  }
-
-  if (!filas || filas.length === 0) {
-    return { ok: false, error: 'No se pudo eliminar la propiedad.' }
+  if (errDelete || !filas || filas.length === 0) {
+    // registro_auditoria es inmutable: el evento de arriba ya dice 'eliminar'.
+    // Este lo desmiente, para que el rastro no afirme un borrado que no ocurrio.
+    const { error: errCompensacion } = await clienteAdmin.rpc('registrar_evento_auditoria', {
+      p_accion: 'propiedad_moderada',
+      p_entidad: 'propiedades',
+      p_entidad_id: valProp.data,
+      p_actor_id: valAdmin.data,
+      p_metadatos: { accion_especifica: 'eliminar_fallida', motivo: valMotivo.data },
+      p_ip: null,
+    })
+    if (errCompensacion) {
+      console.error('[moderacion] No se pudo registrar el evento compensatorio de eliminar_fallida:', errCompensacion)
+    }
+    return {
+      ok: false,
+      error: errDelete ? mapearError(errDelete).mensaje : 'No se pudo eliminar la propiedad.',
+    }
   }
 
   return { ok: true, propiedadId: valProp.data }
