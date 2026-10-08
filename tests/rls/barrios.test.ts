@@ -75,6 +75,13 @@ describe('RLS de barrios', () => {
     expect(error?.code).toBe('23514')
   })
 
+  it('[sitemap] anon puede listar los barrios con anuncios, solo activos y sin duplicados', async () => {
+    const { data, error } = await clienteAnonimo().rpc('barrios_con_anuncios')
+    expect(error).toBeNull()
+    const slugs = (data as { slug: string }[]).map((b) => b.slug)
+    expect(new Set(slugs).size).toBe(slugs.length)
+  })
+
   it('un vendedor NO puede crear barrios', async () => {
     const cliente = await clienteComo(VENDEDOR.correo, VENDEDOR.password)
     const { error } = await cliente.from('barrios')

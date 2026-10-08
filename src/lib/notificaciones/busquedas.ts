@@ -58,6 +58,8 @@ function comoParametros(filtros: Record<string, unknown>): Record<string, string
   return salida;
 }
 
+const CONCURRENCIA = 8;
+
 export async function obtenerBusquedasParaNotificar(): Promise<BusquedaConCoincidencias[]> {
   const admin = crearClienteAdmin();
 
@@ -72,29 +74,27 @@ export async function obtenerBusquedasParaNotificar(): Promise<BusquedaConCoinci
     throw new Error(`Fallo al consultar busquedas guardadas: ${errorBusquedas.message}`);
   }
 
-  const resultado: BusquedaConCoincidencias[] = [];
+  const filasBusqueda = ((busquedas ?? []) as FilaBusquedaGuardada[]).filter((f) => f.filtros?.barrio);
 
-  for (const fila of (busquedas ?? []) as FilaBusquedaGuardada[]) {
+  // Un solo viaje para todos los barrios (antes, una consulta por busqueda).
+  const slugs = [...new Set(filasBusqueda.map((f) => f.filtros.barrio))];
+  const idPorSlug = new Map<string, string>();
+  if (slugs.length > 0) {
+    const { data: barrios, error: errorBarrios } = await admin.from('barrios').select('id, slug').in('slug', slugs);
+    if (errorBarrios) console.error('[Notificaciones] Error al consultar barrios:', errorBarrios);
+    for (const b of (barrios ?? []) as { id: string; slug: string }[]) idPorSlug.set(b.slug, b.id);
+  }
+
+  const procesar = async (fila: FilaBusquedaGuardada): Promise<BusquedaConCoincidencias | null> => {
     const filtros = fila.filtros;
-    if (!filtros?.barrio) continue;
-
-    const { data: barrio, error: errorBarrio } = await admin
-      .from('barrios')
-      .select('id')
-      .eq('slug', filtros.barrio)
-      .maybeSingle();
-
-    if (errorBarrio) {
-      console.error('[Notificaciones] Error al consultar barrio:', errorBarrio);
-    }
-
-    if (!barrio) continue;
+    const barrioId = idPorSlug.get(filtros.barrio);
+    if (!barrioId) return null;
 
     let consulta = admin
       .from('propiedades')
       .select('id, slug, titulo, precio, moneda, barrio:barrios(slug), imagenes_propiedad(id, orden)')
       .eq('estado', 'publicada')
-      .eq('barrio_id', barrio.id)
+      .eq('barrio_id', barrioId)
       .gt('creado_en', fila.ultima_notificacion_en);
 
     // Los mismos filtros que el catalogo, re-validados al leer: filas guardadas
@@ -110,9 +110,9 @@ export async function obtenerBusquedasParaNotificar(): Promise<BusquedaConCoinci
     }
 
     const filas = (propiedades ?? []) as unknown as FilaPropiedadCoincidente[];
-    if (filas.length === 0) continue;
+    if (filas.length === 0) return null;
 
-    resultado.push({
+    return {
       busquedaId: fila.id,
       usuarioId: fila.usuario_id,
       nombre: fila.nombre,
@@ -129,7 +129,16 @@ export async function obtenerBusquedasParaNotificar(): Promise<BusquedaConCoinci
           imagenId: primeraFoto ? primeraFoto.id : null,
         };
       }),
-    });
+    };
+  };
+
+  // Las consultas de propiedades van en paralelo, de CONCURRENCIA en
+  // CONCURRENCIA: 300 en serie tardaban 300 viajes; todas a la vez saturarian
+  // el pool de conexiones. El orden del resultado se conserva.
+  const resultado: BusquedaConCoincidencias[] = [];
+  for (let i = 0; i < filasBusqueda.length; i += CONCURRENCIA) {
+    const lote = await Promise.all(filasBusqueda.slice(i, i + CONCURRENCIA).map(procesar));
+    for (const r of lote) if (r) resultado.push(r);
   }
 
   return resultado;

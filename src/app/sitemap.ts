@@ -3,38 +3,25 @@ import { crearClientePublico } from '@/lib/supabase/cliente-publico'
 import { urlPublica } from '@/lib/catalogo/seo'
 // La retirada de publicaciones debe reflejarse en cada petición del sitemap.
 export const dynamic = 'force-dynamic'
+
+/**
+ * Sitemap principal: portada, ciudades y barrios con anuncios. Las fichas van
+ * aparte en /sitemaps/fichas/{n} (src/app/sitemaps/fichas/[pagina]/route.ts),
+ * de 40.000 en 40.000, y robots.txt los lista todos: a escala nacional no caben
+ * en un solo archivo (tope del protocolo: 50.000 URLs).
+ *
+ * Un barrio sin propiedades publicadas es una pagina fina: no se lista. Lo
+ * decide barrios_con_anuncios() (migracion 20261013000200) sin recorrer las
+ * fichas.
+ */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const db = crearClientePublico()
-  const { data: barrios, error: errorBarrios } = await db.from('barrios').select('slug,ciudad_slug').eq('activo', true).order('slug')
-  if (errorBarrios) throw new Error('No se pudo generar el sitemap')
-  // Un barrio sin propiedades publicadas es una pagina fina: no se lista.
-  const barriosConAnuncios = new Set<string>()
-  const entradas: MetadataRoute.Sitemap = []
-  const fichas = (): MetadataRoute.Sitemap => {
-    const conAnuncios = (barrios ?? []).filter(b => barriosConAnuncios.has(b.slug))
-    // Una ciudad entra si al menos uno de sus barrios tiene anuncios.
-    const ciudades = [...new Set(conAnuncios.map(b => b.ciudad_slug).filter(Boolean))].sort()
-    return [
-      { url: urlPublica('/') },
-      ...ciudades.map(c => ({ url: urlPublica(`/ciudad/${c}`) })),
-      ...conAnuncios.map(b => ({ url: urlPublica(`/${b.slug}`) })),
-      ...entradas,
-    ]
-  }
-  for (let inicio = 0; ; inicio += 500) {
-    const { data, error } = await db.from('propiedades')
-      .select('id,slug,actualizado_en,barrios!inner(slug),imagenes_propiedad!inner(id)')
-      .eq('estado', 'publicada').order('id', { ascending: true }).range(inicio, inicio + 499)
-    if (error) throw new Error('No se pudo generar el sitemap')
-    for (const p of data ?? []) {
-      const barrio = Array.isArray(p.barrios) ? p.barrios[0] : p.barrios
-      if (barrio) {
-        barriosConAnuncios.add(barrio.slug)
-        entradas.push({ url: urlPublica(`/${barrio.slug}/${p.slug}`), lastModified: p.actualizado_en })
-      }
-    }
-    // No emitir silenciosamente un XML inválido por superar el límite del protocolo.
-    if (entradas.length > 50000) throw new Error('El sitemap requiere partición en varios archivos')
-    if (!data || data.length < 500) return fichas()
-  }
+  const { data, error } = await crearClientePublico().rpc('barrios_con_anuncios')
+  if (error) throw new Error('No se pudo generar el sitemap')
+  const barrios = (data ?? []) as { slug: string; ciudad_slug: string | null }[]
+  const ciudades = [...new Set(barrios.map((b) => b.ciudad_slug).filter((c): c is string => Boolean(c)))].sort()
+  return [
+    { url: urlPublica('/') },
+    ...ciudades.map((c) => ({ url: urlPublica(`/ciudad/${c}`) })),
+    ...barrios.map((b) => ({ url: urlPublica(`/${b.slug}`) })),
+  ]
 }

@@ -21,12 +21,15 @@ function tablaBusquedas(filas: unknown[]) {
   };
 }
 
+// Los barrios se piden de una vez para todas las busquedas: select().in('slug', [...]).
+const consultasBarrios: string[][] = [];
 function tablaBarrios(id: string | null) {
   return {
     select: () => ({
-      eq: () => ({
-        maybeSingle: () => Promise.resolve({ data: id ? { id } : null, error: null }),
-      }),
+      in: (_columna: string, slugs: string[]) => {
+        consultasBarrios.push(slugs);
+        return Promise.resolve({ data: id ? slugs.map((slug) => ({ id, slug })) : [], error: null });
+      },
     }),
   };
 }
@@ -267,5 +270,20 @@ describe('obtenerBusquedasParaNotificar', () => {
     expect(llamadas).toContainEqual({ method: 'gte', column: 'estrato', value: 4 });
     expect(llamadas).toContainEqual({ method: 'gte', column: 'habitaciones', value: 3 });
     expect(llamadas.some((l) => l.column === 'estrato' && l.method === 'lte')).toBe(false);
+  });
+
+  it('[rendimiento] los barrios de todas las busquedas se piden en una sola consulta', async () => {
+    consultasBarrios.length = 0;
+    const busqueda = (id: string, barrio: string) => ({
+      id, usuario_id: 'u', nombre: id, filtros: { barrio }, ultima_notificacion_en: '2026-09-01T00:00:00Z', token_baja: 't',
+    });
+    fromMock.mockImplementation((tabla: string) => {
+      if (tabla === 'busquedas_guardadas') return tablaBusquedas([busqueda('a', 'riomar'), busqueda('b', 'prado'), busqueda('c', 'riomar')]);
+      if (tabla === 'barrios') return tablaBarrios('barrio-x');
+      if (tabla === 'propiedades') return tablaPropiedadesConstructor([]);
+      throw new Error(`tabla no mockeada: ${tabla}`);
+    });
+    await obtenerBusquedasParaNotificar();
+    expect(consultasBarrios).toEqual([['riomar', 'prado']]);
   });
 });
