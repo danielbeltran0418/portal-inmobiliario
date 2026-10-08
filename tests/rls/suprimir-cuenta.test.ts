@@ -104,6 +104,18 @@ describe('suprimirCuentaCompradorAction (CN-006)', () => {
     return { cliente, id, leadId: lead!.id as string }
   }
 
+  // Eventos 'cuenta_suprimida' sobre esa cuenta. registro_auditoria no tiene
+  // FK en entidad_id, asi que el rastro sobrevive al borrado del usuario.
+  async function eventosDeSupresion(id: string) {
+    const { data, error } = await clienteAdmin()
+      .from('registro_auditoria')
+      .select('accion, actor_id')
+      .eq('accion', 'cuenta_suprimida')
+      .eq('entidad_id', id)
+    expect(error).toBeNull()
+    return data!
+  }
+
   async function restos(id: string, leadId: string) {
     const admin = clienteAdmin()
     const [auth, perfil, lead, contacto, favoritos] = await Promise.all([
@@ -133,6 +145,11 @@ describe('suprimirCuentaCompradorAction (CN-006)', () => {
 
     expect(r).toEqual({ exito: true })
     expect(await restos(id, leadId)).toEqual({ cuentaAuth: false, perfil: 0, lead: 0, contacto: 0, favoritos: 0 })
+
+    // La traza perdura, sin vinculo a una cuenta que ya no existe.
+    const eventos = await eventosDeSupresion(id)
+    expect(eventos).toHaveLength(1)
+    expect(eventos[0].actor_id).toBeNull()
   })
 
   it('si Auth no borra la cuenta, NO dice exito y no deja la cuenta a medio borrar', async () => {
@@ -150,6 +167,9 @@ describe('suprimirCuentaCompradorAction (CN-006)', () => {
       const { data: perfil } = await clienteAdmin()
         .from('perfiles').select('nombre, suprimido_en').eq('id', id).single()
       expect(perfil!.suprimido_en).toBeNull()
+      // registro_auditoria es inmutable: si la cuenta sigue viva, no puede
+      // existir un evento que diga que fue suprimida.
+      expect(await eventosDeSupresion(id)).toHaveLength(0)
     } finally {
       deleteUserFalla = false
       await clienteAdmin().auth.admin.deleteUser(id)
