@@ -1,5 +1,37 @@
 import { test, expect } from '@playwright/test'
+import { createClient } from '@supabase/supabase-js'
 import { CUENTAS, entrar } from './ayudantes-sesion'
+
+test.describe('E2E — Segundo factor del super_admin (M2)', () => {
+  test('con solo la contrasena no se ve el panel, y un codigo erroneo no abre la puerta', async ({ page }) => {
+    const correo = `admin-sin-mfa-${Date.now()}@prueba.test`
+    const clave = 'AdminEfimero2026*'
+    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      auth: { persistSession: false },
+    })
+    const { data, error } = await admin.auth.admin.createUser({ email: correo, password: clave, email_confirm: true })
+    if (error) throw error
+    await admin.from('perfiles').update({ rol: 'super_admin' }).eq('id', data.user.id)
+
+    await page.goto('/login')
+    await page.fill('input[name="correo"]', correo)
+    await page.fill('input[name="password"]', clave)
+    await page.click('button[type="submit"]')
+    await expect(page).toHaveURL(/\/doble-factor$/)
+
+    // Ir directo a una pagina del panel tampoco sirve, y no se filtra nada.
+    await page.goto('/control/moderacion')
+    await expect(page).toHaveURL(/\/doble-factor$/)
+    expect(await page.content()).not.toMatch(/Moderación de Publicaciones/i)
+
+    await page.getByRole('button', { name: /Configurar autenticador/i }).click()
+    await expect(page.getByTestId('secreto-totp')).toBeVisible()
+    await page.fill('input[name="codigo"]', '000000')
+    await page.getByRole('button', { name: /^Verificar$/ }).click()
+    await expect(page.getByRole('alert')).toContainText(/no es válido/i)
+    await expect(page).toHaveURL(/\/doble-factor$/)
+  })
+})
 
 test.describe('E2E — Panel de Control y Super Admin (SP7)', () => {
   test('acceso denegado y guardas de rol para anónimo, comprador y vendedor', async ({ page }) => {

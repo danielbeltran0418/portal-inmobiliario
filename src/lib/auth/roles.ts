@@ -52,6 +52,18 @@ export function rolDesdeClaims(claims: { app_metadata?: object } | null | undefi
   return ROLES_VALIDOS.includes(rol as Rol) ? (rol as Rol) : 'comprador'
 }
 
+/**
+ * Donde el super_admin configura o introduce su segundo factor (TOTP). Fuera
+ * de /control a proposito: el proxy manda aqui a quien entra en /control sin
+ * una sesion aal2, y no puede ser una ruta que el mismo proxy proteja asi.
+ */
+export const RUTA_DOBLE_FACTOR = '/doble-factor'
+
+/** La sesion paso el segundo factor. `aal` va firmado en el token. */
+export function sesionConSegundoFactor(claims: { aal?: unknown } | null | undefined): boolean {
+  return claims?.aal === 'aal2'
+}
+
 export function rutaPermitida(ruta: string, rol: Rol): boolean {
   const protegida = RUTAS_PROTEGIDAS.find(
     (r) => ruta === r.prefijo || ruta.startsWith(`${r.prefijo}/`),

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 import { config } from 'dotenv'
+import { codigoTotp } from '../compartido/totp'
 
 // .env.local es una comodidad del desarrollador, NO la fuente de verdad. Esta
 // en .gitignore y en CI no existe: alli las variables llegan por el entorno del
@@ -157,11 +158,65 @@ export async function crearUsuarioDePrueba(opciones: {
   return usuarioId
 }
 
-export async function clienteComo(correo: string, password: string): Promise<SupabaseClient> {
+/**
+ * Sesion de un usuario de prueba con su contrasena.
+ *
+ * Si es super_admin, la sesion sube a aal2 con un factor TOTP (por defecto):
+ * desde 20261014000100_mfa_super_admin.sql, es_super_admin() exige el segundo
+ * factor y un super_admin con solo la contrasena no tiene privilegios. Pasa
+ * `{ segundoFactor: false }` para probar precisamente eso.
+ */
+export async function clienteComo(
+  correo: string,
+  password: string,
+  opciones: { segundoFactor?: boolean } = {},
+): Promise<SupabaseClient> {
   const cliente = createClient(URL, ANON, { auth: { persistSession: false } })
-  const { error } = await cliente.auth.signInWithPassword({ email: correo, password })
+  const { data, error } = await cliente.auth.signInWithPassword({ email: correo, password })
   if (error) throw error
+
+  if (opciones.segundoFactor !== false) {
+    const { data: perfil } = await cliente.from('perfiles').select('rol').eq('id', data.user.id).single()
+    if (perfil?.rol === 'super_admin') await subirAAal2(cliente, data.user.id)
+  }
   return cliente
+}
+
+/** Secreto TOTP de cada super_admin de prueba dado de alta en este proceso. */
+const factoresDePrueba = new Map<string, { factorId: string; secreto: string }>()
+
+/**
+ * Lleva la sesion a aal2. Reutiliza el factor dado de alta antes en este
+ * proceso; si no hay (o falla, p. ej. el mismo codigo dentro de la misma
+ * ventana de 30 s), borra los factores del usuario con service_role y da de
+ * alta uno nuevo, cuyo secreto si se conoce.
+ */
+async function subirAAal2(cliente: SupabaseClient, idUsuario: string): Promise<void> {
+  const conocido = factoresDePrueba.get(idUsuario)
+  if (conocido) {
+    const { error } = await cliente.auth.mfa.challengeAndVerify({
+      factorId: conocido.factorId, code: codigoTotp(conocido.secreto),
+    })
+    if (!error) return
+  }
+
+  const admin = clienteAdmin()
+  const { data: lista, error: errorLista } = await admin.auth.admin.mfa.listFactors({ userId: idUsuario })
+  if (errorLista) throw errorLista
+  for (const factor of lista.factors) {
+    const { error: errorBorrado } = await admin.auth.admin.mfa.deleteFactor({ id: factor.id, userId: idUsuario })
+    if (errorBorrado) throw errorBorrado
+  }
+
+  const { data: alta, error: errorAlta } = await cliente.auth.mfa.enroll({
+    factorType: 'totp', friendlyName: `prueba-${randomUUID()}`,
+  })
+  if (errorAlta) throw errorAlta
+  const { error: errorVerificacion } = await cliente.auth.mfa.challengeAndVerify({
+    factorId: alta.id, code: codigoTotp(alta.totp.secret),
+  })
+  if (errorVerificacion) throw errorVerificacion
+  factoresDePrueba.set(idUsuario, { factorId: alta.id, secreto: alta.totp.secret })
 }
 
 // Vendedor EFIMERO, con correo unico por llamada -- NO la cuenta fija del
