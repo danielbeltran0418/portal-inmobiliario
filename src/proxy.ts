@@ -3,7 +3,7 @@ import { esRutaFicha, resolverRutaPublica } from '@/lib/catalogo/rutas'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { construirCabeceras, generarNonce } from '@/lib/seguridad/cabeceras'
-import { rolDesdeToken, rutaPermitida, rutaDePanel } from '@/lib/auth/roles'
+import { rolDesdeClaims, rutaPermitida, rutaDePanel } from '@/lib/auth/roles'
 import { origenReal } from '@/lib/http/origen-peticion'
 
 const RUTAS_PROTEGIDAS = ['/mi-cuenta', '/panel', '/control']
@@ -106,12 +106,22 @@ export async function proxy(peticion: NextRequest) {
     return aplicarCabeceras(redireccion)
   }
 
-  // getUser revalida contra el servidor de auth; getSession solo lee la cookie.
-  const { data: { user } } = await supabase.auth.getUser()
+  // getClaims() en TODAS las rutas: refresca la sesion si el token esta por
+  // caducar (las cookies nuevas salen por setAll) y verifica la firma. Con
+  // llaves asimetricas no viaja al servidor de auth: antes, cada visita al
+  // catalogo publico pagaba un getUser() de red aqui y otro en la cabecera.
+  const { data: datosClaims, error: errorClaims } = await supabase.auth.getClaims()
+  const claims = errorClaims ? null : datosClaims?.claims ?? null
   const ruta = peticion.nextUrl.pathname
   const esProtegida = RUTAS_PROTEGIDAS.some((p) => ruta === p || ruta.startsWith(`${p}/`))
 
   if (esProtegida) {
+    if (!claims?.sub) {
+      return redirigir('/login')
+    }
+    // El estado de verificacion del correo no viaja en el token: solo las
+    // rutas protegidas (una fraccion del trafico) lo consultan al servidor.
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return redirigir('/login')
     }
@@ -119,8 +129,7 @@ export async function proxy(peticion: NextRequest) {
       return redirigir('/verificar-correo')
     }
 
-    const { data: { session } } = await supabase.auth.getSession()
-    const rol = rolDesdeToken(session?.access_token ?? '')
+    const rol = rolDesdeClaims(claims)
 
     if (!rutaPermitida(ruta, rol)) {
       return redirigir(rutaDePanel(rol))

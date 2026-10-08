@@ -42,6 +42,16 @@ export function rolDesdeToken(accessToken: string): Rol {
   }
 }
 
+/**
+ * Rol desde las claims YA verificadas por getClaims() (src/proxy.ts,
+ * src/lib/auth/sesion.ts). Misma regla que rolDesdeToken: lo desconocido cae
+ * en el rol de menos privilegio.
+ */
+export function rolDesdeClaims(claims: { app_metadata?: object } | null | undefined): Rol {
+  const rol = (claims?.app_metadata as { rol?: unknown } | undefined)?.rol
+  return ROLES_VALIDOS.includes(rol as Rol) ? (rol as Rol) : 'comprador'
+}
+
 export function rutaPermitida(ruta: string, rol: Rol): boolean {
   const protegida = RUTAS_PROTEGIDAS.find(
     (r) => ruta === r.prefijo || ruta.startsWith(`${r.prefijo}/`),
