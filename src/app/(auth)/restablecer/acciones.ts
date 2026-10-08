@@ -6,7 +6,11 @@ import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { esquemaNuevaContrasena } from '@/lib/validacion/esquemas'
 import { MENSAJE_GENERICO } from '@/lib/errores/mapear'
 import { rolDesdeToken, rutaDePanel } from '@/lib/auth/roles'
-import { COOKIE_RECUPERACION, MENSAJE_ENLACE_RECUPERACION } from '@/lib/auth/recuperacion'
+import {
+  COOKIE_RECUPERACION,
+  MENSAJE_ENLACE_RECUPERACION,
+  sesionDeRecuperacionReciente,
+} from '@/lib/auth/recuperacion'
 
 export interface EstadoRestablecer {
   error?: string
@@ -28,6 +32,13 @@ export async function restablecerContrasena(
   // La marca la pone solo /confirmar/recuperacion, y tiene que ser de ESTE
   // usuario: una sesion cualquiera no basta para cambiar la clave sin la actual.
   if (!user || almacen.get(COOKIE_RECUPERACION)?.value !== user.id) {
+    return { error: MENSAJE_ENLACE_RECUPERACION }
+  }
+  // La cookie la puede escribir quien tenga la sesion; el amr del token
+  // verificado no (ver sesionDeRecuperacionReciente).
+  const { data: datosClaims, error: errorClaims } = await supabase.auth.getClaims()
+  if (errorClaims || datosClaims?.claims?.sub !== user.id
+      || !sesionDeRecuperacionReciente(datosClaims.claims)) {
     return { error: MENSAJE_ENLACE_RECUPERACION }
   }
 
