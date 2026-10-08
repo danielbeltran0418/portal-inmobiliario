@@ -63,12 +63,12 @@ pase las pruebas. El porqué de cada una está en `docs/ESTADO-Y-GUIA.md` (Parte
 ## Convenciones
 
 - **El código, los nombres, la interfaz y los comentarios van en español,** igual que el resto
-  del repo (`crearClienteServidor`, `acciones.ts`, `componentes/`).
+  del repo (`crearClienteServidor`, `acciones.ts`, `tarjeta-propiedad.tsx`).
 - **Los commits siguen Conventional Commits en español:** `tipo(alcance): descripción`, por
   ejemplo `fix(seguridad): ...` o `feat(citas): ...`.
-- **Los primitivos de shadcn/ui viven en `src/components/ui/`.** Hay componentes duplicados entre
-  `src/components/` y `src/componentes/`, como `BotonCancelarPosicionamiento`, que existe idéntico
-  en las dos. Antes de crear un componente, buscarlo en ambas carpetas y no sumar otra copia.
+- **Todos los componentes viven en `src/components/`:** los primitivos de shadcn/ui en
+  `src/components/ui/` y los del portal por área (`admin/`, `panel/`, `catalogo/`...). No crear de
+  nuevo `src/componentes/`, que se unificó aquí. Antes de crear un componente, buscar si ya existe.
 - **Antes de dar algo por terminado:** `npm run lint`, `npx tsc --noEmit`, `npm run test:unit` y,
   si tocó base de datos, `npm run test:rls` con `npx supabase db reset` antes. En Windows, correr
   vitest, Playwright y Supabase desde PowerShell.
