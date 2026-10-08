@@ -180,10 +180,7 @@ registro (máximo tres altas por hora y por IP, ver la Parte 2), pero eso es un 
 sustituto: sigue sin haber nada que distinga a una persona de un script por debajo de ese número.
 Es lo más urgente antes de exponer esto a internet.
 
-**2. El CI de GitHub no funciona.** Los jobs mueren en 3 segundos sin que se les asigne runner,
-también con un workflow trivial. Descartado: YAML, BOM, finales de línea, Actions deshabilitado,
-y facturación (0 de 2000 minutos usados). Pendiente de soporte de GitHub. **Toda la verificación
-es local.**
+**2. CI de GitHub (Operativo).** El CI de GitHub Actions ya funciona correctamente: el job `verificar` ejecuta y pasa en los PRs (cubriendo gitleaks, lint, typegen, tsc, pruebas unitarias, RLS, Playwright E2E, build y verificación de render dinámico). Ya no es un bloqueante.
 
 **3. Las credenciales de desarrollo están en el historial público.** El repositorio es público y
 `supabase/seed.sql` y el README las contienen. Son de una instancia local que nunca llega a
@@ -270,6 +267,16 @@ Estas cuestan horas si no se saben:
   `page.waitForURL((url) => url.pathname !== '/login')` antes de seguir; `entrar()` en
   `ayudantes-sesion.ts` lo consigue por otra vía, encadenando siempre un `toHaveURL` justo después
   del click.
+
+- **Error `StorageApiError: database error, code: 42P10` en pruebas RLS de Storage.**
+  Ocurre cuando la imagen local de Docker `supabase/storage-api` está desactualizada (p. ej. `v1.73.1`)
+  respecto a las migraciones y esquema de `storage.objects` aplicados por el CLI de Supabase.
+  En PostgreSQL, el código `42P10` indica que no existe una restricción o índice único que coincida
+  con la cláusula `ON CONFLICT` ejecutada por versiones antiguas de storage-api al insertar objetos.
+  **Solución:** detener Supabase (`npx supabase stop --no-backup`), eliminar la imagen vieja de Storage
+  (`docker rmi supabase/storage-api:v1.73.1` o `docker image prune`) para permitir que Docker descargue
+  la versión compatible (`>= v1.79.x`, p. ej. `1.79.36`), reiniciar con `npx supabase start` y resetear
+  la base con `npx supabase db reset`.
 
 ---
 
