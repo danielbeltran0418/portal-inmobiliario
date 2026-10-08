@@ -11,6 +11,7 @@ const resultadoBorradoMock = vi.fn()
 const crearClienteServidor = vi.fn()
 const revalidatePath = vi.fn()
 const procesarImagenMock = vi.fn()
+const propiaMock = vi.fn()
 
 // Igual que en tests/unit/accion-propiedades.test.ts: se sustituye el cliente
 // de Supabase y next/cache por completo, y se mockea solo procesarImagen (no
@@ -20,6 +21,13 @@ const procesarImagenMock = vi.fn()
 // necesitan ejercitar tal cual las usa produccion.
 vi.mock('@/lib/supabase/cliente-servidor', () => ({ crearClienteServidor }))
 vi.mock('next/cache', () => ({ revalidatePath }))
+// subirImagen() sube con service_role (L2): mismo almacen falso, para que las
+// aserciones sobre upload/remove valgan igual.
+vi.mock('@/lib/supabase/cliente-admin', () => ({
+  crearClienteAdmin: () => ({
+    storage: { from: (bucket: string) => ({ upload: (...a: unknown[]) => uploadMock(bucket, ...a), remove: (...a: unknown[]) => removeMock(bucket, ...a) }) },
+  }),
+}))
 vi.mock('@/lib/imagenes/procesar', async (importarOriginal) => {
   const real = await importarOriginal<typeof import('@/lib/imagenes/procesar')>()
   return { ...real, procesarImagen: procesarImagenMock }
@@ -39,6 +47,10 @@ function clienteFalso() {
       select: (columnas: string) => {
         if (columnas === 'id, orden') {
           return { eq: () => ({ order: () => resultadoOrdenMock() }) }
+        }
+        // subirImagen(): .select('id').eq('id', ...).eq('vendedor_id', ...).maybeSingle()
+        if (columnas === 'id') {
+          return { eq: () => ({ eq: () => ({ maybeSingle: propiaMock }) }) }
         }
         return { eq: () => resultadoExistentesMock() }
       },
@@ -75,6 +87,7 @@ describe('subirImagen', () => {
     uploadMock.mockReset().mockResolvedValue({ error: null })
     removeMock.mockReset().mockResolvedValue({ data: [] })
     procesarImagenMock.mockReset().mockResolvedValue(Buffer.from('webp-procesado'))
+    propiaMock.mockReset().mockResolvedValue({ data: { id: 'prop-1' } })
     crearClienteServidor.mockReset().mockResolvedValue(clienteFalso())
     revalidatePath.mockReset()
   })
@@ -135,6 +148,33 @@ describe('subirImagen', () => {
 
     expect(r.error).toBeTruthy()
     expect(insertMock).not.toHaveBeenCalled()
+  })
+
+  // L2: la subida va con service_role, asi que la pertenencia se comprueba
+  // antes de procesar o subir nada.
+  it('una propiedad ajena no llega a procesarse ni a subirse', async () => {
+    propiaMock.mockResolvedValue({ data: null })
+
+    const r = await subirImagen(
+      {},
+      formularioDeSubida({ propiedad_id: 'prop-ajena', alt_text: 'Fachada de la casa', archivo: archivoValido() }),
+    )
+
+    expect(r.error).toBeTruthy()
+    expect(procesarImagenMock).not.toHaveBeenCalled()
+    expect(uploadMock).not.toHaveBeenCalled()
+  })
+
+  it('si la base corta por el tope de fotos (IM001), borra el archivo subido y lo dice', async () => {
+    insertMock.mockResolvedValue({ error: { code: 'IM001' } })
+
+    const r = await subirImagen(
+      {},
+      formularioDeSubida({ propiedad_id: 'prop-1', alt_text: 'Fachada de la casa', archivo: archivoValido() }),
+    )
+
+    expect(r.error).toMatch(/12 fotos/)
+    expect(removeMock).toHaveBeenCalled()
   })
 
   it('con 12 imagenes ya subidas, rechaza la 13a sin procesar ni subir a Storage', async () => {

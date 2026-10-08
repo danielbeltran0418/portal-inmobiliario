@@ -72,8 +72,16 @@ describe('CN-005: solo un vendedor sube archivos al bucket de propiedades', () =
     expect(error).not.toBeNull()
   })
 
-  it('un vendedor si puede subir a su carpeta (control positivo)', async () => {
+  // L2 (20261014000200): tampoco el vendedor sube directo; solo el servidor,
+  // despues de pasar la foto por sharp (sin EXIF ni GPS).
+  it('un vendedor tampoco puede subir directo a su carpeta', async () => {
     const { error } = await vendedor.storage.from('propiedades')
+      .upload(`${idVendedor}/${randomUUID()}.webp`, contenido(), { contentType: 'image/webp' })
+    expect(error?.message).toMatch(/row-level security/i)
+  })
+
+  it('el servidor (service_role) si sube a la carpeta del vendedor (control positivo)', async () => {
+    const { error } = await clienteAdmin().storage.from('propiedades')
       .upload(`${idVendedor}/${randomUUID()}.webp`, contenido(), { contentType: 'image/webp' })
     expect(error).toBeNull()
   })
