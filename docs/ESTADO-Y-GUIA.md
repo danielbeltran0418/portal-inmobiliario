@@ -180,10 +180,7 @@ registro (máximo tres altas por hora y por IP, ver la Parte 2), pero eso es un 
 sustituto: sigue sin haber nada que distinga a una persona de un script por debajo de ese número.
 Es lo más urgente antes de exponer esto a internet.
 
-**2. El CI de GitHub no funciona.** Los jobs mueren en 3 segundos sin que se les asigne runner,
-también con un workflow trivial. Descartado: YAML, BOM, finales de línea, Actions deshabilitado,
-y facturación (0 de 2000 minutos usados). Pendiente de soporte de GitHub. **Toda la verificación
-es local.**
+**2. CI de GitHub (Operativo).** El CI de GitHub Actions ya funciona correctamente: el job `verificar` ejecuta y pasa en los PRs (cubriendo gitleaks, lint, typegen, tsc, pruebas unitarias, RLS, Playwright E2E, build y verificación de render dinámico). Ya no es un bloqueante.
 
 **3. Las credenciales de desarrollo están en el historial público.** El repositorio es público y
 `supabase/seed.sql` y el README las contienen. Son de una instancia local que nunca llega a
@@ -270,6 +267,15 @@ Estas cuestan horas si no se saben:
   `page.waitForURL((url) => url.pathname !== '/login')` antes de seguir; `entrar()` en
   `ayudantes-sesion.ts` lo consigue por otra vía, encadenando siempre un `toHaveURL` justo después
   del click.
+
+- **Error `StorageApiError: database error, code: 42P10` en pruebas RLS de Storage.**
+  Observado (causa no confirmada de forma aislada, atribuible a desfase entre la versión del contenedor de `supabase/storage-api` —el CLI actual utiliza `public.ecr.aws/supabase/storage-api:v1.79.36`— y el esquema de migraciones de `storage.objects` en PostgreSQL).
+  En PostgreSQL, el código `42P10` indica que no coincide una restricción única con la cláusula `ON CONFLICT` ejecutada por versiones desfasadas de storage-api al insertar objetos.
+  **Procedimiento que funcionó:**
+  1. Detener Supabase: `npx supabase stop --no-backup`
+  2. Limpiar imágenes huérfanas o contenedores viejos de storage (`docker rmi <imagen-antigua>` o `docker image prune`).
+  3. Asegurar que el CLI arranque la versión correspondiente (`public.ecr.aws/supabase/storage-api:v1.79.36` en CLI 2.120.0): `npx supabase start`
+  4. Resetear la base de datos: `npx supabase db reset`
 
 ## Variables de entorno del proyecto
 
