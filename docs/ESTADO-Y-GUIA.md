@@ -269,14 +269,37 @@ Estas cuestan horas si no se saben:
   del click.
 
 - **Error `StorageApiError: database error, code: 42P10` en pruebas RLS de Storage.**
-  Ocurre cuando la imagen local de Docker `supabase/storage-api` está desactualizada (p. ej. `v1.73.1`)
-  respecto a las migraciones y esquema de `storage.objects` aplicados por el CLI de Supabase.
-  En PostgreSQL, el código `42P10` indica que no existe una restricción o índice único que coincida
-  con la cláusula `ON CONFLICT` ejecutada por versiones antiguas de storage-api al insertar objetos.
-  **Solución:** detener Supabase (`npx supabase stop --no-backup`), eliminar la imagen vieja de Storage
-  (`docker rmi supabase/storage-api:v1.73.1` o `docker image prune`) para permitir que Docker descargue
-  la versión compatible (`>= v1.79.x`, p. ej. `1.79.36`), reiniciar con `npx supabase start` y resetear
-  la base con `npx supabase db reset`.
+  Observado (causa no confirmada de forma aislada, atribuible a desfase entre la versión del contenedor de `supabase/storage-api` —el CLI actual utiliza `public.ecr.aws/supabase/storage-api:v1.79.36`— y el esquema de migraciones de `storage.objects` en PostgreSQL).
+  En PostgreSQL, el código `42P10` indica que no coincide una restricción única con la cláusula `ON CONFLICT` ejecutada por versiones desfasadas de storage-api al insertar objetos.
+  **Procedimiento que funcionó:**
+  1. Detener Supabase: `npx supabase stop --no-backup`
+  2. Limpiar imágenes huérfanas o contenedores viejos de storage (`docker rmi <imagen-antigua>` o `docker image prune`).
+  3. Asegurar que el CLI arranque la versión correspondiente (`public.ecr.aws/supabase/storage-api:v1.79.36` en CLI 2.120.0): `npx supabase start`
+  4. Resetear la base de datos: `npx supabase db reset`
+
+## Variables de entorno del proyecto
+
+Todas las variables de entorno que lee el código de la aplicación (src/ y scripts/ mediante process.env.*).
+Ninguna variable secreta de servidor debe llevar el prefijo NEXT_PUBLIC_.
+
+| Variable | Ámbito | ¿Secreta? | Propósito | Comportamiento si falta |
+|---|---|---|---|---|
+| NEXT_PUBLIC_SUPABASE_URL | Cliente y servidor | No (pública) | URL base del proyecto Supabase (acceso a REST, Auth y Storage). | Los clientes de Supabase (browser y server) fallan al instanciarse; la app no puede consultar datos ni autenticar usuarios. |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY | Cliente y servidor | No (pública) | Clave pública anónima de Supabase, protegida por RLS en la base de datos. | Las peticiones a Supabase no pueden autenticarse y fallan inmediatamente. |
+| SUPABASE_SERVICE_ROLE_KEY | Solo servidor | **SÍ (CRÍTICA)** | Clave con rol de servicio que salta RLS por completo (cliente-admin.ts, semillas y scripts). | Fallan las operaciones administrativas que requieren permisos elevados; nunca exponerla al cliente ni agregar prefijo NEXT_PUBLIC_. |
+| SUPABASE_DB_URL | Solo servidor | **SÍ** | Cadena de conexión directa a PostgreSQL (postgresql://...). | Fallan las pruebas directas RLS y la guarda del seed; no se usa en ejecución normal de la app. |
+| APP_ENTORNO | Solo servidor | No | Identificador del entorno de ejecución (local, production). | Fuera de producción no afecta; en production bloquea estrictamente la ejecución del seed para no sobreescribir datos reales. |
+| NEXT_PUBLIC_APP_URL | Cliente y servidor | No (pública) | URL base canónica absoluta del sitio (ej. https://portal-inmobiliario-alpha.vercel.app). | Degrada a http://127.0.0.1:3000 o URL vacía; enlaces canónicos SEO y emailRedirectTo en confirmaciones de cuenta pueden salir rotos. |
+| TURNSTILE_SITE_KEY | Cliente y servidor | No (pública) | Clave de sitio para el widget de Cloudflare Turnstile en formularios de registro y login. | Turnstile queda DESACTIVADO (se requieren ambas: SITE y SECRET; con una o ambas vacías, los formularios operan sin captcha y avisan por consola). |
+| TURNSTILE_SECRET_KEY | Solo servidor | **SÍ** | Clave secreta para validar el token de Turnstile contra la API de Cloudflare. | Turnstile queda DESACTIVADO. |
+| IP_CABECERA_CONFIABLE | Solo servidor | No | Nombre de la cabecera que la plataforma reescribe con la IP real (en Vercel: x-vercel-forwarded-for). | En local/test la IP es siempre 127.0.0.1. En producción, el límite de intentos degrada a ventana por correo (más estricto, no falsificable) y avisa en logs; el registro se bloquea en producción si falta para evitar altas anónimas no trazables. |
+| RESEND_API_KEY | Solo servidor | **SÍ** | Clave de API de Resend para el envío transaccional de correos (notificaciones de búsquedas guardadas y avisos de citas). | El cron /api/cron/notificar-busquedas responde 500 sin procesar envíos; las notificaciones de citas no se envían y registran advertencia en logs. |
+| RESEND_FROM | Solo servidor | No | Remitente verificado en Resend (Portal Inmobiliario <alertas@tu-dominio.com>). | El cron de notificaciones responde 500. Sin dominio verificado en Resend (https://resend.com/domains), Resend solo entrega correos a la dirección de la cuenta propietaria. |
+| CRON_SECRET | Solo servidor | **SÍ** | Secreto para autorizar llamadas a rutas /api/cron/* vía cabecera Authorization: Bearer <CRON_SECRET>. | Las rutas de cron responden 401 Unauthorized y ningún cron se ejecuta. |
+| GOOGLE_MAPS_API_KEY | Solo servidor | **SÍ** | Clave de Google Maps Static API para generar la imagen de zona aproximada (/imagen/zona/[id]). | /imagen/zona/[id] responde 404 (sin mapa) y la ficha pública no muestra el mapa. **Debe ir sin restricción de HTTP referrer** en Google Cloud Console porque la pide el servidor vía fetch. |
+| GOOGLE_MAPS_SIGNING_SECRET | Solo servidor | **SÍ** | Secreto criptográfico de firma de URL para Google Maps Static API (URL signing secret). | Opcional: las URLs de mapas estáticos se generan sin firma digital (funcionan con solo la clave, pero sin protección extra contra abuso de cuota si la clave se filtra). |
+| OPENAI_API_KEY | Solo servidor | **SÍ** | Clave de OpenAI para inferencia del asistente inteligente (modelo por defecto: gpt-5.6-luna). | Degrada automáticamente a Gemini si GEMINI_API_KEY está configurada. Si OpenAI falla en ejecución, hace fallback a Gemini con log de advertencia. Si faltan ambas claves, la inferencia falla arrojando ErrorIA('IA004'). |
+| GEMINI_API_KEY | Solo servidor | **SÍ** | Clave de Google Gemini para inferencia de IA (modelo: gemini-3.8-flash vía endpoint compatible con OpenAI). | Se utiliza únicamente OpenAI. Si OpenAI no está configurada o falla en ejecución, no hay proveedor secundario de respaldo y las llamadas de IA fallan con ErrorIA('IA004'). |
 
 ---
 

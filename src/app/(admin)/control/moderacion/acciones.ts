@@ -2,9 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin'
-import { rolDesdeToken } from '@/lib/auth/roles'
+import { accesoAdmin } from '@/lib/auth/admin'
+import { RUTA_DOBLE_FACTOR } from '@/lib/auth/roles'
 import {
   suspenderPropiedad,
   reactivarPropiedad,
@@ -13,17 +13,15 @@ import {
 } from '@/lib/admin/moderacion'
 
 async function verificarSuperAdmin() {
-  const supabase = await crearClienteServidor()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: { session } } = await supabase.auth.getSession()
-  const rol = rolDesdeToken(session?.access_token ?? '')
-  if (rol !== 'super_admin') {
+  // Rol leido de perfiles y sesion aal2: ver src/lib/auth/admin.ts.
+  const acceso = await accesoAdmin()
+  if (acceso.estado === 'sin_sesion') redirect('/login')
+  if (acceso.estado === 'falta_mfa') redirect(RUTA_DOBLE_FACTOR)
+  if (acceso.estado !== 'ok') {
     throw new Error('Acceso no autorizado: requiere rol super_admin')
   }
 
-  return { cliente: supabase, adminId: user.id }
+  return { cliente: acceso.cliente, adminId: acceso.adminId }
 }
 
 export async function accionSuspenderPropiedad(

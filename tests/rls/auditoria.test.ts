@@ -221,7 +221,7 @@ describe('escritura de la auditoria', () => {
       .contains('metadatos', { correo })
     expect(bloqueos).toHaveLength(1)
     expect(bloqueos![0].ip).toBe(ip)
-    expect(bloqueos![0].metadatos).toEqual({ correo, ip_confiable: true, minutos_bloqueo: 15 })
+    expect(bloqueos![0].metadatos).toEqual({ correo, ip_confiable: true, minutos_bloqueo: 5 })
 
     // Y los seis fallos si quedaron auditados uno a uno: el bloqueo es un
     // evento aparte, no un sustituto del registro del intento.

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { rolDesdeToken, rutaPermitida, rutaDePanel, decodificarBase64Url } from '@/lib/auth/roles'
+import { rolDesdeToken, rutaPermitida, rutaDePanel, decodificarBase64Url, destinoTrasContrasena } from '@/lib/auth/roles'
 
 function tokenFalso(claims: object): string {
   const parte = (o: object) => Buffer.from(JSON.stringify(o)).toString('base64url')
@@ -105,5 +105,22 @@ describe('compatibilidad con el runtime Edge', () => {
     expect(sinComentarios).not.toMatch(/\bBuffer\b/)
     expect(sinComentarios).not.toMatch(/\brequire\(/)
     expect(sinComentarios).not.toMatch(/from\s+['"]node:/)
+  })
+})
+
+// M2: tras la contrasena el super_admin tiene una sesion aal1 y /control exige
+// aal2. La redireccion de la server action no pasa por el proxy, asi que el
+// destino tiene que ser ya /doble-factor.
+describe('destinoTrasContrasena', () => {
+  it('lleva al super_admin a /doble-factor en vez de a /control (o a una subruta)', () => {
+    expect(destinoTrasContrasena('super_admin')).toBe('/doble-factor')
+    expect(destinoTrasContrasena('super_admin', '/control/moderacion')).toBe('/doble-factor')
+  })
+
+  it('no toca otros destinos ni otros roles', () => {
+    expect(destinoTrasContrasena('super_admin', '/catalogo')).toBe('/catalogo')
+    expect(destinoTrasContrasena('vendedor')).toBe('/panel')
+    expect(destinoTrasContrasena('comprador')).toBe('/mi-cuenta')
+    expect(destinoTrasContrasena('vendedor', '/controlador')).toBe('/controlador')
   })
 })

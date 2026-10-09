@@ -7,11 +7,14 @@ import { BUCKET_PROPIEDADES } from '@/lib/imagenes/firmar'
 // subirImagen/eliminarImagen/reordenarImagen dependen de crearClienteServidor()
 // (cookies() de next/headers, solo resuelve dentro de una peticion real de
 // Next). Se sustituye por el cliente autenticado que necesite cada prueba,
-// igual que tests/rls/cambiar-estado.test.ts hace para cambiarEstado(). Este
-// fichero no importa crearClienteAdmin (a diferencia de
-// eliminar-propiedad.test.ts): acciones-imagenes.ts no lo usa, asi que no
-// hace falta neutralizar 'server-only' para el.
+// igual que tests/rls/cambiar-estado.test.ts hace para cambiarEstado().
+// subirImagen() sube a Storage con crearClienteAdmin() desde 20261014000200
+// (el vendedor ya no tiene INSERT en el bucket), y ese modulo importa
+// 'server-only': se neutraliza aqui, como en eliminar-propiedad.test.ts. El
+// cliente admin es el real, asi que la subida llega de verdad al bucket.
 let clienteActual: SupabaseClient
+
+vi.mock('server-only', () => ({}))
 
 vi.mock('@/lib/supabase/cliente-servidor', () => ({
   crearClienteServidor: async () => clienteActual,
@@ -117,11 +120,10 @@ describe('acciones de imagenes (contra Postgres y Storage reales)', () => {
     })
 
     // La prueba que mas importa de esta tarea: un vendedor no puede colar
-    // una imagen en la propiedad de otro. La ruta de Storage solo exige que
-    // el primer segmento sea el UID del que sube (storage_propiedades_escritura
-    // no sabe nada de propiedades), asi que la subida a Storage tiene exito;
-    // lo que la detiene es imagenes_escritura_dueno al insertar la fila -- y
-    // ese archivo, ya huerfano, se borra a mano dentro de subirImagen().
+    // una imagen en la propiedad de otro. Desde 20261014000200 la subida va
+    // con service_role, asi que subirImagen() comprueba la propiedad ANTES de
+    // subir nada y no queda archivo en Storage; si esa comprobacion fallara,
+    // imagenes_escritura_dueno seguiria rechazando la fila (abajo, 42501).
     it('el vendedor A NO puede subir una imagen a la propiedad del vendedor B: cero filas y archivo huerfano borrado', async () => {
       clienteActual = clienteA
       const archivo = archivoDePrueba('intruso.jpg', contenidoJpeg)

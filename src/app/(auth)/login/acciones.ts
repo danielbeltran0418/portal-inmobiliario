@@ -6,7 +6,7 @@ import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { esquemaLogin } from '@/lib/validacion/esquemas'
 import { mapearError, MENSAJE_CAPTCHA, MENSAJE_CREDENCIALES } from '@/lib/errores/mapear'
 import { accionBloqueada, registrarIntentoAccion } from '@/lib/auth/limite-intentos'
-import { rolDesdeToken, rutaDePanel } from '@/lib/auth/roles'
+import { destinoTrasContrasena, rolDesdeToken, rutaDePanel } from '@/lib/auth/roles'
 import { rutaDeRetorno } from '@/lib/navegacion/volver'
 import { ipDeConfianza } from '@/lib/http/ip-cliente'
 import { CAMPO_TURNSTILE, verificarTurnstile } from '@/lib/seguridad/turnstile'
@@ -16,7 +16,7 @@ export interface EstadoFormulario {
 }
 
 const MENSAJE_BLOQUEADO =
-  'Demasiados intentos fallidos. Espera 15 minutos antes de volver a intentar.'
+  'Demasiados intentos fallidos. Espera 5 minutos antes de volver a intentar.'
 
 export async function iniciarSesion(
   _estado: EstadoFormulario,
@@ -94,5 +94,6 @@ export async function iniciarSesion(
   // llego al login -- lo controla quien mando el enlace. Sin pasar por
   // rutaDeRetorno seria un redirect abierto justo tras escribir la contrasena.
   const volver = rutaDeRetorno(formData.get('volver') as string | null)
-  redirect(volver !== '/' ? volver : rutaDePanel(rolDesdeToken(data.session.access_token)))
+  const rol = rolDesdeToken(data.session.access_token)
+  redirect(destinoTrasContrasena(rol, volver !== '/' ? volver : rutaDePanel(rol)))
 }

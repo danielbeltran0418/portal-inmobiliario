@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { sesionActual } from '@/lib/auth/sesion'
-import { rolDesdeToken } from '@/lib/auth/roles'
+import { accesoAdmin } from '@/lib/auth/admin'
+import { RUTA_DOBLE_FACTOR } from '@/lib/auth/roles'
 import { NavegacionAdmin } from '@/components/admin/NavegacionAdmin'
 
 export const metadata: Metadata = {
@@ -15,15 +15,12 @@ export default async function LayoutControl({
 }: {
   children: React.ReactNode
 }) {
-  const sesion = await sesionActual()
-  if (!sesion.hayUsuario || !sesion.accessToken) {
-    redirect('/login')
-  }
-
-  const rol = rolDesdeToken(sesion.accessToken)
-  if (rol !== 'super_admin') {
-    redirect('/')
-  }
+  // Rol de la base y segundo factor: ver src/lib/auth/admin.ts. El proxy ya
+  // filtra lo mismo; esto es la segunda capa, por si cambia el matcher.
+  const acceso = await accesoAdmin()
+  if (acceso.estado === 'sin_sesion') redirect('/login')
+  if (acceso.estado === 'no_admin') redirect('/')
+  if (acceso.estado === 'falta_mfa') redirect(RUTA_DOBLE_FACTOR)
 
   return (
     <div className="min-h-dvh bg-fondo">
