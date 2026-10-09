@@ -58,12 +58,15 @@ export function construirCabeceras(nonce: string): Record<string, string> {
     `base-uri 'self'`,
     `form-action 'self'`,
     `object-src 'none'`,
+    `report-to csp-endpoint`,
+    `report-uri /api/seguridad/csp-report`,
     // Supabase local usa HTTP; forzarlo a HTTPS rompe las imágenes redirigidas.
     ...(process.env.NODE_ENV === 'production' ? ['upgrade-insecure-requests'] : []),
   ].join('; ')
 
   return {
     'Content-Security-Policy': csp,
+    'Reporting-Endpoints': 'csp-endpoint="/api/seguridad/csp-report"',
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
     'X-Frame-Options': 'DENY',
     'X-Content-Type-Options': 'nosniff',
