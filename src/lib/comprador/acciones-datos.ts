@@ -122,80 +122,40 @@ export async function suprimirCuentaCompradorAction(
     return { exito: false, error: quedoRegistrado ? MENSAJE_CONTRASENA_SUPRESION : MENSAJE_SUPRESION_BLOQUEADA };
   }
 
-  try {
-    // 1. Borrar datos no críticos / preferencias privadas del comprador
-    await admin.from('favoritos').delete().eq('usuario_id', usuarioId);
-    await admin.from('busquedas_guardadas').delete().eq('usuario_id', usuarioId);
-
-    // 2. Cerrar conversaciones de IA
-    await admin
-      .from('conversaciones_ia')
-      .update({ estado_conversacion: 'cerrada' })
-      .eq('comprador_id', usuarioId);
-
-    // 3. Cancelar citas futuras
-    const { data: leads } = await admin
-      .from('leads')
-      .select('id')
-      .eq('comprador_id', usuarioId);
-
-    const leadIds = (leads ?? []).map((l) => l.id);
-    if (leadIds.length > 0) {
-      await admin
-        .from('citas')
-        .update({
-          estado: 'cancelada',
-          notas: 'Cancelada automáticamente por supresión de cuenta de usuario.',
-        })
-        .in('lead_id', leadIds)
-        .eq('estado', 'confirmada');
-
-      // 4. Anonimizar datos de contacto en leads
-      await admin
-        .from('leads_contacto')
-        .update({
-          nombre: 'Usuario Anónimo',
-          telefono: null,
-          email: 'anonimo@baja.portal.test',
-        })
-        .in('lead_id', leadIds);
-    }
-
-    // 5. Anonimizar perfil y marcar suprimido_en
-    await admin
-      .from('perfiles')
-      .update({
-        nombre: 'Usuario dado de baja',
-        telefono: null,
-        suprimido_en: new Date().toISOString(),
-      })
-      .eq('id', usuarioId);
-
-    // 6. Auditoría
-    await admin.rpc('registrar_evento_auditoria', {
-      p_accion: 'cuenta_suprimida',
-      p_entidad: 'perfiles',
-      p_entidad_id: usuarioId,
-      p_actor_id: usuarioId,
-      p_metadatos: { motivo: 'Habeas Data / Derecho al Olvido ejercido por el titular' },
-      p_ip: null,
-    });
-
-    // 7. Borrado de credenciales en Supabase Auth
-    const { error: errAuth } = await admin.auth.admin.deleteUser(usuarioId);
-    if (errAuth) {
-      console.warn('[SP2] Advertencia al eliminar usuario de auth:', errAuth.message);
-    }
-
-    // 8. Cerrar sesión cliente
-    await supabase.auth.signOut();
-
-    return { exito: true };
-  } catch (error) {
-    console.error('[SP2] Error al suprimir cuenta:', error);
-    return {
-      exito: false,
-      error: 'Ocurrió un error inesperado al procesar la supresión de cuenta.',
-    };
+  // Borrar la cuenta de Auth arrastra en CASCADA (ON DELETE CASCADE) perfiles,
+  // leads, leads_contacto, citas, favoritos, busquedas_guardadas,
+  // conversaciones_ia y mensajes_ia. Por eso NO se toca ni se anonimiza nada
+  // antes (el codigo anterior ademas escribia columnas que no existen en
+  // leads_contacto y no miraba ningun error): si Auth falla, la cuenta queda
+  // entera y el titular puede reintentar.
+  const { error: errAuth } = await admin.auth.admin.deleteUser(usuarioId);
+  if (errAuth) {
+    console.error('[CN-006] Error al eliminar usuario de auth:', errAuth);
+    return { exito: false, error: 'No se pudo eliminar la cuenta. Intenta de nuevo.' };
   }
+
+  // La auditoria va DESPUES: registro_auditoria es inmutable y un evento
+  // anterior afirmaria una supresion que Auth todavia podia rechazar.
+  // registrar_evento_auditoria resuelve actor_id con un SELECT sobre perfiles,
+  // asi que con el perfil ya borrado el actor queda NULL (sin violar la FK) y
+  // entidad_id conserva el uuid para la traza de Habeas Data.
+  const { error: errAuditoria } = await admin.rpc('registrar_evento_auditoria', {
+    p_accion: 'cuenta_suprimida',
+    p_entidad: 'perfiles',
+    p_entidad_id: usuarioId,
+    p_actor_id: usuarioId,
+    p_metadatos: { motivo: 'Habeas Data / Derecho al Olvido ejercido por el titular' },
+    p_ip: null,
+  });
+  if (errAuditoria) {
+    // La cuenta ya no existe: devolver error aqui le diria al titular que no
+    // se borro algo que si se borro. Se registra para que alguien lo repare.
+    console.error('[CN-006] Cuenta suprimida pero la auditoria fallo:', usuarioId, errAuditoria);
+  }
+
+  // El token ya no vale; signOut limpia las cookies. Un fallo aqui no cambia
+  // que la cuenta esta borrada.
+  await supabase.auth.signOut().catch(() => undefined);
+
+  return { exito: true };
 }
