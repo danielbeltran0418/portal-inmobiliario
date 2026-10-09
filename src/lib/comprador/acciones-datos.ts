@@ -54,7 +54,7 @@ export async function actualizarPerfilCompradorAction(
 
 const MENSAJE_CONTRASENA_SUPRESION = 'La contraseña no es correcta.';
 const MENSAJE_SUPRESION_BLOQUEADA =
-  'Demasiados intentos fallidos. Espera 15 minutos antes de volver a intentarlo.';
+  'Demasiados intentos fallidos. Espera 5 minutos antes de volver a intentarlo.';
 
 /**
  * Comprueba la contrasena actual sin tocar la sesion del navegador: un cliente
@@ -78,7 +78,7 @@ async function contrasenaCorrecta(correo: string, password: string): Promise<boo
  * Exige la contrasena actual (hallazgo L3 de la auditoria): borrar la cuenta
  * es irreversible, y con solo una sesion abierta -- un equipo compartido, una
  * sesion robada -- bastaba escribir la frase. Los fallos cuentan en el mismo
- * limite que el login (5 por correo en 15 minutos): si no, este formulario
+ * limite que el login (5 por correo en 5 minutos): si no, este formulario
  * seria una forma de adivinar contrasenas sin el limite del login.
  */
 export async function suprimirCuentaCompradorAction(

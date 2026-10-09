@@ -82,7 +82,7 @@ describe('suprimirCuentaCompradorAction (L3: exige la contrasena actual)', () =>
   it('con el limite de intentos agotado no prueba la contrasena', async () => {
     accionBloqueada.mockResolvedValue(true)
     const r = await suprimirCuentaCompradorAction(FRASE, 'ClaveCorrecta123')
-    expect(r.error).toMatch(/15 minutos/)
+    expect(r.error).toMatch(/5 minutos/)
     expect(signInWithPassword).not.toHaveBeenCalled()
     expect(deleteUser).not.toHaveBeenCalled()
   })
