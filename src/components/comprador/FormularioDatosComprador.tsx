@@ -27,6 +27,7 @@ export function FormularioDatosComprador({
 
   // Estado de Supresión de Cuenta
   const [textoConfirmacion, setTextoConfirmacion] = useState('');
+  const [contrasena, setContrasena] = useState('');
   const [errorSupresion, setErrorSupresion] = useState<string | null>(null);
   const [isPendingSupresion, startTransitionSupresion] = useTransition();
 
@@ -60,7 +61,7 @@ export function FormularioDatosComprador({
     }
 
     startTransitionSupresion(async () => {
-      const res = await suprimirCuentaCompradorAction(textoConfirmacion);
+      const res = await suprimirCuentaCompradorAction(textoConfirmacion, contrasena);
       if (res.exito) {
         router.push('/');
       } else {
@@ -181,9 +182,26 @@ export function FormularioDatosComprador({
             />
           </div>
 
+          <div>
+            <label htmlFor="contrasena-supresion" className="block text-xs font-semibold text-peligro mb-1">
+              Tu contraseña actual
+            </label>
+            <input
+              id="contrasena-supresion"
+              type="password"
+              required
+              autoComplete="current-password"
+              maxLength={72}
+              value={contrasena}
+              onChange={(e) => setContrasena(e.target.value)}
+              className="w-full px-3 py-2 border border-peligro/30 rounded-lg bg-superficie text-tinta focus:outline-none focus:ring-2 focus:ring-peligro text-sm"
+              data-testid="input-contrasena-supresion"
+            />
+          </div>
+
           <button
             type="submit"
-            disabled={isPendingSupresion || textoConfirmacion !== 'ELIMINAR MI CUENTA'}
+            disabled={isPendingSupresion || textoConfirmacion !== 'ELIMINAR MI CUENTA' || contrasena.length === 0}
             className="px-4 py-2 text-sm font-medium rounded-lg bg-peligro text-marca-contraste hover:bg-peligro/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             data-testid="boton-confirmar-supresion"
           >
