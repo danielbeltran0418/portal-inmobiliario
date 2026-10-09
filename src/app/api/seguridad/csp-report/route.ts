@@ -1,6 +1,29 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 const LIMITE_TAMANO_BYTES = 10 * 1024 // 10 KB
+const TOPE_LOGS_POR_MINUTO = 30
+const VENTANA_MS = 60 * 1000
+
+let contadorLogs = 0
+let inicioVentana = Date.now()
+
+export function reiniciarLimiteLogsParaTests() {
+  contadorLogs = 0
+  inicioVentana = Date.now()
+}
+
+function permitirRegistroLog(): boolean {
+  const ahora = Date.now()
+  if (ahora - inicioVentana >= VENTANA_MS) {
+    inicioVentana = ahora
+    contadorLogs = 0
+  }
+  if (contadorLogs >= TOPE_LOGS_POR_MINUTO) {
+    return false
+  }
+  contadorLogs++
+  return true
+}
 
 /**
  * Elimina parámetros de consulta y fragmentos para evitar registrar tokens o datos personales.
@@ -85,6 +108,9 @@ export async function POST(peticion: NextRequest): Promise<NextResponse> {
   }
 
   for (const v of violaciones) {
+    if (!permitirRegistroLog()) {
+      break
+    }
     console.warn('[Seguridad] Violación de CSP detectada:', {
       directiva: v.directiva,
       urlDocumento: v.urlDocumento,

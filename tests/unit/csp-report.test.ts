@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { POST } from '@/app/api/seguridad/csp-report/route'
+import { POST, reiniciarLimiteLogsParaTests } from '@/app/api/seguridad/csp-report/route'
 import type { NextRequest } from 'next/server'
 
 function crearPeticion(body: string, headers: Record<string, string> = {}) {
@@ -14,6 +14,9 @@ function crearPeticion(body: string, headers: Record<string, string> = {}) {
 describe('CN-018: Endpoint de reporte de violaciones CSP', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    if (typeof reiniciarLimiteLogsParaTests === 'function') {
+      reiniciarLimiteLogsParaTests()
+    }
   })
 
   it('rechaza con 413 si la cabecera content-length supera 10 KB', async () => {
@@ -88,5 +91,25 @@ describe('CN-018: Endpoint de reporte de violaciones CSP', () => {
         disposicion: 'enforce',
       }),
     )
+  })
+
+  it('aplica tope de logs por ventana: más de 30 reportes seguidos no generan más de 30 logs y devuelven 204', async () => {
+    const spyWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const payload = JSON.stringify({
+      'csp-report': {
+        'document-uri': 'https://portal.test/panel',
+        'blocked-uri': 'https://malicioso.test/script.js',
+        'effective-directive': 'script-src',
+        'disposition': 'enforce',
+      },
+    })
+
+    for (let i = 0; i < 35; i++) {
+      const req = crearPeticion(payload)
+      const res = await POST(req)
+      expect(res.status).toBe(204)
+    }
+
+    expect(spyWarn).toHaveBeenCalledTimes(30)
   })
 })
