@@ -375,5 +375,147 @@ describe('scripts/verificar-mapa.mjs', () => {
       expect(resultado.ok).toBe(false)
       expect(resultado.resultados.some((r) => r.detalle.includes('ECONNREFUSED'))).toBe(true)
     })
+
+    it('reporta FAIL en ficha-img si la ruta aparece solo como texto plano sin etiqueta img src', async () => {
+      const htmlConTextoPlano = `
+        <html><body>
+          <p>Ruta: /imagen/zona/uuid-1234</p>
+          <a href="https://www.google.com/maps/search/?api=1&query=10.9875%2C-74.7875">Ver la zona en Google Maps</a>
+        </body></html>
+      `
+      const fetchFn = vi.fn(async (url: string | URL | Request) => {
+        const urlStr = String(url)
+        if (urlStr.includes('/imagen/zona/')) {
+          return new Response(new Uint8Array([1]), {
+            status: 200,
+            headers: {
+              'Content-Type': 'image/png',
+              'Cache-Control': 'public, max-age=86400',
+            },
+          })
+        }
+        return new Response(htmlConTextoPlano, { status: 200 })
+      })
+
+      const resultado = await verificarMapa({
+        base: 'https://portal.test',
+        id: 'uuid-1234',
+        ficha: '/el-prado/casa-slug',
+        fetchFn: fetchFn as unknown as typeof fetch,
+        logger: loggerMock,
+      })
+
+      expect(resultado.ok).toBe(false)
+      const pasoImg = resultado.resultados.find((r) => r.paso === 'ficha-img')
+      expect(pasoImg?.estado).toBe('FAIL')
+      expect(pasoImg?.detalle).toContain('NO contiene <img ... src="/imagen/zona/uuid-1234">')
+    })
+
+    it('reporta FAIL en privacidad-exacta si --exacta esta presente pero la ficha no tiene imagen de mapa', async () => {
+      const htmlSinMapa = `
+        <html><body>
+          <a href="https://www.google.com/maps/search/?api=1&query=10.9875%2C-74.7875">Ver la zona en Google Maps</a>
+        </body></html>
+      `
+      const fetchFn = vi.fn(async (url: string | URL | Request) => {
+        const urlStr = String(url)
+        if (urlStr.includes('/imagen/zona/')) {
+          return new Response(new Uint8Array([1]), {
+            status: 200,
+            headers: {
+              'Content-Type': 'image/png',
+              'Cache-Control': 'public, max-age=86400',
+            },
+          })
+        }
+        return new Response(htmlSinMapa, { status: 200 })
+      })
+
+      const resultado = await verificarMapa({
+        base: 'https://portal.test',
+        id: 'uuid-1234',
+        ficha: '/el-prado/casa-slug',
+        exacta: '10.9878,-74.7889',
+        fetchFn: fetchFn as unknown as typeof fetch,
+        logger: loggerMock,
+      })
+
+      expect(resultado.ok).toBe(false)
+      const pasoPrivacidad = resultado.resultados.find((r) => r.paso === 'privacidad-exacta')
+      expect(pasoPrivacidad?.estado).toBe('FAIL')
+      expect(pasoPrivacidad?.detalle).toContain('La ficha no tiene imagen de mapa; no se puede validar la privacidad del mapa')
+    })
+
+    it('reporta FAIL en privacidad-exacta si la URL de la imagen del mapa contiene las coordenadas exactas', async () => {
+      const htmlConImgExacta = `
+        <html><body>
+          <img src="/imagen/zona/uuid-1234?center=10.9878,-74.7889" />
+          <a href="https://www.google.com/maps/search/?api=1&query=10.9875%2C-74.7875">Ver la zona en Google Maps</a>
+        </body></html>
+      `
+      const fetchFn = vi.fn(async (url: string | URL | Request) => {
+        const urlStr = String(url)
+        if (urlStr.includes('/imagen/zona/')) {
+          return new Response(new Uint8Array([1]), {
+            status: 200,
+            headers: {
+              'Content-Type': 'image/png',
+              'Cache-Control': 'public, max-age=86400',
+            },
+          })
+        }
+        return new Response(htmlConImgExacta, { status: 200 })
+      })
+
+      const resultado = await verificarMapa({
+        base: 'https://portal.test',
+        id: 'uuid-1234',
+        ficha: '/el-prado/casa-slug',
+        exacta: '10.9878,-74.7889',
+        fetchFn: fetchFn as unknown as typeof fetch,
+        logger: loggerMock,
+      })
+
+      expect(resultado.ok).toBe(false)
+      const pasoPrivacidad = resultado.resultados.find((r) => r.paso === 'privacidad-exacta')
+      expect(pasoPrivacidad?.estado).toBe('FAIL')
+      expect(pasoPrivacidad?.detalle).toContain('La URL de la imagen del mapa contiene las coordenadas exactas')
+    })
+
+    it('reporta FAIL en privacidad-exacta si la URL de la imagen contiene la clave de Google Maps', async () => {
+      const htmlConClaveEnImg = `
+        <html><body>
+          <img src="/imagen/zona/uuid-1234?key=AIzaSyDUMMYTESTKEY000000000000000000" />
+          <a href="https://www.google.com/maps/search/?api=1&query=10.9875%2C-74.7875">Ver la zona en Google Maps</a>
+        </body></html>
+      `
+      const fetchFn = vi.fn(async (url: string | URL | Request) => {
+        const urlStr = String(url)
+        if (urlStr.includes('/imagen/zona/')) {
+          return new Response(new Uint8Array([1]), {
+            status: 200,
+            headers: {
+              'Content-Type': 'image/png',
+              'Cache-Control': 'public, max-age=86400',
+            },
+          })
+        }
+        return new Response(htmlConClaveEnImg, { status: 200 })
+      })
+
+      const resultado = await verificarMapa({
+        base: 'https://portal.test',
+        id: 'uuid-1234',
+        ficha: '/el-prado/casa-slug',
+        exacta: '10.9878,-74.7889',
+        fetchFn: fetchFn as unknown as typeof fetch,
+        logger: loggerMock,
+      })
+
+      expect(resultado.ok).toBe(false)
+      const pasoPrivacidad = resultado.resultados.find((r) => r.paso === 'privacidad-exacta')
+      expect(pasoPrivacidad?.estado).toBe('FAIL')
+      expect(pasoPrivacidad?.detalle).toContain('La URL de la imagen del mapa contiene la clave de API de Google')
+    })
   })
 })
