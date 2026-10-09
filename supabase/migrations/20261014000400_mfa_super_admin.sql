@@ -15,8 +15,16 @@
 --
 -- 3. registrar_intento_accion audita tambien los intentos de segundo factor
 --    (mfa_exitoso / mfa_fallido / bloqueo_por_intentos), igual que el login.
---    El cuerpo de 'login', 'registro' y 'recuperar' es IDENTICO al de
---    20261008000100 y 20260911000100.
+--    El cuerpo de 'registro' y 'recuperar' es IDENTICO al de 20261008000100.
+--    El de 'login' es el de 20261014000100_limite_login_5_minutos (ventana de
+--    5 minutos, no de 15): esta migracion NO debe devolverlo a 15.
+--
+-- Version: originalmente 20261014000100, la misma que limite_login_5_minutos
+-- (ya aplicada en produccion). El CLI de Supabase compara por version, asi que
+-- dio esta migracion por aplicada sin ejecutarla y produccion se quedo sin la
+-- rama 'mfa' del limitador: el segundo factor del super_admin se rechazaba
+-- siempre. Renumerada a 20261014000400, posterior a 000200 y 000300 (que no
+-- redefinen es_super_admin, accion_bloqueada ni registrar_intento_accion).
 
 -- ---------------------------------------------------------------------------
 -- 1. Super admin = rol + segundo factor en esta sesion
@@ -43,7 +51,7 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
         AND clave = lower(p_clave)
         AND (p_ip IS NULL OR ip = p_ip)
         AND exitoso = false
-        AND creado_en > now() - interval '15 minutes'
+        AND creado_en > now() - interval '5 minutes'
     )
     WHEN 'registro' THEN (
       CASE WHEN p_ip IS NULL THEN true
@@ -143,7 +151,9 @@ BEGIN
        AND public.accion_bloqueada(p_accion, p_clave, p_ip) THEN
       PERFORM public.registrar_evento_auditoria(
         'bloqueo_por_intentos', 'sesion', v_actor, v_actor,
-        v_metadatos || jsonb_build_object('minutos_bloqueo', 15),
+        v_metadatos || jsonb_build_object(
+          'minutos_bloqueo', CASE WHEN p_accion = 'mfa' THEN 15 ELSE 5 END
+        ),
         p_ip
       );
     END IF;

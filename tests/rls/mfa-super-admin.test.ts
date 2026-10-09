@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { clienteAdmin, clienteComo, crearUsuarioDePrueba } from './ayudantes'
 
-// Hallazgo M2 de la auditoria (20261014000100_mfa_super_admin.sql): el
+// Hallazgo M2 de la auditoria (20261014000400_mfa_super_admin.sql): el
 // super_admin necesita una sesion aal2. Con solo la contrasena, frente a la
 // base es un usuario cualquiera -- tambien llamando a PostgREST directo.
 const ADMIN = { correo: `mfa-admin-${randomUUID()}@prueba.test`, password: 'ClaveDePrueba123!' }
