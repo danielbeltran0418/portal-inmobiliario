@@ -10,7 +10,7 @@
  *      (si da 404/502/503, explica la causa según la documentación).
  *   b) GET {base}{ficha} -> 200, contiene <img ... src="/imagen/zona/{id}"> y un enlace
  *      "Ver la zona en Google Maps" cuyo query lat,lng sea un centro aproximado: ((valor - 0.0025) / 0.005) entero con tolerancia 1e-6.
- *   c) Si se pasa --exacta, la ficha NO debe contener esas coordenadas exactas en ninguna forma.
+ *   c) Si se pasa --exacta, la ficha debe tener imagen de mapa y NO debe contener esas coordenadas exactas ni la clave de Google en ninguna forma.
  */
 
 import { fileURLToPath } from 'node:url'
@@ -168,11 +168,17 @@ export async function verificarMapa({
   } else {
     const html = await resFicha.text()
 
-    // 1. Verificar etiqueta <img ... src="/imagen/zona/{id}">
-    const imgRegex = new RegExp(`<img\\b[^>]*\\bsrc=["'](?:[^"']*\\/)?imagen\\/zona\\/${id}(?:["'\\s?][^>]*)?>`, 'i')
-    const tieneImg = imgRegex.test(html) || html.includes(`/imagen/zona/${id}`)
+    // 1. Parsear todas las etiquetas <img> y extraer sus atributos src
+    const imgTags = Array.from(html.matchAll(/<img\b([^>]*)>/gi)).map((m) => {
+      const srcMatch = m[1].match(/\bsrc=["']([^"']*)["']/i)
+      return { tag: m[0], src: srcMatch ? srcMatch[1] : '' }
+    })
 
-    if (!tieneImg) {
+    // Localizar la imagen de mapa correspondiente a /imagen/zona/{id}
+    const imgMapa = imgTags.find((img) => img.src === `/imagen/zona/${id}` || img.src.includes(`/imagen/zona/${id}`))
+    const srcImgMapa = imgMapa ? imgMapa.src : null
+
+    if (!srcImgMapa) {
       okGlobal = false
       resultados.push({
         paso: 'ficha-img',
@@ -185,7 +191,7 @@ export async function verificarMapa({
         paso: 'ficha-img',
         estado: 'PASS',
         httpStatus: 200,
-        detalle: `GET ${urlFicha} -> contiene <img ... src="/imagen/zona/${id}">`,
+        detalle: `GET ${urlFicha} -> contiene <img ... src="${srcImgMapa}">`,
       })
     }
 
@@ -263,29 +269,67 @@ export async function verificarMapa({
     // Paso c: Si se pasa --exacta, comprobar privacidad
     // ------------------------------------------------------------------------
     if (exacta) {
-      const partesExacta = exacta.split(',').map((s) => s.trim())
-      const latExacta = partesExacta[0]
-      const lngExacta = partesExacta[1]
-
-      const exponeLat = latExacta && html.includes(latExacta)
-      const exponeLng = lngExacta && html.includes(lngExacta)
-      const exponePar = html.includes(exacta) || (latExacta && lngExacta && html.includes(`${latExacta}%2C${lngExacta}`))
-
-      if (exponeLat || exponeLng || exponePar) {
+      if (!srcImgMapa) {
         okGlobal = false
         resultados.push({
           paso: 'privacidad-exacta',
           estado: 'FAIL',
           httpStatus: 200,
-          detalle: `La ficha expone las coordenadas exactas configuradas (${exacta}) en el HTML servido`,
+          detalle: 'La ficha no tiene imagen de mapa; no se puede validar la privacidad del mapa',
         })
       } else {
-        resultados.push({
-          paso: 'privacidad-exacta',
-          estado: 'PASS',
-          httpStatus: 200,
-          detalle: `La ficha no contiene las coordenadas exactas (${exacta}) en ninguna forma`,
-        })
+        const partesExacta = exacta.split(',').map((s) => s.trim())
+        const latExacta = partesExacta[0]
+        const lngExacta = partesExacta[1]
+
+        const imgContieneExacta = imgTags.some((img) => (
+          (exacta && img.src.includes(exacta)) ||
+          (latExacta && lngExacta && img.src.includes(`${latExacta}%2C${lngExacta}`)) ||
+          (latExacta && img.src.includes(latExacta)) ||
+          (lngExacta && img.src.includes(lngExacta))
+        ))
+
+        const imgContieneClaveGoogle = imgTags.some((img) => (
+          /[?&]key=AIza|AIza[0-9A-Za-z-_]{35}/i.test(img.src) ||
+          /[?&]key=[^&"'\s]+/i.test(img.src)
+        ))
+
+        const exponeLat = latExacta && html.includes(latExacta)
+        const exponeLng = lngExacta && html.includes(lngExacta)
+        const exponePar = html.includes(exacta) || (latExacta && lngExacta && html.includes(`${latExacta}%2C${lngExacta}`))
+
+        if (imgContieneExacta) {
+          okGlobal = false
+          resultados.push({
+            paso: 'privacidad-exacta',
+            estado: 'FAIL',
+            httpStatus: 200,
+            detalle: `La URL de la imagen del mapa contiene las coordenadas exactas (${exacta})`,
+          })
+        } else if (imgContieneClaveGoogle) {
+          okGlobal = false
+          resultados.push({
+            paso: 'privacidad-exacta',
+            estado: 'FAIL',
+            httpStatus: 200,
+            detalle: 'La URL de la imagen del mapa contiene la clave de API de Google',
+          })
+        } else if (exponeLat || exponeLng || exponePar) {
+          okGlobal = false
+          resultados.push({
+            paso: 'privacidad-exacta',
+            estado: 'FAIL',
+            httpStatus: 200,
+            detalle: `La ficha expone las coordenadas exactas configuradas (${exacta}) en el HTML servido`,
+          })
+        } else {
+          resultados.push({
+            paso: 'privacidad-exacta',
+            estado: 'PASS',
+            httpStatus: 200,
+            detalle: `La ficha no contiene las coordenadas exactas (${exacta}) en ninguna forma`,
+          })
+        }
       }
     }
   }
