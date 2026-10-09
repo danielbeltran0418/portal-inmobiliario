@@ -1,4 +1,6 @@
+import { z } from 'zod'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { mapearError } from '@/lib/errores/mapear'
 
 export interface ResultadoModeracion {
   ok: boolean
@@ -8,12 +10,19 @@ export interface ResultadoModeracion {
 
 export interface MetadatosModeracion {
   motivo?: string
-  accion_especifica: 'suspender' | 'reactivar' | 'eliminar' | 'eliminar_imagen'
+  accion_especifica: 'suspender' | 'reactivar' | 'eliminar' | 'eliminar_fallida' | 'eliminar_imagen'
   estado_anterior?: string
   estado_nuevo?: string
   imagen_id?: string
   [key: string]: unknown
 }
+
+const esquemaId = z.string().uuid('Identificador inválido')
+const esquemaMotivo = z
+  .string()
+  .trim()
+  .min(1, 'Se requiere un motivo de moderación.')
+  .max(500, 'El motivo no puede superar 500 caracteres.')
 
 /**
  * Suspende o rechaza una propiedad por motivos de moderación (infracción de términos,
@@ -26,47 +35,67 @@ export async function suspenderPropiedad(
   motivo: string,
   adminId: string,
 ): Promise<ResultadoModeracion> {
-  if (!propiedadId || !motivo.trim()) {
-    return { ok: false, error: 'Se requiere el ID de la propiedad y un motivo de suspensión.' }
+  const valProp = esquemaId.safeParse(propiedadId)
+  if (!valProp.success) {
+    return { ok: false, error: 'ID de propiedad inválido.' }
+  }
+
+  const valAdmin = esquemaId.safeParse(adminId)
+  if (!valAdmin.success) {
+    return { ok: false, error: 'ID de administrador inválido.' }
+  }
+
+  const valMotivo = esquemaMotivo.safeParse(motivo)
+  if (!valMotivo.success) {
+    return { ok: false, error: valMotivo.error.issues[0]?.message ?? 'Motivo de moderación inválido.' }
   }
 
   // 1. Obtener estado anterior
   const { data: anterior, error: errAnterior } = await cliente
     .from('propiedades')
     .select('id, estado')
-    .eq('id', propiedadId)
+    .eq('id', valProp.data)
     .single()
 
   if (errAnterior || !anterior) {
-    return { ok: false, error: 'Propiedad no encontrada o sin acceso.' }
+    return { ok: false, error: errAnterior ? mapearError(errAnterior).mensaje : 'Propiedad no encontrada o sin acceso.' }
   }
 
-  // 2. Actualizar estado a 'rechazada'
-  const { error: errUpdate } = await cliente
+  // 2. Actualizar estado a 'rechazada' encadenando .select('id')
+  const { data: filas, error: errUpdate } = await cliente
     .from('propiedades')
     .update({ estado: 'rechazada' })
-    .eq('id', propiedadId)
+    .eq('id', valProp.data)
+    .select('id')
 
   if (errUpdate) {
-    return { ok: false, error: 'No se pudo suspender la propiedad: ' + errUpdate.message }
+    return { ok: false, error: mapearError(errUpdate).mensaje }
   }
 
-  // 3. Registrar auditoría inmutable
-  await clienteAdmin.rpc('registrar_evento_auditoria', {
+  if (!filas || filas.length === 0) {
+    return { ok: false, error: 'No se pudo suspender la propiedad.' }
+  }
+
+  // 3. Registrar auditoría inmutable comprobando error
+  const { error: errAuditoria } = await clienteAdmin.rpc('registrar_evento_auditoria', {
     p_accion: 'propiedad_moderada',
     p_entidad: 'propiedades',
-    p_entidad_id: propiedadId,
-    p_actor_id: adminId,
+    p_entidad_id: valProp.data,
+    p_actor_id: valAdmin.data,
     p_metadatos: {
       accion_especifica: 'suspender',
       estado_anterior: anterior.estado,
       estado_nuevo: 'rechazada',
-      motivo: motivo.trim(),
+      motivo: valMotivo.data,
     },
     p_ip: null,
   })
 
-  return { ok: true, propiedadId }
+  if (errAuditoria) {
+    return { ok: false, error: mapearError(errAuditoria).mensaje }
+  }
+
+  return { ok: true, propiedadId: valProp.data }
 }
 
 /**
@@ -78,34 +107,45 @@ export async function reactivarPropiedad(
   propiedadId: string,
   adminId: string,
 ): Promise<ResultadoModeracion> {
-  if (!propiedadId) {
-    return { ok: false, error: 'Se requiere el ID de la propiedad.' }
+  const valProp = esquemaId.safeParse(propiedadId)
+  if (!valProp.success) {
+    return { ok: false, error: 'ID de propiedad inválido.' }
+  }
+
+  const valAdmin = esquemaId.safeParse(adminId)
+  if (!valAdmin.success) {
+    return { ok: false, error: 'ID de administrador inválido.' }
   }
 
   const { data: anterior, error: errAnterior } = await cliente
     .from('propiedades')
     .select('id, estado')
-    .eq('id', propiedadId)
+    .eq('id', valProp.data)
     .single()
 
   if (errAnterior || !anterior) {
-    return { ok: false, error: 'Propiedad no encontrada.' }
+    return { ok: false, error: errAnterior ? mapearError(errAnterior).mensaje : 'Propiedad no encontrada.' }
   }
 
-  const { error: errUpdate } = await cliente
+  const { data: filas, error: errUpdate } = await cliente
     .from('propiedades')
     .update({ estado: 'publicada' })
-    .eq('id', propiedadId)
+    .eq('id', valProp.data)
+    .select('id')
 
   if (errUpdate) {
-    return { ok: false, error: 'No se pudo reactivar la propiedad: ' + errUpdate.message }
+    return { ok: false, error: mapearError(errUpdate).mensaje }
   }
 
-  await clienteAdmin.rpc('registrar_evento_auditoria', {
+  if (!filas || filas.length === 0) {
+    return { ok: false, error: 'No se pudo reactivar la propiedad.' }
+  }
+
+  const { error: errAuditoria } = await clienteAdmin.rpc('registrar_evento_auditoria', {
     p_accion: 'propiedad_moderada',
     p_entidad: 'propiedades',
-    p_entidad_id: propiedadId,
-    p_actor_id: adminId,
+    p_entidad_id: valProp.data,
+    p_actor_id: valAdmin.data,
     p_metadatos: {
       accion_especifica: 'reactivar',
       estado_anterior: anterior.estado,
@@ -114,7 +154,11 @@ export async function reactivarPropiedad(
     p_ip: null,
   })
 
-  return { ok: true, propiedadId }
+  if (errAuditoria) {
+    return { ok: false, error: mapearError(errAuditoria).mensaje }
+  }
+
+  return { ok: true, propiedadId: valProp.data }
 }
 
 /**
@@ -127,31 +171,63 @@ export async function eliminarPropiedadAdmin(
   motivo: string,
   adminId: string,
 ): Promise<ResultadoModeracion> {
-  if (!propiedadId || !motivo.trim()) {
-    return { ok: false, error: 'Se requiere el ID de la propiedad y un motivo de eliminación.' }
+  const valProp = esquemaId.safeParse(propiedadId)
+  if (!valProp.success) {
+    return { ok: false, error: 'ID de propiedad inválido.' }
+  }
+
+  const valAdmin = esquemaId.safeParse(adminId)
+  if (!valAdmin.success) {
+    return { ok: false, error: 'ID de administrador inválido.' }
+  }
+
+  const valMotivo = esquemaMotivo.safeParse(motivo)
+  if (!valMotivo.success) {
+    return { ok: false, error: valMotivo.error.issues[0]?.message ?? 'Motivo de eliminación inválido.' }
   }
 
   // Registrar auditoría antes de eliminar para conservar el enlace entidad_id
-  await clienteAdmin.rpc('registrar_evento_auditoria', {
+  const { error: errAuditoria } = await clienteAdmin.rpc('registrar_evento_auditoria', {
     p_accion: 'propiedad_moderada',
     p_entidad: 'propiedades',
-    p_entidad_id: propiedadId,
-    p_actor_id: adminId,
+    p_entidad_id: valProp.data,
+    p_actor_id: valAdmin.data,
     p_metadatos: {
       accion_especifica: 'eliminar',
-      motivo: motivo.trim(),
+      motivo: valMotivo.data,
     },
     p_ip: null,
   })
 
-  const { error: errDelete } = await cliente
-    .from('propiedades')
-    .delete()
-    .eq('id', propiedadId)
-
-  if (errDelete) {
-    return { ok: false, error: 'No se pudo eliminar la propiedad: ' + errDelete.message }
+  if (errAuditoria) {
+    return { ok: false, error: mapearError(errAuditoria).mensaje }
   }
 
-  return { ok: true, propiedadId }
+  const { data: filas, error: errDelete } = await cliente
+    .from('propiedades')
+    .delete()
+    .eq('id', valProp.data)
+    .select('id')
+
+  if (errDelete || !filas || filas.length === 0) {
+    // registro_auditoria es inmutable: el evento de arriba ya dice 'eliminar'.
+    // Este lo desmiente, para que el rastro no afirme un borrado que no ocurrio.
+    const { error: errCompensacion } = await clienteAdmin.rpc('registrar_evento_auditoria', {
+      p_accion: 'propiedad_moderada',
+      p_entidad: 'propiedades',
+      p_entidad_id: valProp.data,
+      p_actor_id: valAdmin.data,
+      p_metadatos: { accion_especifica: 'eliminar_fallida', motivo: valMotivo.data },
+      p_ip: null,
+    })
+    if (errCompensacion) {
+      console.error('[moderacion] No se pudo registrar el evento compensatorio de eliminar_fallida:', errCompensacion)
+    }
+    return {
+      ok: false,
+      error: errDelete ? mapearError(errDelete).mensaje : 'No se pudo eliminar la propiedad.',
+    }
+  }
+
+  return { ok: true, propiedadId: valProp.data }
 }

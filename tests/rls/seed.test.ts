@@ -10,6 +10,9 @@ const CUENTAS = [
 ]
 
 const SEED = readFileSync('supabase/seed.sql', 'utf8')
+// `supabase db reset` corre seed_env.sql ANTES de seed.sql en la misma sesion
+// (config.toml, [db.seed] sql_paths).
+const SEED_ENV = readFileSync('supabase/seed_env.sql', 'utf8')
 
 /**
  * Parte el archivo en sentencias, respetando comentarios de linea, cadenas
@@ -87,7 +90,10 @@ export function separarSentencias(sql: string): string[] {
  *
  * `entorno` fija el marcador que consulta la guarda.
  */
-async function ejecutarSeed(entorno: string | null): Promise<{ fallo: boolean; mensaje: string }> {
+async function ejecutarSeed(
+  entorno: string | null,
+  { conSeedEnv = false }: { conSeedEnv?: boolean } = {},
+): Promise<{ fallo: boolean; mensaje: string }> {
   const cliente = new Client({ connectionString: URL_BASE_DE_DATOS })
   await cliente.connect()
   const errores: string[] = []
@@ -95,7 +101,8 @@ async function ejecutarSeed(entorno: string | null): Promise<{ fallo: boolean; m
     if (entorno !== null) {
       await cliente.query(`SET app.entorno = '${entorno}'`)
     }
-    for (const sentencia of separarSentencias(SEED)) {
+    const archivos = conSeedEnv ? [SEED_ENV, SEED] : [SEED]
+    for (const sentencia of archivos.flatMap(separarSentencias)) {
       try {
         await cliente.query(sentencia)
       } catch (error) {
@@ -123,7 +130,7 @@ describe('seed de desarrollo', () => {
   // Las pruebas de abajo borran las tres cuentas para poder observar si el
   // seed las crea o no. Se dejan repuestas pase lo que pase.
   afterAll(async () => {
-    const resultado = await ejecutarSeed(null)
+    const resultado = await ejecutarSeed('local')
     expect(resultado.fallo, `no se pudo reponer el seed: ${resultado.mensaje}`).toBe(false)
   })
 
@@ -198,7 +205,12 @@ describe('seed de desarrollo', () => {
     const resultado = await ejecutarSeed('production')
 
     expect(resultado.fallo, 'el seed NO fallo con app.entorno = production').toBe(true)
-    expect(resultado.mensaje).toContain('El seed de desarrollo no se ejecuta en produccion')
+    expect(resultado.mensaje).toContain("El seed de desarrollo solo puede ejecutarse con app.entorno = 'local'")
+
+    // Falla cerrado si app.entorno no está fijado (null)
+    const sinEntorno = await ejecutarSeed(null)
+    expect(sinEntorno.fallo, 'el seed NO fallo cerrado sin app.entorno').toBe(true)
+    expect(sinEntorno.mensaje).toContain("El seed de desarrollo solo puede ejecutarse con app.entorno = 'local'")
 
     // Lo que de verdad importa: ninguna cuenta llego a existir. El archivo va
     // en una sola transaccion, asi que la excepcion de la guarda la deja
@@ -211,6 +223,34 @@ describe('seed de desarrollo', () => {
     // o fallara por cualquier otro motivo.
     const conEntornoLocal = await ejecutarSeed('local')
     expect(conEntornoLocal.fallo, conEntornoLocal.mensaje).toBe(false)
+    expect((await correosExistentes()).sort()).toEqual(CUENTAS.map((c) => c.correo).sort())
+  })
+
+  // El hueco que abrio seed_env.sql: `SET app.entorno = 'local'` incondicional
+  // PISABA el marcador de la base. `supabase db reset --linked` (o
+  // `db push --include-seed`) contra un proyecto marcado 'production' corre
+  // seed_env.sql y luego seed.sql en la misma sesion: con el SET incondicional
+  // la guarda veia 'local' y creaba un super_admin de contrasena publica.
+  it('seed_env.sql no pisa un entorno ya marcado como produccion: el seed aborta', async () => {
+    const admin = clienteAdmin()
+    const { data: previos } = await listarUsuariosDePrueba()
+    for (const usuario of previos!.users) {
+      if (CUENTAS.some((c) => c.correo === usuario.email)) {
+        await admin.auth.admin.deleteUser(usuario.id)
+      }
+    }
+    expect(await correosExistentes()).toHaveLength(0)
+
+    const enProduccion = await ejecutarSeed('production', { conSeedEnv: true })
+
+    expect(enProduccion.fallo, 'el seed NO fallo: seed_env.sql piso app.entorno = production').toBe(true)
+    expect(enProduccion.mensaje).toContain("El seed de desarrollo solo puede ejecutarse con app.entorno = 'local'")
+    expect(await correosExistentes()).toHaveLength(0)
+
+    // Caso positivo: sin marcador previo (el `db reset` local de siempre),
+    // seed_env.sql lo fija en 'local' y el seed SI crea las tres cuentas.
+    const enLocal = await ejecutarSeed(null, { conSeedEnv: true })
+    expect(enLocal.fallo, enLocal.mensaje).toBe(false)
     expect((await correosExistentes()).sort()).toEqual(CUENTAS.map((c) => c.correo).sort())
   })
 

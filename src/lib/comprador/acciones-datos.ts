@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor';
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin';
+import { mapearError } from '@/lib/errores/mapear';
 import { accionBloqueada, registrarIntentoAccion } from '@/lib/auth/limite-intentos';
 import { ipDeConfianza } from '@/lib/http/ip-cliente';
 
@@ -34,16 +35,32 @@ export async function actualizarPerfilCompradorAction(
     return { exito: false, error: 'Debes iniciar sesión.' };
   }
 
-  const { error } = await supabase
+  // Verifica que el usuario tenga rol comprador (CN-010)
+  const { data: perfil, error: errPerfil } = await supabase
+    .from('perfiles')
+    .select('rol')
+    .eq('id', authData.user.id)
+    .single();
+
+  if (errPerfil || !perfil || perfil.rol !== 'comprador') {
+    return { exito: false, error: 'Solo compradores pueden actualizar su perfil aquí.' };
+  }
+
+  const { data: filas, error } = await supabase
     .from('perfiles')
     .update({
       nombre: parsed.data.nombre,
       telefono: parsed.data.telefono ?? null,
     })
-    .eq('id', authData.user.id);
+    .eq('id', authData.user.id)
+    .select('id');
 
   if (error) {
     console.error('[SP2] Error al actualizar perfil:', error);
+    return { exito: false, error: mapearError(error).mensaje };
+  }
+
+  if (!filas || filas.length === 0) {
     return { exito: false, error: 'No se pudo actualizar el perfil.' };
   }
 

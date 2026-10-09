@@ -18,11 +18,19 @@ export interface LeadDeBandeja {
  * "solo si aceptado" duplicaria la regla en dos sitios, y el sitio que manda es
  * la base -- si algun dia divergen, gana la base y este filtro solo serviria
  * para ocultar un fallo.
+ *
+ * Filtro explicito por vendedor_id (CN-011): las politicas RLS SELECT de leads
+ * se combinan con OR, asi que consultar sin filtro explicito podria devolver
+ * filas ajenas si el usuario tuviera acceso por otro rol o relacion.
  */
-export async function listarLeadsDelVendedor(cliente: SupabaseClient): Promise<LeadDeBandeja[]> {
+export async function listarLeadsDelVendedor(
+  cliente: SupabaseClient,
+  vendedorId: string,
+): Promise<LeadDeBandeja[]> {
   const { data, error } = await cliente
     .from('leads')
     .select('id,nombre_mostrado,mensaje,estado,creado_en,propiedades(titulo,slug),leads_contacto(correo,telefono)')
+    .eq('vendedor_id', vendedorId)
     .order('estado', { ascending: true })
     .order('creado_en', { ascending: false })
     // Sin tope, PostgREST corta en 1000 filas sin avisar y cada fila pinta
@@ -32,9 +40,15 @@ export async function listarLeadsDelVendedor(cliente: SupabaseClient): Promise<L
   return (data ?? []) as unknown as LeadDeBandeja[]
 }
 
-export async function contarLeadsNuevos(cliente: SupabaseClient): Promise<number> {
+export async function contarLeadsNuevos(
+  cliente: SupabaseClient,
+  vendedorId: string,
+): Promise<number> {
   const { count, error } = await cliente
-    .from('leads').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo')
+    .from('leads')
+    .select('id', { count: 'exact', head: true })
+    .eq('vendedor_id', vendedorId)
+    .eq('estado', 'nuevo')
   // Un contador que falla no debe tumbar el panel entero: se degrada a cero.
   if (error) return 0
   return count ?? 0

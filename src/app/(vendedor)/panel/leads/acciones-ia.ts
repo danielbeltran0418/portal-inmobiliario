@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
-import { MENSAJE_GENERICO, mensajeDeErrorCita } from '@/lib/errores/mapear'
+import { MENSAJE_GENERICO, mensajeDeErrorCita, mapearError } from '@/lib/errores/mapear'
 
 export interface ResultadoAccionIA {
   ok: boolean
@@ -104,14 +104,33 @@ export async function actualizarAutoConfirmacion(
     return { ok: false, error: 'No autenticado' }
   }
 
-  const { error } = await supabase
+  // Verifica que el usuario tenga rol vendedor (CN-010)
+  const { data: perfil, error: errPerfil } = await supabase
+    .from('perfiles')
+    .select('rol')
+    .eq('id', usuario.id)
+    .single()
+
+  if (errPerfil || !perfil || perfil.rol !== 'vendedor') {
+    return { ok: false, error: 'Solo vendedores pueden modificar esta configuración' }
+  }
+
+  const { data: filas, error } = await supabase
     .from('disponibilidad_semanal')
     .update({ auto_confirmar_citas: valor })
     .eq('vendedor_id', usuario.id)
+    .select('id')
 
   if (error) {
     console.error('[IA] Error al actualizar auto-confirmacion:', error)
-    return { ok: false, error: MENSAJE_GENERICO }
+    return { ok: false, error: mapearError(error).mensaje }
+  }
+
+  if (!filas || filas.length === 0) {
+    return {
+      ok: false,
+      error: 'Debes configurar tus horarios de disponibilidad antes de activar la auto-confirmación.',
+    }
   }
 
   revalidatePath('/panel/disponibilidad')

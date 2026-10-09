@@ -7,9 +7,15 @@ test-results/
 playwright-report/
 *.tsbuildinfo
 
-.env
-.env.local
-.env*.local
+.env*
+!.env.example
+
+.vercel/
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
 
 supabase/.temp/
 supabase/.branches/
