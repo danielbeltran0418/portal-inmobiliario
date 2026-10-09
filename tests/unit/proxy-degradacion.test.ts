@@ -34,6 +34,8 @@ vi.mock('@/lib/auth/roles', () => ({
   rolDesdeClaims: vi.fn((c: { app_metadata?: { rol?: string } } | null) => c?.app_metadata?.rol ?? 'comprador'),
   rutaPermitida: rutaPermitidaMock,
   rutaDePanel: vi.fn(() => '/'),
+  RUTA_DOBLE_FACTOR: '/doble-factor',
+  sesionConSegundoFactor: (c: { aal?: unknown } | null) => c?.aal === 'aal2',
 }))
 
 vi.mock('@/lib/http/origen-peticion', () => ({
@@ -152,6 +154,28 @@ describe('proxy: autenticacion con getClaims()', () => {
     getUserMock.mockResolvedValue({ data: { user: { id: 'u1', email_confirmed_at: '2026-10-01' } } })
     await proxy(crearPeticion('/panel') as unknown as NextRequest)
     expect(rutaPermitidaMock).toHaveBeenLastCalledWith('/panel', 'vendedor')
+  })
+
+  // M2: /control exige el segundo factor en la sesion.
+  it('/control con sesion aal1 manda a /doble-factor; con aal2 deja pasar', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1', email_confirmed_at: '2026-10-01' } } })
+
+    getClaimsMock.mockResolvedValue({ data: { claims: { sub: 'u1', aal: 'aal1', app_metadata: { rol: 'super_admin' } } }, error: null })
+    for (const ruta of ['/control', '/control/moderacion']) {
+      const r = await proxy(crearPeticion(ruta) as unknown as NextRequest)
+      expect(r.headers.get('Location')).toMatch(/\/doble-factor$/)
+    }
+
+    getClaimsMock.mockResolvedValue({ data: { claims: { sub: 'u1', aal: 'aal2', app_metadata: { rol: 'super_admin' } } }, error: null })
+    const r = await proxy(crearPeticion('/control') as unknown as NextRequest)
+    expect(r.headers.get('Location') ?? '').not.toMatch(/doble-factor|login/)
+  })
+
+  it('las demas rutas protegidas no piden segundo factor', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'u1', email_confirmed_at: '2026-10-01' } } })
+    getClaimsMock.mockResolvedValue({ data: { claims: { sub: 'u1', aal: 'aal1', app_metadata: { rol: 'vendedor' } } }, error: null })
+    const r = await proxy(crearPeticion('/panel') as unknown as NextRequest)
+    expect(r.headers.get('Location') ?? '').not.toMatch(/doble-factor/)
   })
 
   it('un token que getClaims rechaza cuenta como sin sesion', async () => {

@@ -1,9 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { crearClienteAdmin } from '@/lib/supabase/cliente-admin'
-import { rolDesdeToken } from '@/lib/auth/roles'
+import { accesoAdmin } from '@/lib/auth/admin'
 import { cambiarEstadoBarrio, crearBarrio } from '@/lib/admin/barrios'
 
 export interface EstadoBarrio {
@@ -13,13 +12,14 @@ export interface EstadoBarrio {
 
 const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i
 
-/** Mismo control que las acciones de moderacion: sesion valida y rol super_admin. */
+/**
+ * Mismo control que las acciones de moderacion: rol super_admin leido de la
+ * base y sesion aal2. Importa mas aqui: estas acciones escriben con
+ * service_role, asi que RLS no vuelve a comprobar nada.
+ */
 async function idSuperAdmin(): Promise<string | null> {
-  const supabase = await crearClienteServidor()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-  const { data: { session } } = await supabase.auth.getSession()
-  return rolDesdeToken(session?.access_token ?? '') === 'super_admin' ? user.id : null
+  const acceso = await accesoAdmin()
+  return acceso.estado === 'ok' ? acceso.adminId : null
 }
 
 function revalidar() {

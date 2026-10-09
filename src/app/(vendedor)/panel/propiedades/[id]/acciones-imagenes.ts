@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
+import { crearClienteAdmin } from '@/lib/supabase/cliente-admin'
 import { mapearError, MENSAJE_GENERICO } from '@/lib/errores/mapear'
 import { BUCKET_PROPIEDADES } from '@/lib/imagenes/firmar'
 import {
@@ -64,6 +65,18 @@ export async function subirImagen(
   // existentes en vez de derivarlo del conteo: `max(orden) + 1` no puede
   // colisionar con ninguna fila que ya exista, sea cual sea el hueco dejado
   // por un borrado anterior.
+  // La subida a Storage va con service_role (el vendedor ya no tiene INSERT
+  // en el bucket, 20261014000200), asi que la pertenencia se comprueba aqui,
+  // ANTES de subir nada, y no se deja a RLS: filtro explicito por
+  // vendedor_id, como en toda consulta de "mis propiedades".
+  const { data: propia } = await supabase
+    .from('propiedades')
+    .select('id')
+    .eq('id', propiedadId)
+    .eq('vendedor_id', usuario.user.id)
+    .maybeSingle()
+  if (!propia) return { error: MENSAJE_GENERICO }
+
   const { data: existentes } = await supabase
     .from('imagenes_propiedad')
     .select('orden')
@@ -85,12 +98,14 @@ export async function subirImagen(
     return { error: 'No pudimos procesar esa imagen. Prueba con otra.' }
   }
 
-  // La ruta DEBE empezar por el uid: es lo que exige la politica
-  // storage_propiedades_escritura de SP0.
+  // <vendedor>/<propiedad>/: lo exige validar_ruta_imagen al insertar la fila,
+  // y es la carpeta en la que el vendedor puede leer y borrar.
   const ruta = `${usuario.user.id}/${propiedadId}/${randomUUID()}.webp`
 
-  const { error: errorSubida } = await supabase.storage
-    .from(BUCKET_PROPIEDADES)
+  // Solo el servidor sube (L2 de la auditoria): asi toda foto del bucket ha
+  // pasado por procesarImagen(), que descarta el EXIF y la posicion GPS.
+  const almacen = crearClienteAdmin().storage.from(BUCKET_PROPIEDADES)
+  const { error: errorSubida } = await almacen
     .upload(ruta, procesada, { contentType: 'image/webp' })
 
   if (errorSubida) { mapearError(errorSubida); return { error: MENSAJE_GENERICO } }
@@ -106,7 +121,12 @@ export async function subirImagen(
   // alimenta al BORRAR una fila de imagenes_propiedad, y aqui nunca hubo
   // fila). Se borra a mano en este camino, no se deja para el drenado.
   if (errorFila) {
-    await supabase.storage.from(BUCKET_PROPIEDADES).remove([ruta])
+    await almacen.remove([ruta])
+    // IM001: tope de fotos de la base (20261014000200), por si otra subida
+    // simultanea gano la carrera al conteo de arriba.
+    if (errorFila.code === 'IM001') {
+      return { error: `Maximo ${MAXIMO_IMAGENES_POR_PROPIEDAD} fotos por propiedad.` }
+    }
     mapearError(errorFila)
     return { error: MENSAJE_GENERICO }
   }

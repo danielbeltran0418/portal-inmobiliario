@@ -3,7 +3,9 @@ import { esRutaFicha, resolverRutaPublica } from '@/lib/catalogo/rutas'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { construirCabeceras, generarNonce } from '@/lib/seguridad/cabeceras'
-import { rolDesdeClaims, rutaPermitida, rutaDePanel } from '@/lib/auth/roles'
+import {
+  RUTA_DOBLE_FACTOR, rolDesdeClaims, rutaPermitida, rutaDePanel, sesionConSegundoFactor,
+} from '@/lib/auth/roles'
 import { origenReal } from '@/lib/http/origen-peticion'
 
 const RUTAS_PROTEGIDAS = ['/mi-cuenta', '/panel', '/control']
@@ -133,6 +135,14 @@ export async function proxy(peticion: NextRequest) {
 
     if (!rutaPermitida(ruta, rol)) {
       return redirigir(rutaDePanel(rol))
+    }
+
+    // /control exige el segundo factor en ESTA sesion (hallazgo M2). La base
+    // aplica la misma regla en es_super_admin(); esto solo evita pintar un
+    // panel vacio y lleva al super_admin a verificar su codigo.
+    const esControl = ruta === '/control' || ruta.startsWith('/control/')
+    if (esControl && !sesionConSegundoFactor(claims)) {
+      return redirigir(RUTA_DOBLE_FACTOR)
     }
   }
 
