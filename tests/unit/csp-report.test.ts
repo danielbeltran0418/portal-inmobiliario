@@ -1,22 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { POST, reiniciarLimiteLogsParaTests } from '@/app/api/seguridad/csp-report/route'
+let POST: typeof import('@/app/api/seguridad/csp-report/route').POST
 import type { NextRequest } from 'next/server'
 
 function crearPeticion(body: string, headers: Record<string, string> = {}) {
-  return {
-    headers: {
-      get: (k: string) => headers[k.toLowerCase()] ?? null,
-    },
-    text: async () => body,
-  } as unknown as NextRequest
+  return new Request('https://portal.test/api/seguridad/csp-report', {
+    method: 'POST', body, headers,
+  }) as NextRequest
 }
-
 describe('CN-018: Endpoint de reporte de violaciones CSP', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    if (typeof reiniciarLimiteLogsParaTests === 'function') {
-      reiniciarLimiteLogsParaTests()
-    }
+  beforeEach(async () => {
+    vi.restoreAllMocks()
+    vi.resetModules()
+    ;({ POST } = await import('@/app/api/seguridad/csp-report/route'))
   })
 
   it('rechaza con 413 si la cabecera content-length supera 10 KB', async () => {
@@ -57,8 +52,8 @@ describe('CN-018: Endpoint de reporte de violaciones CSP', () => {
       '[Seguridad] Violación de CSP detectada:',
       expect.objectContaining({
         directiva: 'script-src-elem',
-        urlDocumento: 'https://portal.test/mi-cuenta/datos',
-        urlBloqueada: 'https://malicioso.test/script.js',
+        urlDocumento: 'https://portal.test',
+        urlBloqueada: 'https://malicioso.test',
         disposicion: 'enforce',
       }),
     )
@@ -86,8 +81,8 @@ describe('CN-018: Endpoint de reporte de violaciones CSP', () => {
       '[Seguridad] Violación de CSP detectada:',
       expect.objectContaining({
         directiva: 'script-src',
-        urlDocumento: 'https://portal.test/panel',
-        urlBloqueada: 'https://cdn-externo.test/lib.js',
+        urlDocumento: 'https://portal.test',
+        urlBloqueada: 'https://cdn-externo.test',
         disposicion: 'enforce',
       }),
     )
@@ -111,5 +106,18 @@ describe('CN-018: Endpoint de reporte de violaciones CSP', () => {
     }
 
     expect(spyWarn).toHaveBeenCalledTimes(30)
+  })
+  it('limita bytes UTF-8 sin confiar en content-length', async () => {
+    const res = await POST(crearPeticion(JSON.stringify({ texto: 'ñ'.repeat(6000) })))
+    expect(res.status).toBe(413)
+  })
+
+  it('no registra rutas con datos personales ni URLs inválidas', async () => {
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await POST(crearPeticion(JSON.stringify({ 'csp-report': {
+      'document-uri': 'https://portal.test/persona/pepe@correo.test',
+      'blocked-uri': 'correo-privado@ejemplo.test',
+    } })))
+    expect(JSON.stringify(aviso.mock.calls)).not.toContain('correo')
   })
 })

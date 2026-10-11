@@ -7,11 +7,6 @@ const VENTANA_MS = 60 * 1000
 let contadorLogs = 0
 let inicioVentana = Date.now()
 
-export function reiniciarLimiteLogsParaTests() {
-  contadorLogs = 0
-  inicioVentana = Date.now()
-}
-
 function permitirRegistroLog(): boolean {
   const ahora = Date.now()
   if (ahora - inicioVentana >= VENTANA_MS) {
@@ -26,15 +21,15 @@ function permitirRegistroLog(): boolean {
 }
 
 /**
- * Elimina parámetros de consulta y fragmentos para evitar registrar tokens o datos personales.
+ * Registra solo el origen HTTP(S): rutas, credenciales y parámetros pueden contener datos personales.
  */
 function limpiarUrl(urlStr: unknown): string {
   if (typeof urlStr !== 'string' || !urlStr) return ''
   try {
     const u = new URL(urlStr)
-    return `${u.protocol}//${u.host}${u.pathname}`
+    return ['https:', 'http:'].includes(u.protocol) ? u.origin : ''
   } catch {
-    return urlStr.split('?')[0].split('#')[0]
+    return ''
   }
 }
 
@@ -70,17 +65,34 @@ export async function POST(peticion: NextRequest): Promise<NextResponse> {
     return new NextResponse('Payload Too Large', { status: 413 })
   }
 
-  let texto: string
+  // Contar bytes mientras se lee: content-length puede faltar o ser falso.
+  const lector = peticion.body?.getReader()
+  if (!lector) return new NextResponse('JSON inválido', { status: 400 })
+  const partes: Uint8Array[] = []
+  let total = 0
   try {
-    texto = await peticion.text()
+    while (true) {
+      const { done, value } = await lector.read()
+      if (done) break
+      total += value.byteLength
+      if (total > LIMITE_TAMANO_BYTES) {
+        await lector.cancel()
+        return new NextResponse('Cuerpo demasiado grande', { status: 413 })
+      }
+      partes.push(value)
+    }
   } catch {
     return new NextResponse('Error al leer cuerpo', { status: 400 })
+  } finally {
+    lector.releaseLock()
   }
-
-  if (texto.length > LIMITE_TAMANO_BYTES) {
-    return new NextResponse('Payload Too Large', { status: 413 })
+  const bytes = new Uint8Array(total)
+  let posicion = 0
+  for (const parte of partes) {
+    bytes.set(parte, posicion)
+    posicion += parte.byteLength
   }
-
+  const texto = new TextDecoder().decode(bytes)
   let cuerpo: unknown
   try {
     cuerpo = JSON.parse(texto)
