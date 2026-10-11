@@ -1,3 +1,4 @@
+vi.mock('@/lib/notificaciones/programar', () => ({ programarAvisosPortal: vi.fn() }))
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { clienteAdmin, rutaImagenPropia, sesionVendedor } from './ayudantes'

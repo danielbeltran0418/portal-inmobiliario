@@ -1,3 +1,4 @@
+vi.mock('server-only', () => ({}))
 import { expect, it, vi, beforeEach } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 
@@ -11,7 +12,7 @@ vi.mock('@/lib/supabase/cliente-servidor', () => ({ crearClienteServidor: async 
 vi.mock('@/lib/auth/sesion', () => ({ sesionActual: async () => ({ hayUsuario: false, accessToken: null, idUsuario: null }) }))
 vi.mock('@/lib/comprador/favoritos', () => ({ idsFavoritos: async () => new Set() }))
 vi.mock('@/lib/comprador/acciones-favoritos', () => ({ conmutarFavoritoAction: vi.fn() }))
-vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NOT_FOUND') } }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => '/', notFound: () => { throw new Error('NOT_FOUND') } }))
 
 const { default: Ciudad, generateMetadata } = await import('@/app/ciudad/[ciudad]/page')
 

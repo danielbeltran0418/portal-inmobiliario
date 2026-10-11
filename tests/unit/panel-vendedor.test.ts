@@ -110,7 +110,7 @@ const ID_USUARIO = 'usuario-de-prueba-11111111-1111-1111-1111-111111111111'
 function clienteFalso(data: unknown[]) {
   const orderMock = vi.fn().mockResolvedValue({ data, error: null })
   const eqMock = vi.fn()
-  const builder = { eq: eqMock, order: orderMock }
+  const builder = { eq: eqMock, order: orderMock, maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }) }
   eqMock.mockReturnValue(builder)
   const selectMock = vi.fn().mockReturnValue(builder)
   return {

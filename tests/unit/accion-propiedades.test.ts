@@ -1,3 +1,4 @@
+vi.mock('@/lib/notificaciones/programar', () => ({ programarAvisosPortal: vi.fn() }))
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { faltantesParaPublicar } from '@/lib/propiedades/completitud'
 import { MENSAJE_UBICACION_NO_GUARDADA } from '@/lib/errores/mapear'

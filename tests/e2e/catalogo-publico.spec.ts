@@ -55,7 +55,7 @@ test('palabras clave: encuentra la casa por su titulo y no por un texto ajeno', 
   await expect(page.getByRole('link', { name: new RegExp(titulo) })).toBeVisible()
 
   await page.goto(`/${barrio.slug}?q=zzqqnoexiste`)
-  await expect(page.getByRole('link', { name: new RegExp(titulo) })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Listado de propiedades' }).getByRole('link', { name: new RegExp(titulo) })).toHaveCount(0)
 })
 test('visitante explora barrio, filtra, abre ficha y ve la foto sin dirección exacta', async ({ page }) => {
   // Portal nacional: la portada lleva a la ciudad, y la ciudad a sus barrios.
@@ -63,10 +63,12 @@ test('visitante explora barrio, filtra, abre ficha y ve la foto sin dirección e
   await page.getByRole('link', { name: barrio.ciudad, exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: `Propiedades en ${barrio.ciudad}` })).toBeVisible()
   await page.getByRole('link', { name: barrio.nombre, exact: true }).click()
+  await expect(page).toHaveURL(new RegExp('/'+barrio.slug+'$'))
   await page.getByLabel('Precio mínimo').fill('98765432.12')
   await page.getByLabel('Precio máximo').fill('98765432.12')
   await page.getByRole('button', { name: 'Filtrar', exact: true }).click()
   await expect(page).toHaveURL(/precio_min=98765432.12/)
+  await expect(page.getByRole('complementary')).toHaveAttribute('aria-busy','false')
   await page.getByRole('link', { name: new RegExp(titulo) }).click()
   await expect(page.getByRole('heading', { level: 1, name: titulo })).toBeVisible()
   const imagen = page.getByRole('img', { name: 'Fachada de la casa del catálogo' })
@@ -97,6 +99,12 @@ test('visitante explora barrio, filtra, abre ficha y ve la foto sin dirección e
   expect(json['@type']).toBe('RealEstateListing')
   expect(json.offers.price).toBe(98765432.12)
   expect(JSON.stringify(json)).not.toContain('DIRECCION SECRETA E2E')
+  await page.getByRole('button', { name: 'Ver fotografías' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('dialog').getByRole('img')).toBeVisible()
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   const fichaUrl = page.url()
   // El sitemap principal lista el barrio; las fichas van en /sitemaps/fichas/{n},
   // y robots.txt enumera los dos.

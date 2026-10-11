@@ -7,7 +7,7 @@ vi.mock('server-only', () => ({}))
 const sesion = vi.fn()
 const favoritos = vi.fn()
 vi.mock('@/lib/auth/sesion', () => ({ sesionActual: () => sesion() }))
-vi.mock('@/lib/supabase/cliente-servidor', () => ({ crearClienteServidor: async () => ({}) }))
+vi.mock('@/lib/supabase/cliente-servidor', () => ({ crearClienteServidor: async () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) }) }))
 vi.mock('next/navigation', () => ({ redirect: (r: string) => { throw new Error(`REDIRECT:${r}`) } }))
 vi.mock('@/lib/comprador/favoritos', async (original) => ({
   ...(await original<typeof import('@/lib/comprador/favoritos')>()),

@@ -6,6 +6,7 @@ import { RUTAS_RESERVADAS } from '@/lib/catalogo/rutas'
 export const esquemaBarrio = z.object({
   nombre: z.string().trim().min(2, 'Escribe el nombre del barrio').max(80, 'Máximo 80 caracteres'),
   ciudad: z.string().trim().min(2, 'Escribe la ciudad').max(80, 'Máximo 80 caracteres'),
+  codigo_postal: z.preprocess((valor) => valor === null || valor === '' ? undefined : valor, z.string().regex(/^\d{6}$/, 'El código postal debe tener seis dígitos.').optional()),
 })
 
 export type ResultadoBarrio = { ok: true; slug: string } | { ok: false; error: string }
@@ -35,18 +36,18 @@ export function proponerSlug(nombre: string, ciudad: string, existentes: Readonl
  */
 export async function crearBarrio(
   admin: SupabaseClient,
-  entrada: { nombre: unknown; ciudad: unknown },
+  entrada: { nombre: unknown; ciudad: unknown; codigo_postal?: unknown },
   adminId: string,
 ): Promise<ResultadoBarrio> {
   const analisis = esquemaBarrio.safeParse(entrada)
   if (!analisis.success) return { ok: false, error: analisis.error.issues[0]?.message ?? 'Datos inválidos' }
-  const { nombre, ciudad } = analisis.data
+  const { nombre, ciudad, codigo_postal } = analisis.data
 
   const { data: filas, error: errorLectura } = await admin.from('barrios').select('slug')
   if (errorLectura) return { ok: false, error: 'No se pudieron leer los barrios existentes.' }
   const slug = proponerSlug(nombre, ciudad, new Set((filas ?? []).map((f: { slug: string }) => f.slug)))
 
-  const { data, error } = await admin.from('barrios').insert({ nombre, ciudad, slug }).select('id').single()
+  const { data, error } = await admin.from('barrios').insert({ nombre, ciudad, slug, ...(codigo_postal ? { codigo_postal } : {}) }).select('id').single()
   if (error || !data) {
     // 23505: otro admin creo el mismo slug entre la lectura y el insert.
     return { ok: false, error: error?.code === '23505' ? 'Ese barrio ya existe. Recarga la página.' : 'No se pudo crear el barrio.' }

@@ -1,12 +1,16 @@
+import { CARACTERISTICAS, type Caracteristica } from './caracteristicas'
 /** Parámetros de URL no confiables: los duplicados se ignoran. */
 export type ParametrosCatalogo = Record<string, string | string[] | undefined>
-const OPERACIONES = ['venta', 'arriendo'] as const
+const OPERACIONES = ['venta', 'arriendo', 'temporal'] as const
 const TIPOS = ['apartamento', 'casa', 'local', 'lote', 'oficina'] as const
 export interface FiltrosCatalogo {
   operacion?: typeof OPERACIONES[number]
   tipo?: typeof TIPOS[number]
   precioMin?: number
   precioMax?: number
+  areaMin?: number
+  areaMax?: number
+  caracteristicas?: Caracteristica[]
   /** Palabras clave ya saneadas: solo letras, numeros y espacios simples. */
   texto?: string
   estratoMin?: number
@@ -52,11 +56,19 @@ export function leerFiltros(parametros: ParametrosCatalogo): FiltrosCatalogo {
   const tipo = TIPOS.find(valor => valor === parametros.tipo)
   if (operacion) filtros.operacion = operacion
   if (tipo) filtros.tipo = tipo
+  const caracteristicas = CARACTERISTICAS.filter((clave) => parametros[clave] === '1')
+  if (caracteristicas.length) filtros.caracteristicas = caracteristicas
   const minimo = precio(parametros.precio_min)
   const maximo = precio(parametros.precio_max)
   if (!(minimo !== undefined && maximo !== undefined && minimo > maximo)) {
     if (minimo !== undefined) filtros.precioMin = minimo
     if (maximo !== undefined) filtros.precioMax = maximo
+  }
+  const areaMin = precio(parametros.area_min)
+  const areaMax = precio(parametros.area_max)
+  if (!(areaMin !== undefined && areaMax !== undefined && areaMin > areaMax)) {
+    if (areaMin !== undefined && areaMin <= 999999.99) filtros.areaMin = areaMin
+    if (areaMax !== undefined && areaMax <= 999999.99) filtros.areaMax = areaMax
   }
   const estratoMin = entero(parametros.estrato_min, 1, 6)
   const estratoMax = entero(parametros.estrato_max, 1, 6)
@@ -96,6 +108,8 @@ export function parametrosDeFiltros(filtros: Omit<FiltrosCatalogo, 'pagina'> & {
   poner('tipo', filtros.tipo)
   poner('precio_min', filtros.precioMin)
   poner('precio_max', filtros.precioMax)
+  poner('area_min', filtros.areaMin)
+  poner('area_max', filtros.areaMax)
   poner('estrato_min', filtros.estratoMin)
   poner('estrato_max', filtros.estratoMax)
   poner('habitaciones_min', filtros.habitacionesMin)
@@ -103,6 +117,7 @@ export function parametrosDeFiltros(filtros: Omit<FiltrosCatalogo, 'pagina'> & {
   poner('parqueaderos_min', filtros.parqueaderosMin)
   poner('administracion_max', filtros.administracionMax)
   poner('q', filtros.texto)
+  for (const caracteristica of filtros.caracteristicas ?? []) poner(caracteristica, 1)
   if (filtros.pagina !== undefined && filtros.pagina > 1) p.set('pagina', String(filtros.pagina))
   return p
 }

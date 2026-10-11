@@ -1,3 +1,4 @@
+import { metodosAcceso } from '@/lib/auth/metodos'
 import type { Metadata } from 'next'
 import { claveDeSitioTurnstile } from '@/lib/seguridad/turnstile'
 import { GuionTurnstile } from '../guion-turnstile'
@@ -31,6 +32,7 @@ export default async function PaginaLogin(
         claveTurnstile={claveDeSitioTurnstile()}
         volver={volver ?? null}
         aviso={aviso}
+        metodos={metodosAcceso()}
       />
     </>
   )

@@ -19,6 +19,7 @@ interface ConsultaFiltrable {
   eq(columna: string, valor: string): ConsultaFiltrable
   gte(columna: string, valor: number): ConsultaFiltrable
   lte(columna: string, valor: number): ConsultaFiltrable
+  contains(columna: string, valores: readonly string[]): ConsultaFiltrable
   or(filtro: string): ConsultaFiltrable
 }
 
@@ -34,12 +35,15 @@ export function aplicarFiltros<T>(consulta: T, filtros: Omit<FiltrosCatalogo, 'p
   if (filtros.tipo) q = q.eq('tipo_inmueble', filtros.tipo)
   if (filtros.precioMin !== undefined) q = q.gte('precio', filtros.precioMin)
   if (filtros.precioMax !== undefined) q = q.lte('precio', filtros.precioMax)
+  if (filtros.areaMin !== undefined) q = q.gte('area_m2', filtros.areaMin)
+  if (filtros.areaMax !== undefined) q = q.lte('area_m2', filtros.areaMax)
   if (filtros.estratoMin !== undefined) q = q.gte('estrato', filtros.estratoMin)
   if (filtros.estratoMax !== undefined) q = q.lte('estrato', filtros.estratoMax)
   if (filtros.habitacionesMin !== undefined) q = q.gte('habitaciones', filtros.habitacionesMin)
   if (filtros.banosMin !== undefined) q = q.gte('banos', filtros.banosMin)
   if (filtros.parqueaderosMin !== undefined) q = q.gte('parqueaderos', filtros.parqueaderosMin)
   if (filtros.administracionMax !== undefined) q = q.lte('administracion', filtros.administracionMax)
+  if (filtros.caracteristicas?.length) q = q.contains('caracteristicas', filtros.caracteristicas)
   if (filtros.texto) q = q.or(filtroTextoLibre(filtros.texto))
   return q as unknown as T
 }
@@ -63,7 +67,7 @@ export async function listarPropiedadesPublicas(
   let consulta = typeof barrios === 'string' ? base.eq('barrio_id', barrios) : base.in('barrio_id', [...barrios])
   consulta = aplicarFiltros(consulta, filtros)
   const { data, error, count } = await consulta
-    .order('actualizado_en', { ascending: false }).order('id', { ascending: false })
+    .order('prioridad_plan', { ascending: false }).order('actualizado_en', { ascending: false }).order('id', { ascending: false })
     .range(inicio, inicio + TAMANO_PAGINA - 1)
   if (error) throw new Error('No se pudo cargar el catálogo')
   return { propiedades: data ?? [], total: count ?? 0 }
@@ -81,6 +85,7 @@ export async function listarRecientes(cliente: SupabaseClient, limite = LIMITE_R
   const { data, error } = await cliente.from('propiedades')
     .select(`${COLUMNAS_LISTADO},barrios!inner(slug,nombre)`)
     .eq('estado', 'publicada')
+    .order('prioridad_plan', { ascending: false })
     .order('destacada', { ascending: false })
     .order('actualizado_en', { ascending: false })
     .limit(limite)

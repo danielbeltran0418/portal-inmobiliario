@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { Heart } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
+const CorazonAnimado = motion.create(Heart);
 import { conmutarFavoritoAction } from '@/lib/comprador/acciones-favoritos';
 
 interface BotonFavoritoProps {
@@ -23,6 +25,7 @@ export function BotonFavorito({
   mostrarTexto = false,
   variante = 'boton',
 }: BotonFavoritoProps) {
+  const reducirMovimiento = useReducedMotion();
   const [esFavorito, setEsFavorito] = useState(inicialEsFavorito);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -66,7 +69,10 @@ export function BotonFavorito({
         title={error ?? undefined}
         data-testid="boton-favorito"
       >
-        <Heart
+        <CorazonAnimado
+          initial={false}
+          animate={{ scale: esFavorito && !reducirMovimiento ? [1, 1.2, 1] : 1 }}
+          transition={{ duration: reducirMovimiento ? 0 : 0.3 }}
           aria-hidden="true"
           className={`h-5 w-5 transition-transform ${isPending ? 'scale-90' : 'scale-100'}`}
           fill={esFavorito ? 'currentColor' : 'none'}

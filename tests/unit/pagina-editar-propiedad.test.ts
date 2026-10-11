@@ -1,3 +1,4 @@
+vi.mock('@/lib/notificaciones/programar', () => ({ programarAvisosPortal: vi.fn() }))
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const crearClienteServidor = vi.fn()

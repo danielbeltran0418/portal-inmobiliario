@@ -1,5 +1,6 @@
 'use server'
 
+import { programarAvisosPortal } from '@/lib/notificaciones/programar'
 import { redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
 import { esquemaLead } from '@/lib/validacion/esquemas'
@@ -38,6 +39,7 @@ export async function enviarLead(_previo: EstadoLead, formData: FormData): Promi
   })
 
   if (!error) {
+    programarAvisosPortal()
     const leadId = data as string | undefined
     if (!leadId) return { enviado: true }
 

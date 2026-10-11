@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from 'react'
 import { actualizarPropiedad, type EstadoPropiedad } from '../acciones'
+import { CARACTERISTICAS, ETIQUETAS_CARACTERISTICAS, type Caracteristica } from '@/lib/catalogo/caracteristicas'
 import { OPERACIONES, TIPOS_INMUEBLE } from '@/lib/validacion/esquemas'
 
 const INICIAL: EstadoPropiedad = {}
@@ -9,6 +10,7 @@ const INICIAL: EstadoPropiedad = {}
 const ETIQUETA_OPERACION: Record<(typeof OPERACIONES)[number], string> = {
   venta: 'Venta',
   arriendo: 'Arriendo',
+  temporal: 'Arriendo temporal (precio por noche)',
 }
 
 const ETIQUETA_TIPO: Record<(typeof TIPOS_INMUEBLE)[number], string> = {
@@ -51,6 +53,9 @@ export interface PropiedadFormulario {
   parqueaderos?: number | null
   anio_construccion?: number | null
   piso?: number | null
+  caracteristicas?: Caracteristica[]
+  whatsapp_contacto?: string | null
+  tour360_url?: string | null
   direccion: string | null
   /** "lat, lng" o null. */
   coordenadas?: string | null
@@ -86,6 +91,19 @@ export function FormularioDatos({
   return (
     <form action={accion} className="space-y-4">
       <input type="hidden" name="id" value={propiedad.id} />
+      <label className="block text-sm font-medium text-tinta">Tour 360° (Destacado o Pro)
+        <input name="tour360_url" type="url" defaultValue={propiedad.tour360_url ?? ''} placeholder="https://my.matterport.com/…" className="mt-2 h-12 w-full rounded-xl border border-linea bg-fondo px-4 text-base" />
+        <span className="mt-1 block text-xs font-normal text-tinta-suave">Enlace de Matterport o Kuula. Requiere un plan de pago vigente.</span>
+      </label>
+      <label className="block text-sm font-medium text-tinta">WhatsApp público del anuncio (opcional)
+        <input name="whatsapp_contacto" type="tel" pattern="573[0-9]{9}" defaultValue={propiedad.whatsapp_contacto ?? ''} placeholder="573001234567" className="mt-2 h-12 w-full rounded-xl border border-linea bg-fondo px-4 text-base" />
+        <span className="mt-1 block text-xs font-normal text-tinta-suave">Al completarlo autorizas publicar este número para que te contacten por WhatsApp. Déjalo vacío para usar solo el formulario del portal.</span>
+      </label>
+      <fieldset className="rounded-2xl border border-linea p-4">
+        <input type="hidden" name="caracteristicas_presentes" value="1" />
+        <legend className="px-2 text-sm font-semibold text-tinta">Características del inmueble</legend>
+        <div className="grid gap-3 sm:grid-cols-2">{CARACTERISTICAS.map((clave) => <label key={clave} className="flex min-h-10 items-center gap-3 text-sm text-tinta"><input type="checkbox" name="caracteristicas" value={clave} defaultChecked={propiedad.caracteristicas?.includes(clave)} className="size-4 accent-[var(--marca)]" />{ETIQUETAS_CARACTERISTICAS[clave]}</label>)}</div>
+      </fieldset>
 
       <div>
         <label htmlFor="titulo" className="mb-1.5 block text-sm font-medium text-tinta">Título</label>

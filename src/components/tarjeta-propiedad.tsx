@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import Image from 'next/image'
+import { FotoTarjeta } from '@/components/catalogo/foto-tarjeta'
 import Link from 'next/link'
 import { Bath, BedDouble, Maximize2, type LucideIcon, Layers } from 'lucide-react'
 
@@ -59,20 +59,12 @@ export function TarjetaPropiedad({
   const datos = caracteristicas(p)
 
   return (
-    <li className="tarjeta-interactiva group relative overflow-hidden rounded-xl border border-linea bg-superficie">
+    <li data-propiedad-id={p.id} className="tarjeta-interactiva group relative overflow-hidden rounded-xl border border-linea bg-superficie">
       {accion && <div className="absolute top-3 right-3 z-10">{accion}</div>}
       <Link href={`/${barrioSlug}/${p.slug}`} className="block">
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-marca-suave">
           {portada ? (
-            <Image
-              src={`/imagen/${portada.id}`}
-              alt={portada.alt_text || p.titulo}
-              width={480}
-              height={320}
-              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-              unoptimized
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
+            <FotoTarjeta key={portada.id} id={portada.id} alt={portada.alt_text || p.titulo} />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xs text-tinta-tenue">
               Sin fotografías

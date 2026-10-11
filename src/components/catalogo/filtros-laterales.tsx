@@ -1,3 +1,6 @@
+import { CARACTERISTICAS, ETIQUETAS_CARACTERISTICAS } from '@/lib/catalogo/caracteristicas'
+import { FiltrosAdaptables } from './filtros-adaptables'
+import { RangoPrecio } from './rango-precio'
 import Link from 'next/link'
 import type { FiltrosCatalogo } from '@/lib/catalogo/filtros'
 
@@ -26,7 +29,7 @@ function SelectorMinimo({ nombre, etiqueta, valor }: { nombre: string; etiqueta:
  */
 export function FiltrosLaterales({ filtros, limpiarHref }: { filtros: FiltrosCatalogo; limpiarHref: string }) {
   return (
-    <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:w-64">
+    <FiltrosAdaptables key={JSON.stringify(filtros)}>
       <form method="get" className="flex flex-col gap-6 rounded-2xl border border-linea bg-superficie p-5">
         <label className="block">
           <span className={ETIQUETA_GRUPO}>Palabras clave</span>
@@ -42,7 +45,7 @@ export function FiltrosLaterales({ filtros, limpiarHref }: { filtros: FiltrosCat
         <fieldset>
           <legend className={ETIQUETA_GRUPO}>Operación</legend>
           <div className="flex flex-col gap-1">
-            {([['', 'Todas'], ['venta', 'Venta'], ['arriendo', 'Arriendo']] as const).map(([valor, texto]) => (
+            {([['', 'Todas'], ['venta', 'Venta'], ['arriendo', 'Arriendo'], ['temporal', 'Temporal / vacacional']] as const).map(([valor, texto]) => (
               <label key={texto} className="flex min-h-9 cursor-pointer items-center gap-2.5 text-sm text-tinta">
                 <input
                   type="radio"
@@ -70,36 +73,17 @@ export function FiltrosLaterales({ filtros, limpiarHref }: { filtros: FiltrosCat
         </label>
 
         <fieldset>
-          <legend className={ETIQUETA_GRUPO}>Precio (COP)</legend>
-          <div className="flex flex-col gap-2">
-            <label className="block text-xs text-tinta-suave">
-              Precio mínimo
-              <input
-                className={`${CAMPO} cifra mt-1`}
-                type="number"
-                min="0.01"
-                step="0.01"
-                inputMode="decimal"
-                name="precio_min"
-                defaultValue={filtros.precioMin}
-                placeholder="Mínimo"
-              />
-            </label>
-            <label className="block text-xs text-tinta-suave">
-              Precio máximo
-              <input
-                className={`${CAMPO} cifra mt-1`}
-                type="number"
-                min="0.01"
-                step="0.01"
-                inputMode="decimal"
-                name="precio_max"
-                defaultValue={filtros.precioMax}
-                placeholder="Máximo"
-              />
-            </label>
+          <legend className={ETIQUETA_GRUPO}>Área (m²)</legend>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs text-tinta-suave">Mínima<input name="area_min" type="number" min="0.01" max="999999.99" step="0.01" defaultValue={filtros.areaMin} className={`${CAMPO} mt-1`} /></label>
+            <label className="text-xs text-tinta-suave">Máxima<input name="area_max" type="number" min="0.01" max="999999.99" step="0.01" defaultValue={filtros.areaMax} className={`${CAMPO} mt-1`} /></label>
           </div>
         </fieldset>
+        <fieldset>
+          <legend className={ETIQUETA_GRUPO}>Comodidades</legend>
+          <div className="grid gap-2">{CARACTERISTICAS.map((clave) => <label key={clave} className="flex min-h-10 items-center gap-3 text-sm text-tinta"><input type="checkbox" name={clave} value="1" defaultChecked={filtros.caracteristicas?.includes(clave)} className="size-4 accent-[var(--marca)]" />{ETIQUETAS_CARACTERISTICAS[clave]}</label>)}</div>
+        </fieldset>
+        <RangoPrecio minimo={filtros.precioMin} maximo={filtros.precioMax} operacion={filtros.operacion} />
 
         {/* Lo que el comprador colombiano filtra siempre (migracion 20261012000100). */}
         <div className="grid grid-cols-2 gap-3">
@@ -156,6 +140,6 @@ export function FiltrosLaterales({ filtros, limpiarHref }: { filtros: FiltrosCat
           </Link>
         </div>
       </form>
-    </aside>
+    </FiltrosAdaptables>
   )
 }

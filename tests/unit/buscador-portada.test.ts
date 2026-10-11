@@ -28,8 +28,8 @@ describe('BuscadorPortada', () => {
     expect(html).toContain('value="arriendo"')
     expect(html).toMatch(/<label[^>]*>[^<]*Operación/)
     expect(html).toMatch(/<label[^>]*>[^<]*Ciudad/)
-    // Tipo y precio se filtran ya en el catalogo del barrio.
-    expect(html).not.toContain('name="tipo"')
+    // El tipo se elige también desde la portada.
+    expect(html).toContain('name="tipo"')
     expect(html).not.toContain('name="precio_max"')
   })
 

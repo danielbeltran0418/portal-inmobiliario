@@ -11,7 +11,9 @@ test('sin sesion la cabecera ofrece entrar y crear cuenta, y no ofrece salir', a
   await page.goto('/')
 
   const nav = cabecera(page)
-  await expect(nav.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login')
+  await nav.getByRole('button', { name: 'Entrar' }).click()
+  await expect(page.getByRole('dialog').getByRole('link', { name: 'Iniciar sesión' })).toHaveAttribute('href', '/login')
+  await page.keyboard.press('Escape')
   await expect(nav.getByRole('link', { name: 'Crear cuenta' })).toHaveAttribute('href', '/registro')
 
   // No se puede cerrar una sesion que no existe: el control no esta.
@@ -103,7 +105,7 @@ test('cerrar sesion destruye la sesion: la ruta protegida se veia y deja de vers
   await expect(page).toHaveURL(/127\.0\.0\.1:3000\/$/)
 
   // --- Y ahora NO se ve -----------------------------------------------------
-  await expect(cabecera(page).getByRole('link', { name: 'Entrar' })).toBeVisible()
+  await expect(cabecera(page).getByRole('button', { name: 'Entrar' })).toBeVisible()
   await expect(
     cabecera(page).getByRole('button', { name: BOTON_CERRAR_SESION }),
   ).toHaveCount(0)

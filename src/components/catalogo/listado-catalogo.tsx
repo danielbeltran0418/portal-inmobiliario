@@ -1,3 +1,5 @@
+import { VistaCatalogo } from './vista-catalogo'
+import type { PinCatalogo } from '@/lib/mapa/catalogo'
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 import { TarjetaPropiedad, type PropiedadDeTarjeta } from '@/components/tarjeta-propiedad'
@@ -28,6 +30,7 @@ export function ListadoCatalogo<P extends PropiedadDeTarjeta>({
   barrioDe,
   conSesion,
   favoritos,
+  mapa,
 }: {
   propiedades: readonly P[]
   total: number
@@ -37,11 +40,12 @@ export function ListadoCatalogo<P extends PropiedadDeTarjeta>({
   barrioDe: (propiedad: P) => { slug: string; nombre: string } | null
   conSesion: boolean
   favoritos: ReadonlySet<string>
+  mapa?: { pines: PinCatalogo[]; clave: string | null; mapaId: string | null; nonce?: string }
 }) {
   const volver = rutaConFiltros(rutaBase, filtros, filtros.pagina)
 
   return (
-    <div className="min-w-0 flex-1">
+    <VistaCatalogo pines={mapa?.pines ?? []} clave={mapa?.clave ?? null} mapaId={mapa?.mapaId ?? null} nonce={mapa?.nonce}>
       {propiedades.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-marca-suave">
@@ -88,6 +92,6 @@ export function ListadoCatalogo<P extends PropiedadDeTarjeta>({
           </Link>
         )}
       </nav>
-    </div>
+    </VistaCatalogo>
   )
 }

@@ -1,3 +1,4 @@
+import { PreferenciasAvisos } from '@/components/acceso/preferencias-avisos';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Heart } from 'lucide-react';
@@ -25,6 +26,7 @@ export default async function PaginaFavoritos() {
   if (!sesion.idUsuario) redirect('/login');
 
   const supabase = await crearClienteServidor();
+  const { data: preferencias } = await supabase.from('preferencias_notificacion').select('avisos_leads,avisos_precios').eq('usuario_id', sesion.idUsuario).maybeSingle();
   const favoritos = await obtenerFavoritosUsuario(supabase, sesion.idUsuario);
   // Sin barrio no hay ruta publica a la que enlazar.
   const conRuta = favoritos.filter((fav) => fav.propiedad?.barrio?.slug);
@@ -38,6 +40,7 @@ export default async function PaginaFavoritos() {
         </span>
       </div>
 
+      <PreferenciasAvisos leads={preferencias?.avisos_leads ?? false} precios={preferencias?.avisos_precios ?? false} />
       {conRuta.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-linea bg-superficie px-6 py-16 text-center">
           <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-marca-suave">
