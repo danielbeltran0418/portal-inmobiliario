@@ -46,13 +46,17 @@ export function construirCabeceras(nonce: string): Record<string, string> {
     }
   })()
 
+  const mapaActivo = process.env.MAPS_INTERACTIVE_ENABLED === 'true' && Boolean(process.env.GOOGLE_MAPS_BROWSER_KEY && process.env.GOOGLE_MAPS_MAP_ID)
+  const recursosMapa = mapaActivo ? ' https://*.googleapis.com https://*.gstatic.com https://*.google.com' : ''
+  const estilosMapa = mapaActivo ? ' https://fonts.googleapis.com' : ''
+  const fuentesMapa = mapaActivo ? ' https://fonts.gstatic.com' : ''
   const csp = [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${evalDeDesarrollo} ${ORIGENES_SCRIPT.join(' ')}`,
-    `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' data: blob: https://*.supabase.co${origenSupabaseLocal}`,
-    `font-src 'self'`,
-    `connect-src 'self' ${ORIGENES_CONEXION.join(' ')}`,
+    `style-src 'self' 'unsafe-inline'${estilosMapa}`,
+    `img-src 'self' data: blob: https://*.supabase.co${origenSupabaseLocal}${recursosMapa}`,
+    `font-src 'self'${fuentesMapa}`,
+    `connect-src 'self' ${ORIGENES_CONEXION.join(' ')}${recursosMapa}`,
     `frame-src https://challenges.cloudflare.com`,
     `frame-ancestors 'none'`,
     `base-uri 'self'`,
