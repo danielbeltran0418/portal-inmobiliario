@@ -39,6 +39,13 @@ describe('cabeceras de seguridad', () => {
     expect(directivaDeScripts(cabeceras['Content-Security-Policy'])).not.toContain('unsafe-inline')
   })
 
+  it('incluye Reporting-Endpoints y directivas de reporte CSP sin relajar script-src (CN-018)', () => {
+    expect(cabeceras['Reporting-Endpoints']).toBe('csp-endpoint="/api/seguridad/csp-report"')
+    expect(cabeceras['Content-Security-Policy']).toContain('report-to csp-endpoint')
+    expect(cabeceras['Content-Security-Policy']).toContain('report-uri /api/seguridad/csp-report')
+    expect(directivaDeScripts(cabeceras['Content-Security-Policy'])).not.toContain('unsafe-inline')
+  })
+
   // React necesita eval() en desarrollo (reconstruye pilas de llamada para el
   // depurador) y no lo usa nunca en produccion. La CSP lo refleja, y las dos
   // caras se fijan juntas: sin la de desarrollo, un 'unsafe-eval' borrado por
