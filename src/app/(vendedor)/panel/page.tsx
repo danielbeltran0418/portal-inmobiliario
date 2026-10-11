@@ -1,3 +1,5 @@
+import { AnaliticaPro } from '@/components/panel/analitica-pro'
+import { PreferenciasAvisos } from '@/components/acceso/preferencias-avisos'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -47,6 +49,7 @@ export default async function PaginaPanelVendedor() {
     .eq('vendedor_id', usuario.user.id)
     .order('actualizado_en', { ascending: false })
 
+  const { data: preferencias } = await supabase.from('preferencias_notificacion').select('avisos_leads,avisos_precios,avisos_leads_whatsapp').eq('usuario_id', usuario.user.id).maybeSingle()
   const filas = filasDelPanel((data ?? []) as unknown as PropiedadCruda[])
   const nuevos = await contarLeadsNuevos(supabase)
   const resumen = contarPorEstado(filas)
@@ -74,6 +77,8 @@ export default async function PaginaPanelVendedor() {
           </Button>
         </header>
 
+        {process.env.WOMPI_ENABLED === 'true' && <AnaliticaPro usuarioId={usuario.user.id} />}
+        <PreferenciasAvisos whatsapp={preferencias?.avisos_leads_whatsapp ?? false} whatsappDisponible={process.env.WHATSAPP_AVISOS_ENABLED === 'true'} leads={preferencias?.avisos_leads ?? false} precios={preferencias?.avisos_precios ?? false} />
         {franjasSemanales === 0 && <Aviso variante="aviso" titulo="Completa tu disponibilidad"><Link href="/panel/disponibilidad" className="font-semibold underline">Marca tus horarios</Link> para que los compradores puedan agendar visitas.</Aviso>}
         {bloqueadoHasta && <Aviso variante="peligro" titulo="Agenda temporalmente bloqueada">Tienes 3 faltas por cancelar o mover visitas con menos de 8 horas de antelación. No recibirás visitas nuevas hasta el {formatearFechaHora(bloqueadoHasta)}.</Aviso>}
 

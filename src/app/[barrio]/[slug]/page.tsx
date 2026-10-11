@@ -1,3 +1,6 @@
+import { registrarVisitaFicha } from '@/lib/propiedades/metricas'
+import { CARACTERISTICAS, ETIQUETAS_CARACTERISTICAS } from '@/lib/catalogo/caracteristicas'
+import { urlPublica } from '@/lib/catalogo/seo'
 import { GaleriaFicha } from '@/components/galeria-ficha'
 import { BotonFavorito } from '@/components/comprador/BotonFavorito'
 import { cache } from 'react'
@@ -15,7 +18,7 @@ import { BotonAgendar } from './boton-agendar'
 import { rolDesdeToken } from '@/lib/auth/roles'
 const cargarFicha = cache(async (slug: string) => {
   const { data: p, error } = await crearClientePublico().from('propiedades')
-    .select('id,vendedor_id,slug,titulo,descripcion,precio,operacion,tipo_inmueble,habitaciones,banos,area_m2,estrato,administracion,parqueaderos,anio_construccion,piso,barrios!inner(nombre,slug,ciudad),imagenes_propiedad(id,alt_text,orden)')
+    .select('id,vendedor_id,slug,titulo,descripcion,precio,operacion,tipo_inmueble,habitaciones,banos,area_m2,estrato,administracion,parqueaderos,anio_construccion,piso,whatsapp_contacto,caracteristicas,tour360_url,barrios!inner(nombre,slug,ciudad),imagenes_propiedad(id,alt_text,orden)')
     .eq('slug', slug).eq('estado', 'publicada').maybeSingle()
   if (error) throw new Error('No se pudo cargar la propiedad')
   if (!p) notFound()
@@ -55,6 +58,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
   const barrio = Array.isArray(p.barrios) ? p.barrios[0] : p.barrios
   if (!barrio) notFound()
   if (barrio.slug !== ruta.barrio) permanentRedirect(`/${barrio.slug}/${p.slug}`)
+  await registrarVisitaFicha(p.id)
   const fotos = [...p.imagenes_propiedad].sort((a, b) => a.orden - b.orden)
 
   // La ficha es publica y esta cacheada por SP1; esta parte depende de la
@@ -129,7 +133,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
 
     <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
       <div className="min-w-0 flex-1">
-        <GaleriaFicha fotos={fotos} titulo={p.titulo} />
+        <GaleriaFicha key={p.id} fotos={fotos} titulo={p.titulo} />
 
         <div className="mt-8 mb-4 flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -141,7 +145,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
           {sesion.hayUsuario && <BotonFavorito propiedadId={p.id} inicialEsFavorito={esFavorito} mostrarTexto />}
         </div>
 
-        <p className="cifra mb-6 text-2xl font-bold text-tinta">{precio}</p>
+        <p className="cifra mb-6 text-2xl font-bold text-tinta">{precio}{p.operacion === 'temporal' ? <span className="text-base font-normal"> / noche</span> : p.operacion === 'arriendo' ? <span className="text-base font-normal"> / mes</span> : null}</p>
 
         {datosClave.length > 0 && (
           <dl className="mb-8 grid grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] gap-3">
@@ -155,6 +159,8 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
           </dl>
         )}
 
+        {p.caracteristicas?.length > 0 && <section className="mb-8"><h2 className="mb-3 font-titulo text-xl text-tinta">Lo que ofrece este espacio</h2><ul className="flex flex-wrap gap-2">{CARACTERISTICAS.filter((clave) => p.caracteristicas.includes(clave)).map((clave) => <li key={clave} className="rounded-full border border-linea bg-superficie px-4 py-2 text-sm text-tinta">{ETIQUETAS_CARACTERISTICAS[clave]}</li>)}</ul></section>}
+        {p.tour360_url && /^https:\/\/(my\.matterport\.com|kuula\.co|www\.kuula\.co)\//.test(p.tour360_url) && <a href={p.tour360_url} target="_blank" rel="noopener noreferrer" className="mb-8 inline-flex min-h-11 items-center rounded-xl border border-marca px-5 font-semibold text-marca">Explorar el tour 360°</a>}
         <section className="mb-8">
           <h2 className="mb-3 font-titulo text-xl font-semibold text-tinta">Descripción</h2>
           <p className="whitespace-pre-wrap break-words leading-relaxed text-tinta-suave">{p.descripcion}</p>
@@ -181,6 +187,7 @@ export default async function FichaPublica({ params }: { params: Promise<{ barri
       </div>
 
       <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:w-80 xl:w-96">
+        {p.whatsapp_contacto && /^573\d{9}$/.test(p.whatsapp_contacto) && <a href={`https://wa.me/${p.whatsapp_contacto}?text=${encodeURIComponent(`Hola, me interesa ${p.titulo}. ID: ${p.id}. ${urlPublica(rutaFicha)}`)}`} target="_blank" rel="noopener noreferrer" className="mb-4 inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-marca px-5 font-semibold text-marca-contraste shadow-md">Chatear por WhatsApp con el asesor</a>}
         {!sesion.hayUsuario ? (
           <div className={TARJETA}>
             <h2 className="font-titulo text-xl font-semibold text-tinta">¿Te interesa esta propiedad?</h2>

@@ -5,7 +5,7 @@ import { aplicarFiltros } from '@/lib/catalogo/consultas';
 
 export interface FiltrosBusquedaGuardada {
   barrio: string;
-  operacion?: 'venta' | 'arriendo';
+  operacion?: 'venta' | 'arriendo' | 'temporal';
   tipo?: string;
   precio_min?: number;
   precio_max?: number;

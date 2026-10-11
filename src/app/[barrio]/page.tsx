@@ -1,3 +1,6 @@
+import { alternativasCiudad } from '@/lib/catalogo/alternativas'
+import { AlternativasCatalogo } from '@/components/catalogo/alternativas-catalogo'
+import { cargarMapaCatalogo } from '@/lib/mapa/cargar-catalogo'
 import { BotonGuardarBusqueda } from '@/components/comprador/BotonGuardarBusqueda'
 import { FiltrosLaterales } from '@/components/catalogo/filtros-laterales'
 import { ListadoCatalogo } from '@/components/catalogo/listado-catalogo'
@@ -9,7 +12,7 @@ import { metadatosBarrio, catalogoIndexable } from '@/lib/catalogo/seo'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { crearClientePublico } from '@/lib/supabase/cliente-publico'
-import { leerFiltros, type ParametrosCatalogo } from '@/lib/catalogo/filtros'
+import { parametrosDeFiltros, leerFiltros, type ParametrosCatalogo } from '@/lib/catalogo/filtros'
 import { listarPropiedadesPublicas, TAMANO_PAGINA } from '@/lib/catalogo/consultas'
 
 type Entrada = { params: Promise<{ barrio: string }>; searchParams: Promise<ParametrosCatalogo> }
@@ -43,6 +46,8 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
     ? await idsFavoritos(await crearClienteServidor(), sesion.idUsuario, propiedades.map((p) => p.id))
     : new Set<string>()
 
+  const alternativas = total < 3 && filtros.pagina === 1 ? await alternativasCiudad(barrio.ciudad_slug, filtros, propiedades.map((p) => p.id)) : []
+  const mapa = await cargarMapaCatalogo(propiedades, () => barrio)
   return (
     <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
       <nav aria-label="Miga de pan" className="mb-6 flex flex-wrap items-center gap-2 text-sm text-tinta-suave">
@@ -70,20 +75,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
           </p>
         </div>
         <BotonGuardarBusqueda
-          filtrosActuales={{
-            barrio: barrio.slug,
-            operacion: filtros.operacion,
-            tipo: filtros.tipo,
-            precio_min: filtros.precioMin,
-            precio_max: filtros.precioMax,
-            q: filtros.texto,
-            estrato_min: filtros.estratoMin,
-            estrato_max: filtros.estratoMax,
-            habitaciones_min: filtros.habitacionesMin,
-            banos_min: filtros.banosMin,
-            parqueaderos_min: filtros.parqueaderosMin,
-            administracion_max: filtros.administracionMax,
-          }}
+          filtrosActuales={{ barrio: barrio.slug, ...Object.fromEntries(parametrosDeFiltros({ ...filtros, pagina: undefined })) }}
         />
       </div>
 
@@ -91,6 +83,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
         <FiltrosLaterales filtros={filtros} limpiarHref={`/${barrio.slug}`} />
         <ListadoCatalogo
           propiedades={propiedades}
+          mapa={mapa}
           total={total}
           filtros={filtros}
           rutaBase={`/${barrio.slug}`}
@@ -100,6 +93,7 @@ export default async function PaginaBarrio({ params, searchParams }: Entrada) {
           favoritos={favoritos}
         />
       </div>
+      <AlternativasCatalogo propiedades={alternativas} />
     </main>
   )
 }

@@ -8,7 +8,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  */
 export const RUTAS_RESERVADAS = [
   'api', 'buscar', 'catalogo', 'ciudad', 'confirmar', 'control', 'doble-factor', 'imagen', 'login',
-  'mi-cuenta', 'notificaciones', 'panel', 'recuperar', 'registro', 'restablecer', 'sitemaps',
+  'mi-cuenta', 'notificaciones', 'panel', 'planes', 'recuperar', 'registro', 'restablecer', 'sitemaps',
   'verificar-correo',
 ] as const
 const RESERVADAS = new Set<string>(RUTAS_RESERVADAS)

@@ -14,11 +14,13 @@ export const metadata: Metadata = {
  * Mismo corte que en /login y por el mismo motivo: ver el comentario de
  * src/app/(auth)/login/page.tsx.
  */
-export default function PaginaRegistro() {
+export default async function PaginaRegistro({ searchParams }: { searchParams: Promise<{ rol?: string }> }) {
+  const { rol } = await searchParams
+  const rolInicial = rol === 'vendedor' ? 'vendedor' : 'comprador'
   return (
     <>
       <GuionTurnstile />
-      <FormularioRegistro claveTurnstile={claveDeSitioTurnstile()} />
+      <FormularioRegistro claveTurnstile={claveDeSitioTurnstile()} rolInicial={rolInicial} />
     </>
   )
 }

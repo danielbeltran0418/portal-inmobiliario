@@ -44,6 +44,9 @@ interface PropiedadCruda {
   parqueaderos?: number | null
   anio_construccion?: number | null
   piso?: number | null
+  caracteristicas?: PropiedadFormulario['caracteristicas']
+  whatsapp_contacto?: string | null
+  tour360_url?: string | null
   imagenes_propiedad: readonly ImagenCruda[] | null
 }
 
@@ -110,7 +113,7 @@ export default async function PaginaEditarPropiedad({
       .from('propiedades')
       .select(
         'id, titulo, descripcion, operacion, tipo_inmueble, precio, habitaciones, banos, ' +
-        'area_m2, barrio_id, estado, estrato, administracion, parqueaderos, anio_construccion, piso, ' +
+        'area_m2, barrio_id, estado, estrato, administracion, parqueaderos, anio_construccion, piso, caracteristicas, whatsapp_contacto, tour360_url, ' +
         'imagenes_propiedad(id, ruta_storage, alt_text, orden)',
       )
       .eq('id', id)
@@ -169,6 +172,9 @@ export default async function PaginaEditarPropiedad({
     parqueaderos: p.parqueaderos ?? null,
     anio_construccion: p.anio_construccion ?? null,
     piso: p.piso ?? null,
+    caracteristicas: p.caracteristicas ?? [],
+    whatsapp_contacto: p.whatsapp_contacto ?? null,
+    tour360_url: p.tour360_url ?? null,
     direccion: ubicacion?.direccion ?? null,
     coordenadas:
       ubicacion?.latitud != null && ubicacion?.longitud != null

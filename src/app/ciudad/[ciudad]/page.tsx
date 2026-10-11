@@ -1,3 +1,6 @@
+import { alternativasCiudad } from '@/lib/catalogo/alternativas'
+import { AlternativasCatalogo } from '@/components/catalogo/alternativas-catalogo'
+import { cargarMapaCatalogo } from '@/lib/mapa/cargar-catalogo'
 import { cache } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -37,6 +40,8 @@ export default async function PaginaCiudad({ params, searchParams }: Entrada) {
   const favoritos = sesion.idUsuario
     ? await idsFavoritos(await crearClienteServidor(), sesion.idUsuario, propiedades.map((p) => p.id))
     : new Set<string>()
+  const alternativas = total < 3 && filtros.pagina === 1 ? await alternativasCiudad(ciudad.slug, filtros, propiedades.map((p) => p.id)) : []
+  const mapa = await cargarMapaCatalogo(propiedades, (p) => barrioPorId.get(p.barrio_id ?? '') ?? null)
   const rutaBase = `/ciudad/${ciudad.slug}`
 
   return (
@@ -75,6 +80,7 @@ export default async function PaginaCiudad({ params, searchParams }: Entrada) {
         <FiltrosLaterales filtros={filtros} limpiarHref={rutaBase} />
         <ListadoCatalogo
           propiedades={propiedades}
+          mapa={mapa}
           total={total}
           filtros={filtros}
           rutaBase={rutaBase}
@@ -84,6 +90,7 @@ export default async function PaginaCiudad({ params, searchParams }: Entrada) {
           favoritos={favoritos}
         />
       </div>
+      <AlternativasCatalogo propiedades={alternativas} />
     </main>
   )
 }

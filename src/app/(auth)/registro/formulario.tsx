@@ -10,7 +10,7 @@ import { CAMPO_ACCESO } from '../login/formulario'
 
 const INICIAL: EstadoFormulario = {}
 
-export function FormularioRegistro({ claveTurnstile }: { claveTurnstile: string | null }) {
+export function FormularioRegistro({ claveTurnstile, rolInicial = 'comprador' }: { claveTurnstile: string | null; rolInicial?: 'comprador' | 'vendedor' }) {
   const [estado, accion, pendiente] = useActionState(registrarUsuario, INICIAL)
 
   if (estado.exito) {
@@ -61,14 +61,14 @@ export function FormularioRegistro({ claveTurnstile }: { claveTurnstile: string 
           <legend className="mb-1 text-sm font-medium text-tinta">¿Qué quieres hacer?</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-linea bg-superficie p-3 transition-colors has-[:checked]:border-marca has-[:checked]:bg-marca-suave">
-              <input type="radio" name="rol" value="comprador" defaultChecked className="mt-1 accent-[var(--marca)]" />
+              <input type="radio" name="rol" value="comprador" defaultChecked={rolInicial === 'comprador'} className="mt-1 accent-[var(--marca)]" />
               <span>
                 <span className="block text-sm font-semibold text-tinta">Buscar una propiedad</span>
                 <span className="mt-0.5 block text-xs text-tinta-suave">Guarda favoritos, búsquedas y agenda visitas.</span>
               </span>
             </label>
             <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-linea bg-superficie p-3 transition-colors has-[:checked]:border-realce has-[:checked]:bg-realce-suave">
-              <input type="radio" name="rol" value="vendedor" className="mt-1 accent-[var(--realce)]" />
+              <input type="radio" name="rol" value="vendedor" defaultChecked={rolInicial === 'vendedor'} className="mt-1 accent-[var(--realce)]" />
               <span>
                 <span className="block text-sm font-semibold text-tinta">Publicar propiedades</span>
                 <span className="mt-0.5 block text-xs text-tinta-suave">Gestiona inmuebles, visitas y contactos.</span>

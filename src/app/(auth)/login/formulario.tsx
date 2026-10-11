@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import Link from 'next/link'
 import { iniciarSesion, type EstadoFormulario } from './acciones'
 import { WidgetTurnstile } from '../widget-turnstile'
+import { AccesoAlternativo, type MetodosAcceso } from '@/components/acceso/acceso-alternativo'
 import { MarcoAcceso } from '@/components/acceso/marco-acceso'
 
 const INICIAL: EstadoFormulario = {}
@@ -12,10 +13,11 @@ export const CAMPO_ACCESO =
   'h-12 w-full rounded-xl border border-linea bg-superficie px-4 text-base text-tinta outline-none transition-colors placeholder:text-tinta-tenue focus:border-marca focus:ring-2 focus:ring-marca/25'
 
 export function FormularioLogin(
-  { claveTurnstile, volver, aviso = null }: {
+  { claveTurnstile, volver, aviso = null, metodos }: {
     claveTurnstile: string | null
     volver: string | null
     aviso?: string | null
+    metodos?: MetodosAcceso
   },
 ) {
   const [estado, accion, pendiente] = useActionState(iniciarSesion, INICIAL)
@@ -61,6 +63,7 @@ export function FormularioLogin(
         </button>
       </form>
 
+      {metodos && <AccesoAlternativo metodos={metodos} claveTurnstile={claveTurnstile} />}
       <p className="mt-6 text-center text-sm text-tinta-suave">
         ¿Todavía no tienes cuenta?{' '}
         <Link href="/registro" className="font-semibold text-marca hover:underline">Crear una cuenta</Link>

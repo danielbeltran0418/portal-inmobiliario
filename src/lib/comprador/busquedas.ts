@@ -33,6 +33,8 @@ export const ETIQUETA_FILTRO: Record<string, string> = {
   precio_min: 'Precio mínimo',
   precio_max: 'Precio máximo',
   q: 'Palabras clave',
+  area_min: 'Área mínima', area_max: 'Área máxima',
+  conjunto_cerrado: 'Conjunto cerrado', mascotas: 'Acepta mascotas', balcon: 'Balcón', piscina: 'Piscina', amoblado: 'Amoblado',
   estrato_min: 'Estrato desde',
   estrato_max: 'Estrato hasta',
   habitaciones_min: 'Habitaciones (mín.)',

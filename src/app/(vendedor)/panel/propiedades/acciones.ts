@@ -1,5 +1,6 @@
 'use server'
 
+import { programarAvisosPortal } from '@/lib/notificaciones/programar'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -128,6 +129,8 @@ function paraElUpdate(datos: Omit<DatosPropiedad, 'direccion' | 'coordenadas'>):
   for (const campo of CAMPOS_OPCIONALES_ANULABLES) {
     if (payload[campo] === undefined) payload[campo] = null
   }
+  if (Object.hasOwn(payload, 'whatsapp_contacto') && payload.whatsapp_contacto === undefined) payload.whatsapp_contacto = null
+  if (Object.hasOwn(payload, 'tour360_url') && payload.tour360_url === undefined) payload.tour360_url = null
   return payload
 }
 
@@ -160,6 +163,9 @@ export async function actualizarPropiedad(
     parqueaderos: formData.get('parqueaderos'),
     anio_construccion: formData.get('anio_construccion'),
     piso: formData.get('piso'),
+    ...(formData.has('caracteristicas_presentes') ? { caracteristicas: formData.getAll('caracteristicas') } : {}),
+    ...(formData.has('tour360_url') ? { tour360_url: formData.get('tour360_url') } : {}),
+    ...(formData.has('whatsapp_contacto') ? { whatsapp_contacto: formData.get('whatsapp_contacto') } : {}),
   })
 
   if (!analisis.success) {
@@ -191,6 +197,7 @@ export async function actualizarPropiedad(
 
   // RLS deniega filtrando filas: cero filas significa "no es tuya".
   if (!data || data.length === 0) return { error: MENSAJE_GENERICO }
+  programarAvisosPortal()
 
   // Upsert por propiedad_id: una propiedad puede no tener fila todavia en
   // propiedades_ubicacion (nace sin ella; la primera vez que el vendedor
@@ -320,6 +327,7 @@ export async function cambiarEstado(id: string, estadoPedido: EstadoDestino): Pr
 
   // RLS deniega filtrando filas: cero filas significa "no es tuya".
   if (!data || data.length === 0) return { error: MENSAJE_GENERICO }
+  programarAvisosPortal()
 
   revalidatePath('/panel')
   revalidatePath(`/panel/propiedades/${id}`)
@@ -340,6 +348,7 @@ export async function eliminarPropiedad(id: string): Promise<EstadoPropiedad> {
 
   // RLS deniega filtrando filas: cero filas significa "no es tuya".
   if (!data || data.length === 0) return { error: MENSAJE_GENERICO }
+  programarAvisosPortal()
 
   await drenarLimpieza()
   revalidatePath('/panel')

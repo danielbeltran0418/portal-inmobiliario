@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { crearClienteServidor } from '@/lib/supabase/cliente-servidor'
-import { rolDesdeToken, rutaDePanel } from '@/lib/auth/roles'
+import { rolDesdeToken, destinoTrasContrasena } from '@/lib/auth/roles'
 import { origenReal } from '@/lib/http/origen-peticion'
 
 /**
@@ -19,7 +19,7 @@ import { origenReal } from '@/lib/http/origen-peticion'
  * la plantilla por defecto sin poder entrar: el correo se verificaba en
  * Supabase pero aqui se rebotaba a /login?verificacion=fallida.
  */
-const TIPOS_ACEPTADOS = new Set(['email', 'signup'])
+const TIPOS_ACEPTADOS = new Set(['email', 'signup', 'magiclink'])
 
 export async function GET(peticion: NextRequest) {
   // origenReal(), no peticion.url: en next dev el host queda canonicalizado
@@ -45,5 +45,5 @@ export async function GET(peticion: NextRequest) {
     return NextResponse.redirect(`${origin}/login?verificacion=fallida`)
   }
 
-  return NextResponse.redirect(`${origin}${rutaDePanel(rolDesdeToken(accessToken))}`)
+  return NextResponse.redirect(`${origin}${destinoTrasContrasena(rolDesdeToken(accessToken))}`)
 }

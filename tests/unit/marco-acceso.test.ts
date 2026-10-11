@@ -1,3 +1,4 @@
+vi.mock('@/components/acceso/acciones-alternativas', () => ({ accesoAlternativo: vi.fn() }))
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createElement } from 'react'

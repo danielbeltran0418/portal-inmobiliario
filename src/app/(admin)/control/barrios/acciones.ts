@@ -30,7 +30,7 @@ function revalidar() {
 export async function accionCrearBarrio(_previo: EstadoBarrio, formData: FormData): Promise<EstadoBarrio> {
   const adminId = await idSuperAdmin()
   if (!adminId) return { error: 'Acceso no autorizado.' }
-  const r = await crearBarrio(crearClienteAdmin(), { nombre: formData.get('nombre'), ciudad: formData.get('ciudad') }, adminId)
+  const r = await crearBarrio(crearClienteAdmin(), { nombre: formData.get('nombre'), ciudad: formData.get('ciudad'), codigo_postal: formData.get('codigo_postal') }, adminId)
   if (!r.ok) return { error: r.error }
   revalidar()
   return { creado: r.slug }

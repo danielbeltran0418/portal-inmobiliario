@@ -1,3 +1,4 @@
+import { ModalAcceso } from '@/components/acceso/modal-acceso'
 import Link from 'next/link'
 import { sesionActual } from '@/lib/auth/sesion'
 import { ENLACE_REGISTRO, estadoDeCabecera } from '@/lib/navegacion/enlaces'
@@ -10,12 +11,7 @@ export const NOMBRE_DEL_SITIO = 'Portal Inmobiliario'
  * Cabecera del sitio. Es un componente de SERVIDOR asincrono: la sesion se
  * resuelve en el servidor y al navegador solo le llega el HTML ya decidido.
  *
- * Sin componentes de cliente ni <script> propios a proposito. La CSP lleva
- * 'strict-dynamic' y no lleva 'unsafe-inline' para scripts, y aqui no hace
- * falta nada interactivo: los enlaces son enlaces y cerrar sesion es un
- * formulario que envia un server action por POST. Funciona incluso sin
- * JavaScript.
- *
+ * El acceso abre un modal de cliente; la sesión y el cierre se mantienen en el servidor.
  * Va en el layout raiz, que declara force-dynamic; el que sea dinamica no
  * cuesta nada extra.
  */
@@ -51,7 +47,8 @@ export async function Cabecera() {
         </Link>
 
         <div className="hidden items-center gap-2 md:flex">
-          {enlaces.map((enlace) => (
+          <Link href="/planes" className="rounded-lg px-4 py-2 text-sm font-medium text-tinta-suave hover:bg-superficie-alt">Planes</Link>
+          {enlaces.map((enlace) => enlace.destino === '/login' ? <ModalAcceso key={enlace.destino} /> : (
             <Link
               key={enlace.destino}
               href={enlace.destino}
@@ -80,7 +77,7 @@ export async function Cabecera() {
             </form>
           )}
         </div>
-        <MenuMovil enlaces={enlaces} cerrarSesion={cerrarSesion} autenticado={autenticado} />
+        <MenuMovil enlaces={[{ etiqueta: 'Planes', destino: '/planes' }, ...enlaces]} cerrarSesion={cerrarSesion} autenticado={autenticado} />
       </nav>
     </header>
   )

@@ -25,6 +25,9 @@ export function FormularioBarrio({ ciudades }: { ciudades: readonly string[] }) 
           </datalist>
         </label>
       </div>
+      <label className="text-sm font-medium text-tinta">Código postal (opcional)
+        <input name="codigo_postal" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} placeholder="Seis dígitos" className={`${CAMPO} mt-1`} />
+      </label>
       <p className="text-xs text-tinta-suave">
         La dirección del catálogo se genera sola. Si ya existe un barrio con ese nombre en otra ciudad, se le agrega la
         ciudad (por ejemplo, el-prado-bucaramanga). Escribe la ciudad igual que las existentes para que se agrupen.

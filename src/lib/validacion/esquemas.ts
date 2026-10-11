@@ -1,3 +1,4 @@
+import { CARACTERISTICAS } from '@/lib/catalogo/caracteristicas'
 import { z } from 'zod'
 import { leerCoordenadas } from '@/lib/mapa/coordenadas'
 
@@ -31,7 +32,7 @@ export const esquemaNuevaContrasena = z.object({
 export type DatosRegistro = z.infer<typeof esquemaRegistro>
 export type DatosLogin = z.infer<typeof esquemaLogin>
 
-export const OPERACIONES = ['venta', 'arriendo'] as const
+export const OPERACIONES = ['venta', 'arriendo', 'temporal'] as const
 export const TIPOS_INMUEBLE = ['apartamento', 'casa', 'local', 'lote', 'oficina'] as const
 
 // Estados que el vendedor puede elegir desde su panel. 'en_revision' y
@@ -85,6 +86,7 @@ export const esquemaPropiedadNueva = z.object({
 export const esquemaPropiedad = z.object({
   titulo: z.string().trim().min(10, 'Minimo 10 caracteres').max(120, 'Maximo 120'),
   descripcion: z.string().trim().max(4000).default(''),
+  caracteristicas: z.array(z.enum(CARACTERISTICAS)).max(5).optional(),
   operacion: z.enum(OPERACIONES),
   tipo_inmueble: z.enum(TIPOS_INMUEBLE),
   precio: opcional(
@@ -97,6 +99,8 @@ export const esquemaPropiedad = z.object({
   area_m2: opcional(z.coerce.number().positive().max(100000)),
   barrio_id: opcional(z.string().uuid('Elige un barrio')),
   direccion: opcional(z.string().trim().max(200)),
+  tour360_url: opcional(z.string().max(2000).url().refine((valor) => { const url = new URL(valor); return url.protocol === 'https:' && !url.username && !url.password && ['my.matterport.com','kuula.co','www.kuula.co'].includes(url.hostname) }, 'Usa un enlace HTTPS de Matterport o Kuula.')),
+  whatsapp_contacto: opcional(z.string().regex(/^573\d{9}$/, 'Usa 57 seguido del celular colombiano de 10 dígitos.')),
   // "lat, lng" tal como lo copia Google Maps. Privado: el publico solo ve la
   // zona aproximada (zona_aproximada_propiedad, 20261011000100).
   coordenadas: opcional(

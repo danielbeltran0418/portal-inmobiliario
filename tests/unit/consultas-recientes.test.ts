@@ -21,8 +21,9 @@ describe('listarRecientes (portada)', () => {
     expect(columnas).toContain('imagenes_propiedad!inner')
     expect(columnas).toContain('barrios!inner(slug,nombre)')
     expect(q.eq).toHaveBeenCalledWith('estado', 'publicada')
-    expect(q.order.mock.calls[0]).toEqual(['destacada', { ascending: false }])
-    expect(q.order.mock.calls[1]).toEqual(['actualizado_en', { ascending: false }])
+    expect(q.order.mock.calls[0]).toEqual(['prioridad_plan', { ascending: false }])
+    expect(q.order.mock.calls[1]).toEqual(['destacada', { ascending: false }])
+    expect(q.order.mock.calls[2]).toEqual(['actualizado_en', { ascending: false }])
     expect(q.limit).toHaveBeenCalledWith(6)
   })
 
