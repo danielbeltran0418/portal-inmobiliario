@@ -18,6 +18,17 @@ async function identidad(db:Client,id:string) {
   await db.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({ sub:id,role:'authenticated',app_metadata:{ rol:'vendedor' } })])
 }
 describe('equipos y límites de fotos',()=>{
+  it('con seis anuncios históricos permite Pro pero rechaza cobrar Destacado',()=>transaccion(async db=>{
+    await db.query('UPDATE public.configuracion_comercial SET planes_activos=false WHERE singleton')
+    for(let i=0;i<6;i++){
+      const id=randomUUID()
+      await db.query("INSERT INTO public.propiedades(id,vendedor_id,slug,titulo,descripcion,operacion,tipo_inmueble,precio) VALUES($1,$2,$3,'Casa de prueba','Descripción','venta','casa',1000)",[id,dueno,'cuota-'+id])
+      await db.query("INSERT INTO public.imagenes_propiedad(propiedad_id,ruta_storage,alt_text) VALUES($1,$2,'Fachada de prueba')",[id,dueno+'/'+id+'/foto.webp'])
+      await db.query("UPDATE public.propiedades SET estado='publicada' WHERE id=$1",[id])
+    }
+    await db.query("INSERT INTO public.ordenes_plan(usuario_id,plan,periodo,centavos,ambiente) VALUES($1,'pro','mensual',10000,'prod')",[dueno])
+    await expect(db.query("INSERT INTO public.ordenes_plan(usuario_id,plan,periodo,centavos,ambiente) VALUES($1,'destacado','mensual',10000,'prod')",[dueno])).rejects.toMatchObject({code:'23514'})
+  }))
   it('un webhook tardío de otro plan registra el pago sin sobrescribir Pro',()=>transaccion(async db=>{
     const pro=randomUUID();const destacado=randomUUID()
     await db.query("INSERT INTO public.ordenes_plan(id,usuario_id,plan,periodo,centavos,ambiente) VALUES($1,$3,'pro','mensual',20000,'prod'),($2,$3,'destacado','mensual',10000,'prod')",[pro,destacado,dueno])
